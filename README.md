@@ -18,6 +18,16 @@ validation limits](STATUS.md) for exactly what was measured and when.
 
 [Start diagnosing](docs/DECISION_TREE.md) · [Read the recovery story](docs/SUCCESSFUL_RECOVERY_PATH.md) · [Browse the evidence](docs/EVIDENCE_MAP.md) · [Download the latest release](https://github.com/LordVitaly/retrofreak-rf1-repair-research/releases/latest)
 
+## Acknowledgements: where this repair began
+
+Earlier community research gave this repair its essential starting points:
+
+- **Ken / Sui Lab** [documented using a RetroN 5 recovery SD image on Retro Freak](https://sui-lab.info/archives/3342) in January 2021. That article motivated our initial recovery attempt. The recovery image itself came from the RetroN 5 full-reset package; Ken is credited here for documenting its application to Retro Freak.
+- **Anonymous 5ch contributor `f0xHXxH1`, post #10**, [recorded the hidden service switch and PC connection sequence](https://medaka.5ch.io/test/read.cgi/gameurawaza/1447594308) in November 2015. This was the critical reference for finding our service entry path. We subsequently confirmed Rockchip RK3066 MaskROM (`2207:300A`) on the investigated RF-1; the retained description of the original post did not explicitly identify MaskROM. The attribution comes from the research-session record and could not be independently re-fetched during publication review.
+- **hissorii / [retrofd](https://github.com/hissorii/retrofd)** provided foundational research on Retro Freak's Android internals, SD boot, NAND partitions, ADB and USB/OTG behavior that helped make further diagnosis possible.
+
+These contributions made the investigation possible. See [Sources and credits](docs/SOURCES_AND_CREDITS.md) for the full attribution record, including nosuke, Duddyfinger, the original recovery-image provenance and other upstream projects.
+
 ## Find the right starting point
 
 | Your goal | Read first |
