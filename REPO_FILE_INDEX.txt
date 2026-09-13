@@ -20,6 +20,7 @@ REPO_FILE_INDEX.txt
 SECURITY.md
 STATUS.md
 docs/ADDRESS_SPACES.md
+docs/BOARD_PHOTOS.md
 docs/DECISION_TREE.md
 docs/EVIDENCE_MAP.md
 docs/FIRMWARE_REFERENCE.md
@@ -36,6 +37,14 @@ docs/SUCCESSFUL_RECOVERY_PATH.md
 docs/TECHNICAL_REPORT.md
 docs/TOOLING.md
 docs/VALIDATION.md
+docs/assets/board/PHOTOS.json
+docs/assets/board/rf1-board-overview.jpg
+docs/assets/board/rf1-connected-board.jpg
+docs/assets/board/rf1-maskrom-button-annotated.jpg
+docs/assets/board/rf1-ram-usb-dc.jpg
+docs/assets/board/rf1-soc-nand-button.jpg
+docs/assets/board/rf1-underside-power.jpg
+docs/assets/board/rf1-underside-test-pads.jpg
 evidence/INDEX.json
 evidence/README.md
 evidence/phase1/selected/outputs/boot.from_nand.verified.json
@@ -133,12 +142,14 @@ references/RECOVERY_SD_READONLY_REPORT.md
 references/SOURCES.json
 scripts/check_repository.py
 scripts/download_cygwin_packages.py
+scripts/photo_support.py
 scripts/refresh_metadata.py
 scripts/repo_support.py
 scripts/verify_manifest.py
 tests/README.md
 tests/test_checker_cli.py
 tests/test_package_downloads.py
+tests/test_photo_metadata.py
 tests/test_publication_boundaries.py
 tests/test_repository_integrity.py
 tests/test_rf1_boot_digest.py

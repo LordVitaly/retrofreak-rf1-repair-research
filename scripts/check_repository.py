@@ -11,6 +11,7 @@ import urllib.parse
 
 from repo_support import load_json, publication_files, sha256, canonical_path
 from verify_manifest import verify
+from photo_support import validate_photo
 
 BAD_ENDINGS = ('.img', '.raw', '.dump', '.dmp', '.bin', '.apk', '.so', '.exe', '.dll',
                '.sys', '.pem', '.key', '.zip', '.7z', '.pyc')
@@ -18,7 +19,7 @@ SECRET = re.compile(r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY|\bgh[pousr]_[
 HOSTPATH = re.compile(r'(?i)[A-Z]:[\\/](?:Users|Documents|Downloads)[\\/]|' + '/' + r'Users/[^/\s]+/')
 CITATION = re.compile(r'\ue200|\ue201|' + 'sandbox' + r':/|' + 'utm_source' + r'=chatgpt|\bturn\d+(?:file|view|search)\d+\b')
 NON_ENGLISH_SCRIPT = re.compile(r'[\u0400-\u052f\u3040-\u30ff\u3400-\u9fff]')
-LINK = re.compile(r'(?<!!)\[[^\]\n]*\]\(([^\s)]+)(?:\s+"[^"\n]*")?\)')
+LINK = re.compile(r'\[[^\]\n]*\]\(([^\s)]+)(?:\s+"[^"\n]*")?\)')
 
 
 def private_device_arrays(value, path: str = '') -> list[str]:
@@ -65,12 +66,29 @@ def audit(root: Path) -> tuple[list[str], dict]:
     errors = []
     counts = {'files': len(files), 'json_files': 0, 'python_files': 0,
               'markdown_files': 0, 'relative_links_checked': 0,
-              'archival_snapshots': 0}
+              'archival_snapshots': 0, 'reviewed_photos': 0}
+    photo_entries = load_json(root / 'docs/assets/board/PHOTOS.json')['files']
+    photos = {canonical_path(entry['path']): entry for entry in photo_entries}
+    if len(photos) != len(photo_entries):
+        errors.append('Duplicate photo catalog entries')
+    for rel in photos:
+        if not rel.startswith('docs/assets/board/') or not rel.endswith('.jpg') or rel not in names:
+            errors.append('Invalid/missing reviewed photo: ' + rel)
     if len({n.casefold() for n in names}) != len(names):
         errors.append('Case-insensitive path collision')
     for path, rel in zip(files, names):
         if rel.lower().endswith(BAD_ENDINGS):
             errors.append('Excluded binary/private artifact extension: ' + rel)
+        if rel in photos:
+            entry = photos[rel]
+            if path.stat().st_size != entry['bytes'] or sha256(path) != entry['sha256']:
+                errors.append('Reviewed photo changed: ' + rel)
+            try:
+                validate_photo(path.read_bytes())
+            except ValueError as exc:
+                errors.append(f'Invalid/private photo metadata: {rel}: {exc}')
+            counts['reviewed_photos'] += 1
+            continue
         try:
             text = path.read_text('utf-8')
         except UnicodeDecodeError:

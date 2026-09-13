@@ -38,6 +38,7 @@ These contributions made the investigation possible. See [Sources and credits](d
 | Check the evidence behind a claim | [Evidence map](docs/EVIDENCE_MAP.md) and [project status](STATUS.md) |
 | Reuse the research code | [Tooling guide](docs/TOOLING.md), [tool index](toolkit/INDEX.json), [license scope](LICENSE_STATUS.md) |
 | Learn from the wrong turns | [Postmortem](docs/POSTMORTEM.md) |
+| Locate the hidden service button or inspect this board | [Board photographs and MaskROM button](docs/BOARD_PHOTOS.md) |
 | Identify the firmware used in this case | [Firmware reference](docs/FIRMWARE_REFERENCE.md) and [reference hashes](docs/REFERENCE_HASHES.md) |
 
 ## The recovery, at a glance
@@ -85,6 +86,7 @@ local files without a console.
 
 ## Materials included
 
+- [Board photographs](docs/BOARD_PHOTOS.md): seven full-resolution owner-supplied images, including the marked service button, both board sides and connector orientation.
 - [Documentation](docs/README.md): diagnosis, successful path, pitfalls and references.
 - [Evidence](evidence/README.md): selected redacted results linked to the claims.
 - `toolkit/phase1_20260903/` and `toolkit/phase2_20260908/`: 456 preserved source snapshots.
@@ -123,3 +125,16 @@ Our original code is **MIT-licensed**; our original documentation is **CC BY 4.0
 Third-party material retains its own terms. See [license scope and attribution](LICENSE_STATUS.md).
 This is an independent community research project, not a manufacturer-supported
 service or a universal flasher.
+
+## Maintainer's note and AI assistance
+
+I am not a programmer. This repair began with assistance from **GPT-5.6 Sol** and
+continued with **GPT-6 Astra**. This GitHub repository and its documentation were
+prepared with assistance from **GPT-6 Astra**. I performed the physical actions
+and reported the console's behavior during the investigation.
+
+I am sharing the material **as is** and have tried to preserve as many useful
+details, findings, tools and failed attempts as possible for future repairers.
+AI assistance does not make every explanation correct or turn this case into a
+universal repair procedure. The evidence and its limits are documented throughout;
+corrections supported by observations are welcome.

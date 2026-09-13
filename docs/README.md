@@ -4,6 +4,7 @@
 |---|---|
 | [Successful recovery path](SUCCESSFUL_RECOVERY_PATH.md) | The sequence leading to functional recovery; not portable flash instructions. |
 | [Technical report](TECHNICAL_REPORT.md) | Diagnosis, formats, code paths, repairs and evidence limits. |
+| [Board photographs](BOARD_PHOTOS.md) | Owner-supplied board details, marked service button and connector orientation. |
 | [Evidence map](EVIDENCE_MAP.md) | Direct links from important findings to included records. |
 | [Safety and scope](SAFETY_AND_SCOPE.md) | Hidden-write risks, mappings, power and public-tool limits. |
 | [Decision tree](DECISION_TREE.md) | Evidence-led diagnostic choices, not a mandatory sequence of writes. |

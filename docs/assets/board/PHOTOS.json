@@ -1,0 +1,64 @@
+{
+  "credit": "LordVitaly",
+  "license": "CC-BY-4.0",
+  "reviewed": "2026-09-13",
+  "processing": "APP/COM metadata and trailing data removed; only a minimal EXIF orientation tag retained. Primary compressed image data and decoded pixels unchanged. Annotation supplied by the maintainer.",
+  "files": [
+    {
+      "path": "docs/assets/board/rf1-maskrom-button-annotated.jpg",
+      "bytes": 2217684,
+      "sha256": "aa2d28743bfb75985b6733ffe4f367dd09df71c3d64d582fa628c85abe6ebc76",
+      "stored_width": 4032,
+      "stored_height": 3024,
+      "orientation": 1
+    },
+    {
+      "path": "docs/assets/board/rf1-board-overview.jpg",
+      "bytes": 1901138,
+      "sha256": "c71d7c5fcde433a46128248726c39523346183d7e46e6085061572cdf5caa19f",
+      "stored_width": 4032,
+      "stored_height": 3024,
+      "orientation": 3
+    },
+    {
+      "path": "docs/assets/board/rf1-soc-nand-button.jpg",
+      "bytes": 1934664,
+      "sha256": "a64fb27346104ce9afa35d912ad9696e709e8a697417b4cb1eead81636077ab5",
+      "stored_width": 4032,
+      "stored_height": 3024,
+      "orientation": 8
+    },
+    {
+      "path": "docs/assets/board/rf1-ram-usb-dc.jpg",
+      "bytes": 1896541,
+      "sha256": "618cb9a60794aadacbb9f3c9b1e36c92917d84d4b2062552f55c584b870986ee",
+      "stored_width": 4032,
+      "stored_height": 3024,
+      "orientation": 8
+    },
+    {
+      "path": "docs/assets/board/rf1-underside-test-pads.jpg",
+      "bytes": 2106667,
+      "sha256": "1a9831de603c4b071a3d2b2a9729514cb5f0f1a50018f8292fef627e9575f3fd",
+      "stored_width": 4032,
+      "stored_height": 3024,
+      "orientation": 6
+    },
+    {
+      "path": "docs/assets/board/rf1-underside-power.jpg",
+      "bytes": 2232290,
+      "sha256": "4cde43a95030f8420c6e5a544a604dfd2819eab090b5f4b4450a7b10851d2aab",
+      "stored_width": 4032,
+      "stored_height": 3024,
+      "orientation": 6
+    },
+    {
+      "path": "docs/assets/board/rf1-connected-board.jpg",
+      "bytes": 2469989,
+      "sha256": "1658d32bbc90408ef74b080f3b496d3211d3bbacd3458b1ee7498f9f753604bb",
+      "stored_width": 4032,
+      "stored_height": 3024,
+      "orientation": 1
+    }
+  ]
+}

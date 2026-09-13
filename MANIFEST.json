@@ -69,18 +69,18 @@
     },
     {
       "path": "LICENSE_STATUS.md",
-      "bytes": 2508,
-      "sha256": "9bdf93856406e1f64db1f32eb80a7904df48761287e269014bf0ed78a5d8856f"
+      "bytes": 2630,
+      "sha256": "58c01dea46efa89eea8bf4b231afb729fa750369a44b8ee0fc5e02a812a3e4a6"
     },
     {
       "path": "PRIVACY.md",
-      "bytes": 1124,
-      "sha256": "747c74c6436ed79ffa60739c4b92d0b1f2d3ae43eef59350ad03759429e745bf"
+      "bytes": 1451,
+      "sha256": "364178a1030a49cff13fe677ba1895f079db1dc5445e4e4132033f64c4c6cbf8"
     },
     {
       "path": "README.md",
-      "bytes": 8228,
-      "sha256": "c115d470ba14cb8c7fd63f0e924f670208d459c2b6f09c879e5191f8635f8c86"
+      "bytes": 9239,
+      "sha256": "b83eed1c0a0896cecf5bf53eb20ecda9dee9f76cd71e912f48f1d207d00d9525"
     },
     {
       "path": "REPAIR_SUMMARY.json",
@@ -89,8 +89,8 @@
     },
     {
       "path": "REPO_FILE_INDEX.txt",
-      "bytes": 37054,
-      "sha256": "b9be2520d30d4acbdf1282d2bef1c88764186644bbecc287657eb79a159a2706"
+      "bytes": 37460,
+      "sha256": "977d3e68a05eed043b42e6fcaafb1c7fa443b191ac3538d610ceb75a36559640"
     },
     {
       "path": "SECURITY.md",
@@ -106,6 +106,11 @@
       "path": "docs/ADDRESS_SPACES.md",
       "bytes": 2058,
       "sha256": "94a43e188a8509591ff86c20c6a1a723897bde952209c4a6fee9fb59c0a31d6a"
+    },
+    {
+      "path": "docs/BOARD_PHOTOS.md",
+      "bytes": 5228,
+      "sha256": "52f7a91d79263c4839df312c70cb9daaa312eecd6878f78b0da8d36d99e3e8bd"
     },
     {
       "path": "docs/DECISION_TREE.md",
@@ -139,8 +144,8 @@
     },
     {
       "path": "docs/README.md",
-      "bytes": 1634,
-      "sha256": "9c0759788e015cf712d5ebb4a67423fdfc694f1ed70ac66699545d700f1dc3df"
+      "bytes": 1756,
+      "sha256": "d218394ec5111290a02d1b34b5aa04bf05eeb6eebc616917c65e0cccc5c66722"
     },
     {
       "path": "docs/RECOVERY_SD.md",
@@ -174,8 +179,8 @@
     },
     {
       "path": "docs/TECHNICAL_REPORT.md",
-      "bytes": 12614,
-      "sha256": "549dcbc3a7fbd6b1173826e0462019c80bf55213fee5bccd83c7dad2bc883da0"
+      "bytes": 12883,
+      "sha256": "9e3710acbab5e86b13fb4c5c19612c813f9127ebf406dca8af9ea123a26856d3"
     },
     {
       "path": "docs/TOOLING.md",
@@ -186,6 +191,46 @@
       "path": "docs/VALIDATION.md",
       "bytes": 2370,
       "sha256": "996aa2ef1321969e9aa264e36b6b6afb47d243542ed9b36f2b179dcab8547e5a"
+    },
+    {
+      "path": "docs/assets/board/PHOTOS.json",
+      "bytes": 2135,
+      "sha256": "cd08ec4fd14f7ffebeea922f8f41a196480f0889ae991a3c91b96c1ea3efc5b4"
+    },
+    {
+      "path": "docs/assets/board/rf1-board-overview.jpg",
+      "bytes": 1901138,
+      "sha256": "c71d7c5fcde433a46128248726c39523346183d7e46e6085061572cdf5caa19f"
+    },
+    {
+      "path": "docs/assets/board/rf1-connected-board.jpg",
+      "bytes": 2469989,
+      "sha256": "1658d32bbc90408ef74b080f3b496d3211d3bbacd3458b1ee7498f9f753604bb"
+    },
+    {
+      "path": "docs/assets/board/rf1-maskrom-button-annotated.jpg",
+      "bytes": 2217684,
+      "sha256": "aa2d28743bfb75985b6733ffe4f367dd09df71c3d64d582fa628c85abe6ebc76"
+    },
+    {
+      "path": "docs/assets/board/rf1-ram-usb-dc.jpg",
+      "bytes": 1896541,
+      "sha256": "618cb9a60794aadacbb9f3c9b1e36c92917d84d4b2062552f55c584b870986ee"
+    },
+    {
+      "path": "docs/assets/board/rf1-soc-nand-button.jpg",
+      "bytes": 1934664,
+      "sha256": "a64fb27346104ce9afa35d912ad9696e709e8a697417b4cb1eead81636077ab5"
+    },
+    {
+      "path": "docs/assets/board/rf1-underside-power.jpg",
+      "bytes": 2232290,
+      "sha256": "4cde43a95030f8420c6e5a544a604dfd2819eab090b5f4b4450a7b10851d2aab"
+    },
+    {
+      "path": "docs/assets/board/rf1-underside-test-pads.jpg",
+      "bytes": 2106667,
+      "sha256": "1a9831de603c4b071a3d2b2a9729514cb5f0f1a50018f8292fef627e9575f3fd"
     },
     {
       "path": "evidence/INDEX.json",
@@ -664,13 +709,18 @@
     },
     {
       "path": "scripts/check_repository.py",
-      "bytes": 8178,
-      "sha256": "420736bfc23e4edd7d80527507a213f06450fae40ef2cc2dff2da8fc39304a4c"
+      "bytes": 9143,
+      "sha256": "8c49d54a5101497c9f7b336a48af5a16a5c2c676e55d437d993109e9d9312ef4"
     },
     {
       "path": "scripts/download_cygwin_packages.py",
       "bytes": 4384,
       "sha256": "fc595f1d8e46f8d22716b18e99ec0f1d5df0eb4e7b85978e8524af700738481c"
+    },
+    {
+      "path": "scripts/photo_support.py",
+      "bytes": 3546,
+      "sha256": "92945aeaebacba34e5783cc500d953048c0e9844d32694ea9c46acb286d8688b"
     },
     {
       "path": "scripts/refresh_metadata.py",
@@ -701,6 +751,11 @@
       "path": "tests/test_package_downloads.py",
       "bytes": 3511,
       "sha256": "17819418fa13ce3cce0dc5c68a54d1491bbfc76d37685a16158cacbfa8d93268"
+    },
+    {
+      "path": "tests/test_photo_metadata.py",
+      "bytes": 2165,
+      "sha256": "ad81dc9d74d6f9ede20334ca3d8b2481a88a284e0546109ad4d7e0a58f16a96c"
     },
     {
       "path": "tests/test_publication_boundaries.py",

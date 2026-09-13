@@ -8,6 +8,7 @@ records saying no license had been selected describe the earlier edition.
 | Original code in `scripts/`, `tests/`, and `toolkit/offline/`; original CI/configuration code | [MIT](LICENSES/MIT.txt) |
 | Original research-code contributions preserved in `toolkit/phase1_20260903/` and `toolkit/phase2_20260908/` | MIT for those original contributions only; preserved third-party fragments and vendor material are excluded from this grant |
 | Original README, documentation, research narratives, and original editorial text in evidence/provenance | [CC BY 4.0](LICENSES/CC-BY-4.0.txt) |
+| Owner-supplied board photographs and service-button annotation in `docs/assets/board/` | CC BY 4.0; credit LordVitaly |
 | Upstream notices, third-party source fragments, quotations and vendor material | Original terms and rights apply; not relicensed by this repository |
 
 The MIT grant does not turn an inert historical snapshot into a supported

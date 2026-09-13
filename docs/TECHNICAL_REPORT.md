@@ -56,6 +56,11 @@ A 2015 Japanese 5ch post described a hidden switch near one front USB port and a
 
 This was the key escape hatch: it provided a boot-ROM-controlled service path independent of Android, recovery and the installed NAND boot chain.
 
+The owner's [board photographs and marked service button](BOARD_PHOTOS.md)
+show the yellow tactile pushbutton and connector orientation on this RF-1.
+
+![Yellow service button marked by the owner on the investigated RF-1](assets/board/rf1-maskrom-button-annotated.jpg)
+
 ## 5. NAND backup and representation pitfalls
 
 The first full acquisition used a Rockchip `RS` path that returned records of 528 bytes:
