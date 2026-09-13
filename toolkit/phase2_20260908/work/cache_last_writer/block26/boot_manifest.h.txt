@@ -1,0 +1,8 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/cache_last_writer/block26/boot_manifest.h
+Role: case_specific_payload_source_not_complete_standalone_firmware
+Original repair session must not be resumed from this public copy.
+
+#define TARGET_LBA 0x1a000u
+#define SOURCE_CRC 0x8d89877eu

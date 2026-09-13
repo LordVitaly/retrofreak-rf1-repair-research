@@ -1,0 +1,28 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/verify_flashboot_bbt_replay.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Independent assertions over the bounded BBT replay output."""
+import json
+import struct
+from pathlib import Path
+root=Path(__file__).resolve().parents[1]
+d=json.loads((root/'outputs/flashboot_offline_bbt_stage2.json').read_text())
+assert d['return_value']==0 and d['error'] is None and d['stop'] is None
+header=bytes.fromhex(d['ftl_header_hex'])
+bbt=bytes.fromhex(d['bbt_header_hex'])
+u16=lambda data,offset:struct.unpack_from('<H',data,offset)[0]
+assert u16(header,4)==0x438 and u16(header,0xe)==2048
+assert u16(header,0x10)==1896 and u16(bbt,2)==4
+assert struct.unpack_from('<4H',bbt,6)==(12,13,14,15)
+assert struct.unpack_from('<4H',bbt,14)==(<REDACTED:DEVICE_BAD_BLOCK_LIST>)
+assert d['reads'][:5]==[
+    dict(sector=49152,count=1,first_tag='0xf000'),
+    dict(sector=49168,count=1,first_tag='0xffff'),
+    dict(sector=53248,count=1,first_tag='0xf000'),
+    dict(sector=53264,count=1,first_tag='0xffff'),
+    dict(sector=49152,count=8,first_tag='0xf000')]
+f900={r['sector']//4096 for r in d['reads'] if r['first_tag']=='0xf900'}
+assert f900=={2044,2045,2046,2047}
+print('PASS: actual-code BBT selection 12/13, four expected bad blocks, usable 1896, F900 scan 2044..2047; optimistic read status, injected scratch buffer.')

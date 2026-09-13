@@ -1,0 +1,12 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/read_status.ld
+Role: case_specific_payload_source_not_complete_standalone_firmware
+Original repair session must not be resumed from this public copy.
+
+ENTRY(read_status)
+SECTIONS {
+ . = 0x60800d80;
+ .text : { *(.text*) }
+ /DISCARD/ : { *(.ARM.exidx*) *(.ARM.extab*) *(.comment*) }
+}

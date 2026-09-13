@@ -1,0 +1,12 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/power_hold_snapshot.ld
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+ENTRY(power_snapshot)
+SECTIONS {
+ . = 0x60000400;
+ .text : { *(.text*) *(.rodata*) }
+ ASSERT(. <= 0x60001000, "Snapshot code too large")
+ /DISCARD/ : { *(.ARM.exidx*) *(.ARM.extab*) *(.comment*) }
+}

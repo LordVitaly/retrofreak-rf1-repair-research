@@ -1,0 +1,47 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_ftl_fullmap_system_read.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Same proven reader/bridge/return. Only remap mode and fixed logical LBA change."""
+import hashlib,json,struct,zlib,subprocess
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1]
+old=(ROOT/'work/ftl_bridge_read_v1/read.raw').read_bytes()
+assert hashlib.sha256(old).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+data=bytearray(old[:110080])
+assert data[0x76f8:0x76fc]==bytes.fromhex('0000a0e3') #60086cc4 MOV r0,#0
+data[0x76f8:0x76fc]=bytes.fromhex('0100a0e3')
+out=ROOT/'work/ftl_fullmap_system_read_v1';out.mkdir(exist_ok=False)
+elfpath=out/'read.elf'
+subprocess.run([str(ROOT/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe'),'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-nostdlib','-DRF_FULLMAP','work/ftl_bridge_read.S','-Wl,-T,work/ftl_bridge_read.ld','-Wl,-e,ftl_bridge_read','-o',str(elfpath)],cwd=ROOT,check=True)
+elf=elfpath.read_bytes();phoff=struct.unpack_from('<I',elf,28)[0];sz,n=struct.unpack_from('<HH',elf,42);code=[]
+for i in range(n):
+    typ,off,va,pa,fs,ms,flags,align=struct.unpack_from('<8I',elf,phoff+i*sz)
+    if typ==1 and fs and flags&1:
+        assert va==0x60007040 and fs<=0x180;code.append(elf[off:off+fs])
+assert len(code)==1
+data[0x7040:0x7040+len(code[0])]=code[0]
+data[0x1e0:0x1e4]=bytes(4);base=zlib.crc32(data);basis={}
+for bit in range(32):
+    trial=bytearray(data);trial[0x1e0+bit//8]^=1<<(bit%8);v=zlib.crc32(trial)^base;mask=1<<bit
+    while v:
+        p=v.bit_length()-1
+        if p not in basis:basis[p]=(v,mask);break
+        v^=basis[p][0];mask^=basis[p][1]
+v=<REDACTED:ARTIFACT_CRC>^base;solution=0
+while v:
+    p=v.bit_length()-1;v^=basis[p][0];solution^=basis[p][1]
+data[0x1e0:0x1e4]=struct.pack('<I',solution)
+assert zlib.crc32(data)==<REDACTED:ARTIFACT_CRC>
+allowed=((0x76f8,0x76fc),(0x7040,0x7040+len(code[0])),(0x1e0,0x1e4))
+assert all(any(a<=i<b for a,b in allowed) for i,(x,y) in enumerate(zip(data,old)) if x!=y)
+for off in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):assert data[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+for off in (0xbbc8,0xbc90):assert data[off:off+4]==bytes.fromhex('feffffea')
+raw=bytes(data)+bytes(272)
+with (out/'read.raw').open('xb') as f:f.write(raw)
+build=json.loads((ROOT/'outputs/ftl_bridge_read_build.json').read_text())
+build.update(read_lba='0x103000',remap_mode=1,expected_sha256='<REDACTED:HASH_OR_BYTES>',scope='Full remap mode1; fixed sector of known intact system logical block259; all NAND guards retained')
+build['cases']=[dict(name='actual_usb_entry',file=str((out/'read.raw').relative_to(ROOT)),cut_pc='0x600982e4',sha256=hashlib.sha256(raw).hexdigest())]
+with (ROOT/'outputs/ftl_fullmap_system_read_build.json').open('x') as f:json.dump(build,f,indent=2)
+print(json.dumps(build,indent=2))

@@ -1,0 +1,56 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/inventory_native_cache.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Offline F100/cache inventory from actual RF1 FtlCacheRecovery fields.
+Does not execute recovery or claim the resulting overlays are fully validated.
+"""
+import json
+from pathlib import Path
+ROOT=Path(__file__).parent
+rows=[]
+for p in sorted((ROOT/'native_ecc40_index').glob('NAND_*.json')):
+    rows.extend(json.loads(p.read_text())['blocks'])
+blocks=[]
+for row in rows:
+    m=row['page0_meta']
+    if m[0]&0xff00==0xf100:
+        blocks.append(dict(physical_block=row['physical_block'],counter=((m[0]&255)<<16)|m[1]))
+blocks.sort(key=lambda r:r['counter'],reverse=True)
+# GetRemapTbl retains at most16 consecutive most recent F100 block counters.
+retained=[]
+for row in blocks:
+    if retained and row['counter']!=retained[-1]['counter']-1: break
+    retained.append(row)
+    if len(retained)==16: break
+seen=set()
+entries=[]
+for row in retained:
+    chunk,local=divmod(row['physical_block'],64)
+    with (ROOT/'nand_native_ecc40'/f'NAND_{chunk:02d}.RAW').open('rb') as f:
+        f.seek(local*256*8448)
+        raw=f.read(256*8448)
+    for page in range(255,-1,-1):
+        start=page*8448
+        m=[int.from_bytes(raw[start+i*528+512:start+i*528+514],'little') for i in range(8)]
+        if m[2]==65535: continue
+        sector=m[2]|(m[3]<<16)
+        mask=m[4]|(m[5]<<16)
+        if sector in seen: continue
+        seen.add(sector)
+        if mask:
+            entries.append(dict(physical_block=row['physical_block'],page=page,
+                logical_sector=sector,logical_block=sector//4096,valid_sector_mask=mask,
+                metadata=m))
+        if len(entries)>=32: break
+    if len(entries)>=32: break
+report=dict(scope='Offline cache candidates; requires complete F100 set and ECC/read semantics validation',
+    indexed_physical_blocks=len(rows),all_blocks=blocks,retained_counter_run=retained,entries=entries)
+out=ROOT.parent/'outputs'/f'native_cache_inventory_{len(rows)}blocks.json'
+if not out.exists():
+    with out.open('x') as f: json.dump(report,f,indent=2)
+print('F100',blocks)
+print('retained',retained)
+for entry in entries: print(entry)
+print('cached boot/recovery/system blocks',[e['logical_block'] for e in entries if 6<=e['logical_block']<=18 or 186<=e['logical_block']<=259])

@@ -1,0 +1,36 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/boot_diagnostic_writer/system_writer_original.S
+Role: case_specific_payload_source_not_complete_standalone_firmware
+Original repair session must not be resumed from this public copy.
+
+.syntax unified
+.arm
+.section .text.original_wrapper,"ax",%progbits
+.global original_wrapper
+original_wrapper:
+    push {r0-r11,lr}
+    mov r4,r0
+    ldr pc,=0x600830e0
+    .ltorg
+.section .text.original_program,"ax",%progbits
+.global original_program
+original_program:
+    push {r0-r11,lr}
+    mov r9,r2
+    ldr pc,=0x6008afe4
+    .ltorg
+.section .text.original_erase,"ax",%progbits
+.global original_erase
+original_erase:
+    push {r0,r1,r4-r10,lr}
+    mov r6,r1
+    ldr pc,=0x6008b1f0
+    .ltorg
+.section .text.original_logical,"ax",%progbits
+.global original_logical
+original_logical:
+    push {r1-r11,lr}
+    mov r5,r1
+    ldr pc,=0x600873a0
+    .ltorg

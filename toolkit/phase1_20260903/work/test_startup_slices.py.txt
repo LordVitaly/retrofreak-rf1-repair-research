@@ -1,0 +1,60 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_startup_slices.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Bounded original startup prefix + state restoration. No peripheral model."""
+import hashlib,json,struct
+import startup_slice_test_harness as h
+from unicorn import UC_HOOK_CODE
+from unicorn.arm_const import UC_ARM_REG_CPSR,UC_ARM_REG_CP_REG,UC_ARM_REG_SP
+ROOT=h.ROOT;build=json.loads((ROOT/'outputs/startup_slices_build.json').read_text())
+assert build['bridge_sha256']==h.r['files']['usb_ram_bridge_checkpoint_modefix.BOOT.OFFLINE_ONLY.bin']['sha256']
+results=[]
+for case in build['cases']:
+    raw=(ROOT/case['file']).read_bytes();assert hashlib.sha256(raw).hexdigest()==case['sha256']
+    cut=int(case['cut_pc'],16)
+    for mode,stack in ((0x13,0x60422268),(0x12,0x60022268)):
+        u=h.machine();u.mem_map(0x10080000,0x1000)
+        initial_sram=0x76543210;u.mem_write(0x10080000,struct.pack('<I',initial_sram))
+        u.mem_write(h.B+61440,bytes([0xa5])*(110268-61440+64))
+        before=bytes(u.mem_read(h.B,110268+64))
+        u.mem_write(h.STAGE,raw)
+        u.reg_write(UC_ARM_REG_CPSR,mode)
+        initial_sctlr=u.reg_read(UC_ARM_REG_CP_REG,(15,0,0,1,0,0,0))
+        assert initial_sctlr&5==0, 'This known bridge runs with MMU/D-cache off'
+        h.SP=stack
+        visited=[]
+        def trace(uc,pc,size,ctx):
+            if h.B<=pc<h.B+110268:
+                assert pc in (h.B,h.B+4) or h.B+0x100<=pc<h.B+0x1b0 or h.B+0x20c<=pc<=cut,hex(pc)
+                if pc>=h.B+0x20c:visited.append(pc)
+        hook=u.hook_add(UC_HOOK_CODE,trace)
+        size=h.symbols['bridge_relocated_end']-h.symbols['bridge_relocated']
+        rc,writes=h.call(u,h.symbols['bridge_execute'],ranges=(
+            (0x61200000,0x61200000+110268),(0x62000000,0x62000000+size),
+            (h.B,h.B+110268),(0x60801000,0x60801018),
+            (0x10080000,0x10080004),(h.STAGE+110080,h.STAGE+110104)),budget=16000000)
+        u.hook_del(hook)
+        assert rc==0xffffffff and visited[-1]==cut
+        assert bytes(u.mem_read(h.B,110268+64))==before
+        assert u.reg_read(UC_ARM_REG_CP_REG,(15,0,0,1,0,0,0))==initial_sctlr
+        assert struct.unpack('<I',u.mem_read(0x10080000,4))[0]==initial_sram
+        assert u.reg_read(UC_ARM_REG_CPSR)&0xff==mode and u.reg_read(UC_ARM_REG_SP)==stack
+        after=bytes(u.mem_read(h.STAGE,len(raw)));record=struct.unpack_from('<6I',after,110080)
+        expected_sctlr=initial_sctlr if case['name']=='control_before_cpu' else initial_sctlr&~0x10003805
+        expected_sram=initial_sram if case['name']=='control_before_cpu' else 0x18
+        assert record==(0x31475453,cut,initial_sctlr,expected_sctlr,expected_sram,initial_sram),record
+        assert after[:110080]==raw[:110080] and after[110104:]==bytes(len(raw)-110104)
+        # Real existing RS callback retrieves the independent new tail record.
+        rc,_=h.call(u,h.B+0x787c,(0,0x7f0000,h.BUF,209),((h.BUF,h.BUF+len(raw)),))
+        assert rc==0 and bytes(u.mem_read(h.BUF,len(raw)))==after
+        results.append(dict(name=case['name'],mode=hex(mode),cut_pc=hex(cut),
+            reached=True,sram_and_sctlr_restored=True,usbplug_ram_restored=True,
+            no_NAND_USB_PMU_GRF_access=True,tail_record_exact=True,record=[hex(x) for x in record]))
+        print('PASS',case['name'],hex(mode),flush=True)
+report=dict(device_access=False,bridge_sha256=build['bridge_sha256'],cases=results,
+    all_pass=True,limits=['Flat memory, no cache/DMA timing model','SRAM word values are synthetic',
+    'Does not execute stages at/after original 0x260; those remain untested','Hardware return after prefix not yet proved'])
+with (ROOT/'outputs/startup_slices_offline.json').open('x',encoding='utf-8') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

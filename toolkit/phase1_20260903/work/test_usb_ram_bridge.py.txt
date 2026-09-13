@@ -1,0 +1,121 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_usb_ram_bridge.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Bounded ARM tests of RAM transport and handoff. No peripheral emulation."""
+import hashlib,json,struct,sys
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'work/emulator_deps'))
+from unicorn import Uc,UC_ARCH_ARM,UC_MODE_ARM,UC_HOOK_CODE,UC_HOOK_MEM_WRITE
+from unicorn.arm_const import *
+r=json.loads((ROOT/'outputs/usb_ram_bridge_disconnect_build.json').read_text())
+usb=(ROOT/'work/usb_ram_bridge_disconnect.USBPLUG.OFFLINE_ONLY.bin').read_bytes()
+raw=(ROOT/'work/usb_ram_bridge_disconnect.guarded_payload.RAM_ONLY.raw').read_bytes()
+for name in ('usb_ram_bridge_disconnect.USBPLUG.OFFLINE_ONLY.bin','usb_ram_bridge_disconnect.BOOT.OFFLINE_ONLY.bin','usb_ram_bridge_disconnect.guarded_payload.RAM_ONLY.raw'):
+    assert hashlib.sha256((ROOT/'work'/name).read_bytes()).hexdigest()==r['files'][name]['sha256']
+symbols={k:int(v,16) for k,v in r['symbols'].items()}
+B,STAGE,BUF,SP,STOP=0x60000000,0x61000000,0x60050000,0x607ff000,0x607ffffc
+def machine():
+    u=Uc(UC_ARCH_ARM,UC_MODE_ARM,cpu=UC_CPU_ARM_CORTEX_A9)
+    for start,size in ((B,0x900000),(STAGE,0x30000),(0x62000000,0x1000),(0x10180000,0x1000)):
+        u.mem_map(start,size)
+    u.mem_write(B,usb)
+    u.emu_start(B+0x30,B+0x34,count=10000)
+    assert u.reg_read(UC_ARM_REG_PC)==B+0x34
+    assert u.reg_read(UC_ARM_REG_R0)==0x101027fc
+    assert bytes(u.mem_read(0x60800000,r['addon_bytes']))==usb[0xe000:0xe000+r['addon_bytes']]
+    # Appended storage is not persistent: original C startup/buffers may clear it.
+    u.mem_write(B+0xe000,bytes(4096))
+    return u
+def call(u,pc,args=(),ranges=(),budget=2000000,stop=STOP):
+    u.reg_write(UC_ARM_REG_SP,SP);u.reg_write(UC_ARM_REG_LR,STOP)
+    for register,value in zip((UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3),args):
+        u.reg_write(register,value)
+    writes=[]
+    def write(uc,access,address,size,value,ctx):
+        assert SP-0x1000<=address and address+size<=SP or any(a<=address and address+size<=z for a,z in ranges),(hex(pc),hex(address),size)
+        writes.append((address,size))
+    handle=u.hook_add(UC_HOOK_MEM_WRITE,write)
+    u.emu_start(pc,stop,count=budget)
+    u.hook_del(handle)
+    assert u.reg_read(UC_ARM_REG_PC)==stop,hex(u.reg_read(UC_ARM_REG_PC))
+    return u.reg_read(UC_ARM_REG_R0),writes
+u=machine()
+rc,_=call(u,B+0x787c,(0,0x7effff,BUF,1),((BUF,BUF+528),))
+assert rc==0 and bytes(u.mem_read(BUF,8))==b'RF1RAM03'
+assert bytes(u.mem_read(BUF+8,8))==struct.pack('<II',110080,<REDACTED:ARTIFACT_CRC>)
+
+# Match measured host WS framing and explicit 16-sector host commands.
+u.mem_write(STAGE,bytes([0xa5])*0x30000)
+for start in range(0,215,16):
+    count=min(16,215-start)
+    piece=b''.join(raw[j*512:(j+1)*512]+bytes([0xa5])*16 for j in range(start,start+count))
+    u.mem_write(BUF,piece)
+    end=len(raw) if start+count==215 else (start+count)*512
+    rc,_=call(u,B+0x7718,(0,0x7f0000+start,BUF,count),((STAGE+start*512,STAGE+end),))
+    assert rc==0
+assert bytes(u.mem_read(STAGE,len(raw)))==raw
+rc,_=call(u,B+0x787c,(0,0x7f0000,BUF,209),((BUF,BUF+len(raw)),))
+assert rc==0 and bytes(u.mem_read(BUF,len(raw)))==raw
+
+negatives=[]
+for offset in (0x7718,0x787c):
+    for args in ((1,0x7f0000,BUF,1),(0,0,BUF,1),(0,0x16020,BUF,16),
+        (0,0x7f0000,BUF,0),(0,0x7f0000,BUF,216),(0,0x7f00d6,BUF,2),
+        (0,0x7f00d7,BUF,1),(0,0xffffffff,BUF,1),(0,0x7f0000,0x10500000,1),
+        (0,0x7f0000,0x607ffff0,1),(0,0x7f0000,BUF,0xffffffff)):
+        result,writes=call(u,B+offset,args)
+        assert result==0xffffffff
+        negatives.append(dict(entry=hex(offset),args=[hex(v) for v in args],rejected=True))
+for off in (0x3620,0x3fa4,0x7528,0x75ac,0x7614,0x7624):
+    result,writes=call(u,B+off,(0,0x16000,BUF,16))
+    assert result==0xffffffff and not writes
+
+# Execute the actual replacement dispatcher for every possible command byte.
+allowed={0:0x18d0,1:0x18d8,4:0x18f0,5:0x18f8,0x1a:0x1908,0x1b:0x1928,0xff:0x1910}
+for op in range(256):
+    u.reg_write(UC_ARM_REG_R0,op)
+    def stop_dispatch(uc,pc,size,ctx):
+        if pc>=B+0x18bc: uc.emu_stop()
+    h=u.hook_add(UC_HOOK_CODE,stop_dispatch,begin=B+0x1850,end=B+0x1944)
+    u.emu_start(B+0x1850,B+0x1944,count=64);u.hook_del(h)
+    assert u.reg_read(UC_ARM_REG_PC)==B+allowed.get(op,0x18bc)
+
+# Bad payload cannot launch; test beginning/middle/end, then exact payload.
+for position in (0,55040,110079):
+    u.mem_write(STAGE+position,bytes([raw[position]^1]))
+    result,_=call(u,symbols['bridge_execute'],budget=16000000)
+    assert result==0xffffffff
+    u.mem_write(STAGE+position,raw[position:position+1])
+
+relocated_size=symbols['bridge_relocated_end']-symbols['bridge_relocated']
+_,writes=call(u,symbols['bridge_execute'],ranges=((0x62000000,0x62000000+relocated_size),
+    (B,B+110080+188),(0x10180804,0x10180808)),budget=16000000,stop=B)
+assert bytes(u.mem_read(B,110080))==raw[:110080]
+assert bytes(u.mem_read(B+110080,188))==bytes(188)
+assert struct.unpack('<I',u.mem_read(0x10180804,4))[0]==2
+assert next(a for a,n in writes if not SP-0x1000<=a<SP)==0x10180804
+# Isolated transition only: one exact USB register RMW precedes any copy.
+# These synthetic register values test instructions, not controller behavior.
+disconnect_cases=[]
+for initial in (0,1,0xa5a5a5a5,0xffffffff):
+    v=machine();v.mem_write(STAGE,raw)
+    v.mem_write(0x10180804,struct.pack('<I',initial))
+    _,w=call(v,symbols['bridge_handoff'],ranges=((0x62000000,0x62000000+relocated_size),
+        (B,B+110080+188),(0x10180804,0x10180808)),stop=B)
+    assert struct.unpack('<I',v.mem_read(0x10180804,4))[0]==initial|2
+    assert w[0]==(0x10180804,4)
+    assert bytes(v.mem_read(B,110080))==raw[:110080]
+    disconnect_cases.append(dict(initial=hex(initial),result=hex(initial|2)))
+report=dict(device_access=False,build_sha256=r['files']['usb_ram_bridge_disconnect.BOOT.OFFLINE_ONLY.bin']['sha256'],
+    marker_exact=True,full_110352_byte_RAM_roundtrip=True,WS_512_plus_16_unwrapped=True,range_negative_tests=len(negatives),
+    six_NAND_entry_guards_reject_without_writes=True,all_256_opcodes_checked=True,
+    three_corrupted_payloads_refused=True,guarded_flashboot_handoff_bytes_exact=True,
+    tail188_zero=True,extra_code_bytes=r['addon_bytes'],bridge_survives_cleared_low_append_area=True,
+    disconnect_before_copy=True,disconnect_cases=disconnect_cases,
+    limits=['No real USB transport/host WS framing test','No NAND init or controller emulation',
+            'Stops before FlashBoot first instruction','No claim that six entry guards cover every possible controller path'])
+with (ROOT/'outputs/usb_ram_bridge_disconnect_offline_tests.json').open('x',encoding='utf-8') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

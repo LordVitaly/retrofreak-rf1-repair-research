@@ -1,0 +1,36 @@
+{
+  "date": "2026-09-12",
+  "scope": "Public input provenance only; original narrative language files are not embedded. Unrelated collection archives were not used.",
+  "inputs": [
+    {
+      "name": "RetroFreak_RF1_Repair_Research_GitHub_English_2026-09-12.zip",
+      "role": "Previous English publication; base for this final review",
+      "sha256": "179e7ff734e263e50b37b1e21ea254af72fb3a7e85f7f97825735603c75dbf22",
+      "bytes": 1409623
+    },
+    {
+      "name": "RF1_20260903_THREAD_PUBLIC_2026-09-09.zip",
+      "role": "Early sanitized source/evidence archive",
+      "sha256": "307e5fce0f89f8814346104bc1d41a137aa69e59449f6b20957bba78953b48a6",
+      "bytes": 826287
+    },
+    {
+      "name": "RF1_PUBLIC_REPAIR_2026-09-09_USB_FINAL.zip",
+      "role": "Late sanitized source/evidence archive including final stock-boot return",
+      "sha256": "0cecd00a8c9836732a8f69b9d93618895542816a61184791b82a048347f3bf17",
+      "bytes": 1000494
+    },
+    {
+      "name": "RF1_20260903_THREAD_HANDOFF_PUBLIC_2026-09-09.md",
+      "role": "Authoritative early public handoff; narrative not redistributed",
+      "sha256": "c1702df33ba46ee5d987561bf32a663266287f087f0faaf5e17592a176cfac54",
+      "bytes": 32611
+    },
+    {
+      "name": "RF1_PUBLIC_REPAIR_2026-09-09_USB_FINAL_HANDOFF_RU.md",
+      "role": "Authoritative final public handoff; narrative not redistributed",
+      "sha256": "02527b88c0384a773d7f5cb410c89341f9e8b99b769abc518acd77b5da149227",
+      "bytes": 109784
+    }
+  ]
+}

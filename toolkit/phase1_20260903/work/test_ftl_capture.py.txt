@@ -1,0 +1,34 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_ftl_capture.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Only the added snapshot helper, no repeated full startup/peripheral replay."""
+import hashlib,json,struct
+import startup_slice_test_harness as h
+from unicorn import UC_HOOK_CODE
+from unicorn.arm_const import UC_ARM_REG_R4,UC_ARM_REG_LR,UC_ARM_REG_PC
+build=json.loads((h.ROOT/'outputs/ftl_capture_build.json').read_text())
+raw=(h.ROOT/'work/ftl_capture_v1/capture.raw').read_bytes()
+assert hashlib.sha256(raw).hexdigest()==build['sha256']
+assert json.loads((h.ROOT/'work/ftl_fullmap_system_read_hardware_attempt01/result.json').read_text())['all_pass']
+pattern=hashlib.shake_256(b'FTL snapshot exact bounds').digest(0xa8000);results=[]
+for return_code in (0,0xffffffff):
+    u=h.machine();u.mem_map(0x62fff000,0xaa000)
+    u.mem_write(h.B,raw);u.mem_write(0x602b3000,pattern[:0xa6000]);u.mem_write(0x60359000,pattern[0xa6000:])
+    u.mem_write(0x62fff000,b'\x69'*4096);u.mem_write(0x630a8000,b'\x73'*4096)
+    calls=[]
+    def read(uc,pc,size,ctx):
+        assert [uc.reg_read(r) for r in (h.UC_ARM_REG_R0,h.UC_ARM_REG_R1,h.UC_ARM_REG_R2,h.UC_ARM_REG_R3)]==[0,0x103000,1,0x6101b000]
+        if return_code==0:uc.mem_write(0x6101b000,bytes(512))
+        uc.reg_write(h.UC_ARM_REG_R0,return_code);uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR));calls.append(pc)
+    u.hook_add(UC_HOOK_CODE,read,begin=0x600846a0,end=0x600846a0)
+    u.reg_write(UC_ARM_REG_R4,0x6009a1f8)
+    h.call(u,0x60007040,ranges=((0x6101af10,0x6101af28),(0x6101b000,0x6101b200),(0x63000000,0x630a8000)),stop=0x60000100,budget=2000000)
+    assert calls==[0x600846a0] and u.reg_read(UC_ARM_REG_R4)==0x6009a1f8
+    assert bytes(u.mem_read(0x63000000,0xa8000))==pattern
+    assert bytes(u.mem_read(0x62fff000,4096))==b'\x69'*4096 and bytes(u.mem_read(0x630a8000,4096))==b'\x73'*4096
+    assert struct.unpack('<4I',u.mem_read(0x6101af18,16))==(0x103000,1,return_code,0xa8000)
+    results.append(dict(read_status=hex(return_code),pass_test=True,captured_bytes=0xa8000,main_r4_preserved=True,exact_existing_return=True,sentinels_unchanged=True))
+with (h.ROOT/'outputs/ftl_capture_offline.json').open('x') as f:json.dump(dict(all_pass=True,device_access=False,sha256=build['sha256'],cases=results,limits=['Original FTL read is an ABI contract here; parent actual code/startup already hardware proven','No change to NAND guards or peripheral startup; this proves only added RAM copying']),f,indent=2)
+print('PASS capture helper: success/error paths,688128bytes exact, old return unchanged')

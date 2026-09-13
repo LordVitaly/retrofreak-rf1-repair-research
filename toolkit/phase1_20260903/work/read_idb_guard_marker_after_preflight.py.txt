@@ -1,0 +1,24 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/read_idb_guard_marker_after_preflight.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Read current guard state once after failed RFI preflight. No writes/reset/DB."""
+import json,struct
+from pathlib import Path
+from ram_console_session import RamConsole
+ROOT=Path(__file__).resolve().parents[1]
+prior=json.loads((ROOT/'work/idb_copy6_restore_hardware_attempt01/result.json').read_text())
+assert not prior['erase_control_dispatched'] and prior['program_chunks_dispatched']==0
+out=ROOT/'work/idb_copy6_marker_after_preflight01';out.mkdir(exist_ok=False)
+c=None;result=dict(nand_write_commands=0,read_complete=False)
+try:
+    c=RamConsole(out);c.select();p=out/'marker.raw'
+    c.command(f'RS 0x7effff 0x1 {p}')
+    data=p.read_bytes();assert len(data)==528
+    result.update(read_complete=True,words=list(struct.unpack('<15I',data[:60])))
+except BaseException as e:result['error']=repr(e);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    with (out/'result.json').open('x') as f:json.dump(result,f,indent=2)
+    print(json.dumps(result,indent=2),flush=True)

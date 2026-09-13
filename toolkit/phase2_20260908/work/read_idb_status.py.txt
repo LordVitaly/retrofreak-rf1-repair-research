@@ -1,0 +1,59 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/read_idb_status.py
+Role: historical_device_runner_or_stateful_scenario_review_before_any_use
+Original repair session must not be resumed from this public copy.
+
+"""Fresh MaskROM; read IDB headers and FlashInfo with native return logging."""
+from pathlib import Path
+import hashlib,json,os,struct,sys,time
+OLD=Path('<EXTERNAL_STAGE_03>');HERE=Path(__file__).resolve().parent
+sys.path.insert(0,str(OLD/'work'))
+from ram_console_session import RamConsole
+from console_completion import ANSI,completed_response
+assert sys.argv[1:]==['--fresh-maskrom-confirmed']
+loader=HERE/'idb_status_readonly_v4/reader.bin'
+assert hashlib.sha256(loader.read_bytes()).hexdigest()=='<HISTORICAL_HASH_REDACTED>'
+assert json.loads((loader.parent/'build.json').read_text())['all_pass']
+out=HERE/'idb_status_attempt01';out.mkdir(exist_ok=False)
+result=dict(complete=False,nand_writes_enabled=False,ftl_init=False,reset_commands=0,reads=[])
+c=None
+def command(cmd,token):
+    assert cmd=='RFI' or cmd=='DB '+os.path.relpath(loader,out)
+    start=len(''.join(c.chunks));c.commands.append(cmd);c.send_once(cmd)
+    deadline=time.monotonic()+45
+    while time.monotonic()<deadline:
+        response=''.join(c.chunks);done=completed_response(response,start,token)
+        if done is not None:return done
+        if 'Error:' in ANSI.sub('',response[start:]):raise RuntimeError('Transport error; no retry')
+        time.sleep(.01)
+    raise RuntimeError('No completion; no retry')
+def read(name,sector,count):
+    block,local=divmod(sector,4096)
+    assert (sector==0x7effff and count==1) or (block in (1,3,5,6) and (local,count) in ((0,4),(240,4),(244,1)))
+    p=out/(name+'.raw');c.command(f'RS {hex(sector)} {hex(count)} {p}')
+    raw=p.read_bytes();assert len(raw)==528*count
+    return raw
+def marker(name):
+    w=list(struct.unpack_from('<18I',read(name,0x7effff,1)))
+    assert w[:10]==[0x31424449,0x06000103,0,0,0,0,0,0,0x6000,0] and w[13]==1 and w[15:]==[1,0x5770,1],w
+    return w
+try:
+    c=RamConsole(out);intro=c.wait('Select input');assert 'Found 1 rockusb' in intro and 'Maskrom' in intro
+    c.select();command('DB '+os.path.relpath(loader,out),'Download boot ok')
+    previous=marker('loaded_marker');result['loaded_marker']=previous;assert previous[10:13]==[0,0,0]
+    for block in (6,5,3,1):
+        for label,offset,count in (('headers',0,4),('code_tail',240,4),('flashinfo',244,1)):
+            name=f'block{block:02d}_{label}'
+            raw=read(name,block*4096+offset,count)
+            current=marker(name+'_marker')
+            assert current[10]-previous[10]==1
+            main=b''.join(raw[i:i+512] for i in range(0,len(raw),528))
+            row=dict(block=block,part=label,sector=hex(block*4096+offset),native_return=current[12],native_error_count_delta=current[11]-previous[11],main_sha256=hashlib.sha256(main).hexdigest())
+            result['reads'].append(row);print(json.dumps(row),flush=True);previous=current
+    result['final_marker']=marker('final_marker');result['complete']=True
+except BaseException as exc:result['error']=repr(exc);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    with (out/'result.json').open('x') as f:json.dump(result,f,indent=2)
+    print(json.dumps({k:v for k,v in result.items() if k not in ('reads','commands')},indent=2))

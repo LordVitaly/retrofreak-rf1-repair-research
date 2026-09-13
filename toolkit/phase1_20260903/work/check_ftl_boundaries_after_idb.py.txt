@@ -1,0 +1,96 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/check_ftl_boundaries_after_idb.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Two existing return-point payloads, current authenticated bridge, no DB/retry."""
+import hashlib,json,os,struct,sys
+from pathlib import Path
+from ram_console_session import RamConsole
+ROOT=Path(__file__).resolve().parents[1]
+assert sys.argv[1:] in (['--after-successful-nand-init'],['--trace-failed-bbt-existing-bridge'],['--trace-bbt-full-read-existing-bridge'],['--bbt-count-ram-only-existing-bridge'],['--remap-with-count-ram-only'])
+remapfix=sys.argv[1:]==['--remap-with-count-ram-only']
+ramfix=remapfix or sys.argv[1:]==['--bbt-count-ram-only-existing-bridge']
+detail=ramfix or sys.argv[1:]==['--trace-bbt-full-read-existing-bridge']
+trace=detail or sys.argv[1:]==['--trace-failed-bbt-existing-bridge']
+prior=ROOT/'work/nand_init_after_idb_readonly_attempt01'
+result0=json.loads((prior/'result.json').read_text())
+assert result0['all_pass'] and result0['nand_init_success']
+cases=[('bbt_return','startup_slices_v23_bbt','<REDACTED:HASH_OR_BYTES>',0x60086c84),
+       ('remap_return','startup_slices_v24_remap','<REDACTED:HASH_OR_BYTES>',0x60086ccc)]
+if trace:cases=[('trace','bbt_read_trace_v1','<REDACTED:HASH_OR_BYTES>',0x60086c84)]
+if detail:cases=[('trace','bbt_read_trace_v2','<REDACTED:HASH_OR_BYTES>',0x60086c84)]
+if ramfix:cases=[('trace','bbt_read_trace_v3_ram_count','<REDACTED:HASH_OR_BYTES>',0x60086c84)]
+if remapfix:cases=[('trace','bbt_ram_count_remap_v4','<REDACTED:HASH_OR_BYTES>',0x60086ccc)]
+payloads=[]
+for name,folder,digest,cut in cases:
+    raw=(ROOT/'work'/folder/(name+'.raw')).read_bytes()
+    assert len(raw)==110352 and hashlib.sha256(raw).hexdigest()==digest
+    if trace:
+        proof=json.loads((ROOT/'work'/folder/'build.json').read_text());assert proof['all_pass'] and proof['sha256']==digest
+    else:
+        assert json.loads((ROOT/f'outputs/startup_{name}_offline.json').read_text())['all_pass']
+        previous=json.loads((ROOT/f'work/startup_{name}_hardware_attempt01/result.json').read_text())
+        assert not previous.get('error') and previous['cases'][0][name]=='0x0'
+    for off in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):
+        assert raw[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+    for off in (0xbbc8,0xbc90):assert raw[off:off+4]==bytes.fromhex('feffffea')
+    payloads.append(raw)
+out=ROOT/('work/remap_bbt_count_ram_only_attempt01' if remapfix else 'work/bbt_count_ram_only_hardware_attempt01' if ramfix else 'work/bbt_full_read_trace_hardware_attempt01' if detail else 'work/bbt_read_trace_hardware_attempt01' if trace else 'work/ftl_boundaries_after_idb_attempt01');out.mkdir(exist_ok=False)
+c=None;result=dict(all_pass=False,nand_writes_enabled=False,db_commands=0,cases=[])
+def save(name,data):
+    with (out/name).open('x') as f:json.dump(data,f,indent=2);f.flush();os.fsync(f.fileno())
+def read(name,sector,count):
+    assert (sector,count) in ((0x7effff,1),(0x7f0000,0xd1)) or trace and (sector,count)==(0x7f00d1,2)
+    p=out/(name+'.raw');c.command(f'RS {hex(sector)} {hex(count)} {p}')
+    b=p.read_bytes();assert len(b)==count*528;return b
+try:
+    c=RamConsole(out);c.select()
+    if trace:
+        prior=ROOT/('work/bbt_count_ram_only_hardware_attempt01' if remapfix else 'work/bbt_full_read_trace_hardware_attempt01' if ramfix else 'work/bbt_read_trace_hardware_attempt01' if detail else 'work/ftl_boundaries_after_idb_attempt01')
+        expected_marker=(prior/('trace_marker.raw' if detail else 'bbt_return_marker.raw')).read_bytes()
+        assert expected_marker==b'RF1CKP02'+struct.pack('<IIII',110080,<REDACTED:ARTIFACT_CRC>,1,0x60000004)+bytes(504)
+        expected_data=(prior/('trace_after.raw' if detail else 'bbt_return_after.raw')).read_bytes()
+        assert struct.unpack_from('<II',expected_data,110080)==(0x44475453,0x60086c84)
+        assert struct.unpack_from('<I',expected_data,110344)[0]==(0 if remapfix else 0xffffffff)
+        assert read('initial_marker',0x7effff,1)==expected_marker
+        assert read('previous',0x7f0000,0xd1)==expected_data
+    else:
+        assert read('initial_marker',0x7effff,1)==(prior/'marker_after.raw').read_bytes()
+        assert read('previous',0x7f0000,0xd1)==(prior/'after.raw').read_bytes()
+    for sequence,((name,folder,digest,cut),raw) in enumerate(zip(cases,payloads),2):
+        case=dict(name=name,sha256=digest);result['cases'].append(case)
+        for i,off in enumerate(range(0,110080,8192)):
+            p=out/f'{name}_{i:02d}.bin'
+            with p.open('xb') as f:f.write(raw[off:min(off+8192,110080)])
+            c.command(f'WS {hex(0x7f0000+off//512)} {p}')
+        assert read(name+'_before',0x7f0000,0xd1)==raw;case['ram_exact']=True
+        save(name+'_DISPATCHED_NO_RETRY.json',case);c.command('RD')
+        data=read(name+'_after',0x7f0000,0xd1)
+        assert data[:110080]==raw[:110080] and data[110348:]==bytes(4)
+        w=struct.unpack_from('<67I',data,110080);case['record']=[hex(x) for x in w]
+        assert w[:2]==(0x44475453,cut) and w[2]&5==0 and w[3]==w[2]&~0x10003805
+        assert w[11]&31==0x12 and w[12:14]==(0x600011fc,0x600009c0) and w[14]==w[10]+60
+        assert all(w[i]==0 for i in (15,16,19)) and w[21] in (0,1)
+        assert w[20]==w[3]|0x1005 and w[22]&0xfff==0xc8 and w[28:30]==(1,0)
+        case['return_code']=hex(w[66]);case['geometry']=data[110272:110344].hex()
+        marker=read(name+'_marker',0x7effff,1)
+        # Completed flag, not an execution counter: each upload clears it.
+        assert marker==b'RF1CKP02'+struct.pack('<IIII',110080,<REDACTED:ARTIFACT_CRC>,1,0x60000004)+bytes(504)
+        case['bridge_returned']=True;save(name+'_result.json',case)
+        print(json.dumps(dict(name=name,return_code=case['return_code'],bridge_returned=True)),flush=True)
+        if trace:
+            log=read('read_trace',0x7f00d1,2)
+            magic,total,errors,tags=struct.unpack_from('<4I',log)
+            assert magic==0x31544242 and total<=50*256 and errors<=total and tags<=total
+            result['trace']=dict(reads=total,nonzero_read_returns=errors,f000_tags=tags,rows=[dict(zip(('sector','return_code','aux_tag','aux_version','main_first_word','sectors' if detail else 'aux_logical_count'),struct.unpack_from('<6I',log,16+i*24))) for i in range(min(total,32))])
+            if detail:result['trace']['ftl_header_u16']=list(struct.unpack_from('<16H',log,800))
+            if ramfix:result['trace'].update(original_bbt_meta=list(struct.unpack_from('<8H',log,832)),ram_substitution_value=struct.unpack_from('<I',log,848)[0])
+            print(json.dumps(result['trace']),flush=True)
+        else:assert w[66]==0,'Nonzero stage return; stop before next stage, no retry'
+    result['all_pass']=True
+except BaseException as e:result['error']=repr(e);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    save('result.json',result)
+    print(json.dumps({k:v for k,v in result.items() if k not in ('commands','cases')},indent=2),flush=True)

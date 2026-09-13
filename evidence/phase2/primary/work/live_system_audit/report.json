@@ -1,0 +1,173 @@
+{
+  "official_image_path": "<EXTERNAL_STAGE_01>\\work\\rkfw_contents\\components\\system.img",
+  "official_image_bytes": 155185152,
+  "official_image_sha256": "b9ca511124e6c3d9ee2a1e31220f6bf5a858f06d88f9003f5fd7f7e25cf5676a",
+  "hardware_access": false,
+  "commands": {
+    "inode234_stat": {
+      "command": "stat <234>",
+      "returncode": 0,
+      "stdout": "Inode: 234   Type: regular    Mode:  0644   Flags: 0x0\nGeneration: 0    Version: 0x00000000\nUser:     0   Group:     0   Size: 8767485\nFile ACL: 0\nLinks: 1   Blockcount: 17194\nFragment:  Address: 0    Number: 0    Size: 0\nctime: 0x56c3e519 -- Wed Feb 17 06:12:25 2016\natime: 0x56c3e4b5 -- Wed Feb 17 06:10:45 2016\nmtime: 0x56c3e4b5 -- Wed Feb 17 06:10:45 2016\nBLOCKS:\n(0-11):27789-27800, (IND):27801, (12-267):27802-28057, (DIND):28058, (IND):28059, (268-523):28060-28315, (IND):28316, (524-779):28317-28572, (IND):28573, (780-1035):28574-28829, (IND):28830, (1036-1291):28831-29086, (IND):29087, (1292-1547):29088-29343, (IND):29344, (1548-1803):29345-29600, (IND):29601, (1804-2059):29602-29857, (IND):29858, (2060-2315):29859-30114, (IND):30115, (2316-2571):30116-30371, (IND):30372, (2572-2827):30373-30628, (IND):30629, (2828-3083):30630-30885, (IND):30886, (3084-3339):30887-31142, (IND):31143, (3340-3595):31144-31399, (IND):31400, (3596-3851):31401-31656, (IND):31657, (3852-4107):31658-31913, (IND):31914, (4108-4129):31915-31936, (4130-4363):23053-23286, (IND):23287, (4364-4619):23288-23543, (IND):23544, (4620-4875):23545-23800, (IND):23801, (4876-5026):23802-23952, (5027-5131):37236-37340, (IND):37341, (5132-5387):37342-37597, (IND):37598, (5388-5643):37599-37854, (IND):37855, (5644-5899):37856-38111, (IND):38112, (5900-6155):38113-38368, (IND):38369, (6156-6411):38370-38625, (IND):38626, (6412-6667):38627-38882, (IND):38883, (6668-6923):38884-39139, (IND):39140, (6924-7179):39141-39396, (IND):39397, (7180-7435):39398-39653, (IND):39654, (7436-7691):39655-39910, (IND):39911, (7692-7700):39912-39920, (7701-7947):42786-43032, (IND):43033, (7948-8203):43034-43289, (IND):43290, (8204-8459):43291-43546, (IND):43547, (8460-8561):43548-43649\nTOTAL: 8597\n\n",
+      "stderr": "debugfs 1.44.5 (15-Dec-2018)\n"
+    },
+    "inode234_name": {
+      "command": "ncheck 234",
+      "returncode": 0,
+      "stdout": "Inode\tPathname\n234\t/framework/framework-res.apk\n",
+      "stderr": "debugfs 1.44.5 (15-Dec-2018)\n"
+    },
+    "gles_stat": {
+      "command": "stat /lib/libGLESv1_CM.so",
+      "returncode": 0,
+      "stdout": "Inode: 225   Type: regular    Mode:  0644   Flags: 0x0\nGeneration: 0    Version: 0x00000000\nUser:     0   Group:     0   Size: 21564\nFile ACL: 0\nLinks: 1   Blockcount: 46\nFragment:  Address: 0    Number: 0    Size: 0\nctime: 0x56c3e519 -- Wed Feb 17 06:12:25 2016\natime: 0x56c3e4c2 -- Wed Feb 17 06:10:58 2016\nmtime: 0x56c3e4c2 -- Wed Feb 17 06:10:58 2016\nBLOCKS:\n(0-11):25585-25596, (IND):25597, (12-21):25598-25607\nTOTAL: 23\n\n",
+      "stderr": "debugfs 1.44.5 (15-Dec-2018)\n"
+    },
+    "gles_blocks": {
+      "command": "blocks /lib/libGLESv1_CM.so",
+      "returncode": 0,
+      "stdout": "25585 25586 25587 25588 25589 25590 25591 25592 25593 25594 25595 25596 25597 25598 25599 25600 25601 25602 25603 25604 25605 25606 25607 \n",
+      "stderr": "debugfs 1.44.5 (15-Dec-2018)\n"
+    },
+    "gles_extract": {
+      "command": "dump /lib/libGLESv1_CM.so <THREAD_ROOT>/work/live_system_audit/libGLESv1_CM.so",
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "debugfs 1.44.5 (15-Dec-2018)\n"
+    }
+  },
+  "libGLESv1_CM": {
+    "path": "<THREAD_ROOT>\\work\\live_system_audit\\libGLESv1_CM.so",
+    "bytes": 21564,
+    "sha256": "1ee117f323c6d5af4781abe8e2f50297044ec26810d525410b38f4449223cbe1",
+    "head64_hex": "<HISTORICAL_HASH_REDACTED>",
+    "ELF": true
+  },
+  "layout": {
+    "fs_block_size": 1024,
+    "block_count": 151548,
+    "inodes_per_group": 72,
+    "inode_size": 128,
+    "group_descriptor_byte": 2048,
+    "system_partition_lba": 761856
+  },
+  "inode_records": {
+    "225": {
+      "inode_table_fsblock": 23957,
+      "inode_image_offset": 24532992,
+      "inode_table_sector_lba": 809772,
+      "inode_offset_within_sector": 0,
+      "bytes": 128,
+      "sha256": "<HISTORICAL_HASH_REDACTED>",
+      "i_block": [
+        25585,
+        25586,
+        25587,
+        25588,
+        25589,
+        25590,
+        25591,
+        25592,
+        25593,
+        25594,
+        25595,
+        25596,
+        25597,
+        0,
+        0
+      ]
+    },
+    "234": {
+      "inode_table_fsblock": 23957,
+      "inode_image_offset": 24534144,
+      "inode_table_sector_lba": 809774,
+      "inode_offset_within_sector": 128,
+      "bytes": 128,
+      "sha256": "<HISTORICAL_HASH_REDACTED>",
+      "i_block": [
+        27789,
+        27790,
+        27791,
+        27792,
+        27793,
+        27794,
+        27795,
+        27796,
+        27797,
+        27798,
+        27799,
+        27800,
+        27801,
+        28058,
+        0
+      ]
+    }
+  },
+  "expected_fsblocks": {
+    "25585": {
+      "image_offset": 26199040,
+      "device_lba": 813026,
+      "device_offset": 416269312,
+      "sha256": "<HISTORICAL_HASH_REDACTED>",
+      "head32_hex": "<HISTORICAL_HASH_REDACTED>",
+      "bytes": 1024,
+      "path": "<THREAD_ROOT>\\work\\live_system_audit\\fsblock25585.official.bin"
+    },
+    "25597": {
+      "image_offset": 26211328,
+      "device_lba": 813050,
+      "device_offset": 416281600,
+      "sha256": "<HISTORICAL_HASH_REDACTED>",
+      "head32_hex": "<HISTORICAL_HASH_REDACTED>",
+      "bytes": 1024,
+      "path": "<THREAD_ROOT>\\work\\live_system_audit\\fsblock25597.official.bin"
+    },
+    "28058": {
+      "image_offset": 28731392,
+      "device_lba": 817972,
+      "device_offset": 418801664,
+      "sha256": "<HISTORICAL_HASH_REDACTED>",
+      "head32_hex": "<HISTORICAL_HASH_REDACTED>",
+      "bytes": 1024,
+      "path": "<THREAD_ROOT>\\work\\live_system_audit\\fsblock28058.official.bin"
+    },
+    "38883": {
+      "image_offset": 39816192,
+      "device_lba": 839622,
+      "device_offset": 429886464,
+      "sha256": "<HISTORICAL_HASH_REDACTED>",
+      "head32_hex": "<HISTORICAL_HASH_REDACTED>",
+      "bytes": 1024,
+      "path": "<THREAD_ROOT>\\work\\live_system_audit\\fsblock38883.official.bin"
+    },
+    "38931": {
+      "image_offset": 39865344,
+      "device_lba": 839718,
+      "device_offset": 429935616,
+      "sha256": "<HISTORICAL_HASH_REDACTED>",
+      "head32_hex": "<HISTORICAL_HASH_REDACTED>",
+      "bytes": 1024,
+      "path": "<THREAD_ROOT>\\work\\live_system_audit\\fsblock38931.official.bin"
+    }
+  },
+  "inode234_lblock6715_chain": {
+    "inode_dind": 28058,
+    "dind_entry_index": 25,
+    "dind_entry_value": 38883,
+    "indirect_entry_index": 47,
+    "expected_data_fsblock": 38931
+  },
+  "GLES_contiguous_ranges": {
+    "data_fsblocks_inclusive": [
+      [
+        25585,
+        25596
+      ],
+      [
+        25598,
+        25607
+      ]
+    ],
+    "indirect_metadata_fsblock": 25597,
+    "exact_reconstruction_matches_debugfs": true
+  }
+}

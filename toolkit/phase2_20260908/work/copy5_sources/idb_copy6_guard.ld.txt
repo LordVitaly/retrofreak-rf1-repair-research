@@ -1,0 +1,20 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/copy5_sources/idb_copy6_guard.ld
+Role: case_specific_payload_source_not_complete_standalone_firmware
+Original repair session must not be resumed from this public copy.
+
+ENTRY(idb_preinit)
+_start = idb_preinit;
+SECTIONS {
+ . = 0x60800000;
+ .text : { KEEP(*(.text.preinit)) KEEP(*(.text.guarded*)) *(.text*) *(.rodata*) . = ALIGN(4); }
+ . = ALIGN(4);
+ __addon_size = . - 0x60800000;
+ .data : { *(.data*) }
+ .bss (NOLOAD) : { *(.bss*) *(COMMON) }
+ /DISCARD/ : { *(.ARM.exidx*) *(.ARM.extab*) *(.comment*) }
+ ASSERT(SIZEOF(.data)==0, "No initialized writable state")
+ ASSERT(SIZEOF(.bss)==0, "No implicit initialization")
+ ASSERT(__addon_size<=4096, "Must fit proven 61440-byte USBplug transfer")
+}

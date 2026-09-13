@@ -1,0 +1,86 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_ram_bootstrap.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Execute complete offline bootstrap; stop before FlashBoot's first instruction."""
+import hashlib
+import json
+import struct
+import sys
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'work/emulator_deps'))
+from unicorn import Uc, UcError, UC_ARCH_ARM, UC_MODE_ARM, UC_HOOK_CODE, UC_HOOK_MEM_WRITE, UC_PROT_READ, UC_PROT_WRITE, UC_PROT_EXEC
+from unicorn.arm_const import UC_ARM_REG_PC, UC_ARM_REG_R0, UC_ARM_REG_SP, UC_CPU_ARM_CORTEX_A9
+elf=(ROOT/'work/ram_bootstrap.OFFLINE_ONLY.elf').read_bytes()
+blob=(ROOT/'work/ram_bootstrap.NOT_FOR_UPLOAD.bin').read_bytes()
+build=json.loads((ROOT/'outputs/ram_bootstrap_build.json').read_text())
+assert hashlib.sha256(blob).hexdigest()==build['binary_sha256']
+assert hashlib.sha256(elf).hexdigest()==build['elf_sha256']
+shoff=struct.unpack_from('<I',elf,32)[0]
+shsize,shnum=struct.unpack_from('<HH',elf,46)
+sections=[struct.unpack_from('<10I',elf,shoff+n*shsize) for n in range(shnum)]
+symbols={}
+for s in sections:
+    if s[1]!=2: continue
+    st=sections[s[6]]; strings=elf[st[4]:st[4]+st[5]]
+    for off in range(s[4],s[4]+s[5],s[9]):
+        name,value,size,info,other,index=struct.unpack_from('<IIIBBH',elf,off)
+        symbols[strings[name:strings.find(b'\0',name)].decode()]=value
+source=(ROOT/'work/FlashBoot.machine_guards_usb_only.UNPACKAGED_NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(source).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+
+def run(name,payload,fill,expect_ok):
+    u=Uc(UC_ARCH_ARM,UC_MODE_ARM,cpu=UC_CPU_ARM_CORTEX_A9)
+    u.mem_map(0x60000000,0x20000)
+    u.mem_write(0x60000000,bytes([fill])*0x20000)
+    u.mem_write(0x60000000,payload)
+    u.mem_map(0x61000000,0x20000)
+    u.mem_write(0x61000000,bytes([fill])*0x20000)
+    u.mem_map(0x61200000,0x10000,UC_PROT_READ|UC_PROT_WRITE)
+    u.reg_write(UC_ARM_REG_SP,0xdead0000) # stub must establish its own stack
+    state=dict(phase='copy',visits=0,failure_hits=0,violations=[],copied_exact=False)
+    def entry(uc,address,size,ctx):
+        state['visits']+=1
+        if state['visits']==2: uc.emu_stop()
+    def relocated(uc,address,size,ctx):
+        state['copied_exact']=bytes(uc.mem_read(0x61000000,len(payload)))==payload
+        state['phase']='decode'
+        uc.mem_protect(0x61000000,0x10000,UC_PROT_READ|UC_PROT_EXEC)
+    def failed(uc,address,size,ctx):
+        state['failure_hits']+=1
+        if state['failure_hits']==8: uc.emu_stop()
+    def write(uc,access,address,size,value,ctx):
+        ranges=([(0x61000000,0x61000000+len(payload))] if state['phase']=='copy' else
+            [(0x60000000,0x60000000+len(source)),(symbols['__bss_start'],symbols['__bss_end']),(0x61200000,0x61210000)])
+        if not any(lo<=address and address+size<=hi for lo,hi in ranges):
+            state['violations'].append((hex(address),size)); uc.emu_stop()
+    u.hook_add(UC_HOOK_CODE,entry,begin=0x60000000,end=0x60000000)
+    u.hook_add(UC_HOOK_CODE,relocated,begin=symbols['relocated'],end=symbols['relocated'])
+    u.hook_add(UC_HOOK_CODE,failed,begin=symbols['failure'],end=symbols['failure'])
+    u.hook_add(UC_HOOK_MEM_WRITE,write)
+    error=None
+    try: u.emu_start(0x60000000,0,timeout=30000000,count=100000000)
+    except UcError as e: error=str(e)
+    pc=u.reg_read(UC_ARM_REG_PC)
+    assert not error and not state['violations'] and state['copied_exact'],(name,error,state,hex(pc))
+    output=bytes(u.mem_read(0x60000000,len(source)))
+    if expect_ok: assert pc==0x60000000 and state['visits']==2 and output==source
+    else: assert pc==symbols['failure'] and state['visits']==1 and state['failure_hits']==8
+    assert bytes(u.mem_read(0x60000000+len(source),0x20000-len(source)))==bytes([fill])*(0x20000-len(source))
+    assert bytes(u.mem_read(0x61000000,len(payload)))==payload
+    result=dict(case=name,pc=hex(pc),fill=fill,returned_to_flashboot=expect_ok,decoder_result=None if expect_ok else u.reg_read(UC_ARM_REG_R0),output_sha256=hashlib.sha256(output).hexdigest(),state=state)
+    print('PASS',name,flush=True)
+    return result
+
+start=symbols['payload_start']-0x61000000
+bad=bytearray(blob); bad[start+25000]^=0x80
+badprop=bytearray(blob); badprop[start]=0
+crcbytes=struct.pack('<I',int(build['source_crc32'],16))
+assert blob.count(crcbytes)==1
+badcrc=bytearray(blob); badcrc[blob.index(crcbytes)]^=1
+cases=[run('valid_zero',blob,0,True),run('valid_dirty_ram',blob,0xa5,True),run('corrupt_stream',bytes(bad),0xa5,False),run('bad_properties',bytes(badprop),0xa5,False),run('wrong_pinned_crc',bytes(badcrc),0xa5,False)]
+report=dict(binary_sha256=build['binary_sha256'],bytes=len(blob),symbols={k:hex(symbols[k]) for k in ('relocated','handoff','failure','payload_start','__bss_start','__bss_end')},cases=cases,device_access=False,limitation='Stops BEFORE FlashBoot execution. Unicorn flat memory; cache/BootROM/USB/peripherals not emulated. Bytes after 110080-byte FlashBoot remain initial fill.')
+(ROOT/'outputs/ram_bootstrap_execution.json').write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps(report,indent=2))

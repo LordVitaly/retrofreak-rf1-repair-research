@@ -1,0 +1,24 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/nand_init_after_idb_readonly_attempt01/result.json",
+  "interpretation": "NAND init returned 0; separate from BBT acceptance.",
+  "data": {
+    "all_pass": true,
+    "payload_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "nand_write_enabled": false,
+    "pmic_value_writes_by_test": 0,
+    "explicit_soc_reset_requests": 0,
+    "scope": "Return immediately after original NAND init, before FTL",
+    "intro": "<REDACTED:RAW_LOG_OR_IDENTIFIER>",
+    "bridge_returned": true,
+    "result_record": {
+      "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+      "original_items": 67
+    },
+    "nand_id": "2c44444ba900",
+    "nand_init_return": "0x0",
+    "nand_geometry_hex": "<REDACTED:HASH_OR_BYTES>",
+    "nand_init_success": true,
+    "commands": "<REDACTED:RAW_LOG_OR_IDENTIFIER>"
+  }
+}

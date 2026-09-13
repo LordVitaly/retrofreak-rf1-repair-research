@@ -1,0 +1,30 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_system_writer_core.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""OFFLINE-only core. Does not generate any loader or hardware payload."""
+import hashlib,json,struct,subprocess,zlib
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1]
+out=ROOT/'work/system_writer_core_v3';out.mkdir(exist_ok=False)
+donor=ROOT.parent.parent/'2026-09-01/retro-freak-retrofreak-systemupdate-0-2/work/rkfw_contents/components/system.img'
+data=donor.read_bytes()
+assert len(data)==155185152 and hashlib.sha256(data).hexdigest()=='b9ca511124e6c3d9ee2a1e31220f6bf5a858f06d88f9003f5fd7f7e25cf5676a'
+crcs=[zlib.crc32(data[i:i+2097152]) for i in range(0,len(data),2097152)]
+# Generated build artifact, never a manual source edit.
+with (out/'system_writer_manifest.h').open('x') as f:
+    f.write('static const u32 donor_crc[74]={'+','.join(hex(c)+'u' for c in crcs)+'};\n')
+elfpath=out/'core.elf'
+subprocess.run([str(ROOT/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe'),'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-Os','-ffreestanding','-fno-builtin','-nostdlib','-I'+str(out),'work/system_writer_core.c','-Wl,-T,work/system_writer_core.ld','-Wl,-e,system_write_portion','-o',str(elfpath)],cwd=ROOT,check=True)
+elf=elfpath.read_bytes();phoff=struct.unpack_from('<I',elf,28)[0];sz,n=struct.unpack_from('<HH',elf,42);parts=[]
+for i in range(n):
+    typ,off,va,pa,fs,ms,flags,align=struct.unpack_from('<8I',elf,phoff+i*sz)
+    if typ==1 and fs and flags&1:
+        assert va==0x61800000 and fs<4096;parts.append(elf[off:off+fs])
+assert len(parts)==1
+with (out/'core.NOT_FOR_UPLOAD.bin').open('xb') as f:f.write(parts[0])
+# Entry from ELF, no assumptions about compiler function ordering.
+report=dict(device_access=False,hardware_ready=False,entry=hex(struct.unpack_from('<I',elf,24)[0]),code_address='0x61800000',sha256=hashlib.sha256(parts[0]).hexdigest(),bytes=len(parts[0]),donor_sha256=hashlib.sha256(data).hexdigest(),portion_crc32=[hex(c) for c in crcs],limitations=['No physical write gates or hardware transport packaging','CRC32 is accidental-corruption check, not authentication; source SHA pinned by host'])
+with (ROOT/'outputs/system_writer_core_v3_build.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

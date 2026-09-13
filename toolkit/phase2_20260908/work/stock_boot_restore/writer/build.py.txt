@@ -1,0 +1,240 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/stock_boot_restore/writer/build.py
+Role: completed_stock_return_or_temporary_USB_probe_historical_source
+No binaries or specimen auxiliary headers are included. Do not resume this old hardware session.
+
+"""Build only the three freshly mapped physical stock-boot targets, offline."""
+import importlib.util
+import struct
+import subprocess
+import zlib
+from common import *
+
+APPROVED_TARGETS = [(77, 9), (78, 10), (74, 6)]
+STOCK_SHA256 = '416c84c67be71e89d63530c1902112ebbe54845aca3e377a79506ce5c90b090d'
+CURRENT_SHA256 = '3e9556dc6195a7d6616685f9d58a439c23fe55dbe760ba9254f4d233ba79df0f'
+PLAN_SHA256 = '<HISTORICAL_HASH_REDACTED>'
+BLOCK_BYTES = 2097152
+
+
+def main():
+    assert len(sys.argv) == 1, 'No hardware or arbitrary-target CLI is supported'
+    for name, expected in IMMUTABLE_SOURCE_PINS.items():
+        pin(OUT / name, expected)
+    # Invalidate any older readiness before doing work. No prior bundle can stay ready
+    # after an interrupted rebuild or after inputs cease to satisfy preconditions.
+    dump(OUT / 'manifest.json', {'all_pass': False, 'hardware_ready': False,
+                                'build_pass': False, 'device_access': False})
+    plan_path = BASE / 'plan.json'
+    plan_bytes = plan_path.read_bytes()
+    assert sha(plan_bytes) == PLAN_SHA256, 'Only the reviewed fresh plan is permitted'
+    plan = json.loads(plan_bytes)
+    assert plan['schema_version'] == 1 and plan['fresh_maps_pass']
+    assert plan['native_backups_complete'] is True
+    assert plan['both_modes_share_same_active_physical_boot'] is True
+    assert plan['tail_preserved'] is True
+    assert plan['block_bytes'] == BLOCK_BYTES and plan['stock_prefix_bytes'] == 8781824
+    assert plan['partition_first_logical_block'] == 6
+    assert plan['boot_logical_blocks'] == [6, 7, 8, 9, 10]
+    assert [(t['physical_block'], t['logical']) for t in plan['targets']] == APPROVED_TARGETS
+    assert plan['execution_order'] == [p for p, _ in APPROVED_TARGETS]
+    inputs = {str(plan_path): sha(plan_bytes)}
+
+    def pinned_input(path, expected=None):
+        path = Path(path)
+        data = path.read_bytes()
+        if expected is not None:
+            assert sha(data) == expected, ('input pin', str(path))
+        inputs[str(path)] = sha(data)
+        return data
+
+    current = pinned_input(plan['current_boot']['path'], plan['current_boot']['sha256'])
+    target = pinned_input(plan['target_boot']['path'], plan['target_boot']['sha256'])
+    assert len(current) == plan['current_boot']['bytes'] == 16777216
+    assert len(target) == plan['target_boot']['bytes'] == len(current)
+    prefix = plan['stock_prefix_bytes']
+    assert sha(current[:prefix]) == CURRENT_SHA256
+    assert sha(target[:prefix]) == STOCK_SHA256
+    assert current[prefix:] == target[prefix:]
+    changed = [6 + i for i in range(8)
+               if current[i*BLOCK_BYTES:(i+1)*BLOCK_BYTES] != target[i*BLOCK_BYTES:(i+1)*BLOCK_BYTES]]
+    assert changed == [6, 9, 10]
+    assert target[:8] == b'ANDROID!'
+    kernel_size, _, ramdisk_size = struct.unpack_from('<3I', target, 8)
+    second_size = struct.unpack_from('<I', target, 24)[0]
+    page = struct.unpack_from('<I', target, 36)[0]
+    assert page == 16384 and kernel_size == 6971428 and second_size == 0
+    ramdisk_offset = page + ((kernel_size + page - 1)//page)*page
+    second_offset = ramdisk_offset + ((ramdisk_size + page - 1)//page)*page
+    import hashlib
+    h = hashlib.sha1()
+    for blob in (target[page:page+kernel_size], struct.pack('<I', kernel_size),
+                 target[ramdisk_offset:ramdisk_offset+ramdisk_size], struct.pack('<I', ramdisk_size),
+                 target[second_offset:second_offset+second_size], struct.pack('<I', second_size), target[32:576]):
+        h.update(blob)
+    assert h.digest() + bytes(12) == target[576:608]
+
+    maps = {}
+    for mode in ('0', '1'):
+        spec = plan['maps'][mode]
+        raw = pinned_input(spec['capture_path'], spec['capture_sha256'])
+        result = json.loads(pinned_input(spec['result_path'], spec['result_sha256']))
+        assert result['complete'] and result['mode'] == int(mode) and len(raw) == 0xa8000
+        assert result['lba'] == 0x6020 and result['sectors'] == 1 and result['sha256'] == sha(raw)
+        assert bytes.fromhex(result['status_hex'])[:24] == b'RF1READ1' + struct.pack('<4I', 0x6020, 1, 0, 0xa8000)
+        mapping = list(struct.unpack_from('<1896H', raw, 0xf00))
+        assert mapping == spec['logical_to_physical']
+        assert [mapping[i] for i in [6, 7, 8, 9, 10]] == [74, 23, 24, 77, 78]
+        for physical, logical in APPROVED_TARGETS:
+            assert [i for i, owner in enumerate(mapping) if owner == physical] == [logical]
+        maps[mode] = raw
+    fixture = maps['1'][0xa6000:]
+    assert len(fixture) == 8192
+    g = fixture[0xa34:]
+    assert struct.unpack_from('<I', g)[0] == 6
+    assert all(g[i] == value for i, value in {8:1,9:0,10:0,12:1,13:1,14:1,16:1,17:1,18:40,20:4,21:16,22:16}.items())
+    assert struct.unpack_from('<II', g, 24) == (4096, 4096)
+    assert struct.unpack_from('<H', g, 160)[0] >= 12
+    (OUT / 'native_geometry_fixture.bin').write_bytes(fixture)
+    capture_result_path = Path(plan['native_capture_result_path'])
+    capture_result = json.loads(pinned_input(capture_result_path, plan['native_capture_result_sha256']))
+    assert capture_result['all_pass'] is True
+
+    helper_path = OLD / 'work/ram_artifact.py'
+    pinned_input(helper_path, '<HISTORICAL_HASH_REDACTED>')
+    sp = importlib.util.spec_from_file_location('pure_artifact_helper', helper_path)
+    helper = importlib.util.module_from_spec(sp)
+    sp.loader.exec_module(helper)
+    parent = pinned_input(HERE / 'work/boot_map_compare/capture_mode1.raw', '<HISTORICAL_HASH_REDACTED>')
+    original = pinned_input(OLD / 'work/FlashBoot.packet512.STATIC_ONLY.bin', 'ed820d1c51ab4b75b9b6758cfac378732cdfaa9cbc12d7cfe3f24b57c70615f5')
+    report = {'all_pass':False, 'hardware_ready':False, 'build_pass':False,
+              'synthetic_only':False, 'device_access':False,
+              'plan_path':str(plan_path), 'plan_sha256':sha(plan_bytes),
+              'allowed_physical_blocks':plan['execution_order'], 'execution_order':plan['execution_order'],
+              'allowed_logical_blocks':[6,9,10], 'stock_prefix_sha256':STOCK_SHA256,
+              'stock_vendor_digest_pass':True, 'fresh_tail_exact':True,
+              'source_parent_sha256':sha(parent), 'variants':{}, 'blocks':{},
+              'fresh_native_backups_complete':True, 'fresh_maps_both_modes_pass':True,
+              'error_test_variant':f'{plan["execution_order"][0]}_write',
+              'expected_error_cases':ERROR_CASES, 'cut_pc':'0x600982e4', 'return_pc':'0x60000100',
+              'native_geometry_fixture':{'path':str(OUT/'native_geometry_fixture.bin'), 'sha256':sha(fixture),
+                 'source_capture_path':plan['maps']['1']['capture_path'], 'source_offset':0xa6000,
+                 'role':'RAM fixture only; native I/O in proof is simulated, not hardware ECC'}}
+    zig = str(OLD / 'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe')
+    for t in plan['targets']:
+        physical, logical = t['physical_block'], t['logical']
+        assert t['partition_block'] == logical - 6 and t['modes'] == [0,1]
+        source = pinned_input(t['source_path'], t['source_sha256'])
+        start = (logical - 6) * BLOCK_BYTES
+        expected_old = current[start:start+BLOCK_BYTES]
+        assert source == target[start:start+BLOCK_BYTES] and len(source) == BLOCK_BYTES
+        assert sha(expected_old) == t['expected_old_main_sha256'] and source != expected_old
+        summary = json.loads(pinned_input(t['backup_summary_path'], t['backup_summary_sha256']))
+        assert summary['all_pass'] and summary['physical_block'] == physical and summary['logical'] == logical
+        assert summary['native_page_rc'] == [0] * 256
+        assert summary['diagnostic_main_exact'] is True
+        raw = pinned_input(t['backup_raw_path'], summary['raw_sha256'])
+        assert sha(raw) == t['backup_raw_sha256']
+        assert len(raw) == 4096 * 528
+        oldmain = b''.join(raw[i:i+512] for i in range(0, len(raw), 528))
+        assert oldmain == expected_old and sha(oldmain) == summary['main_sha256']
+        assert all(raw[i+514:i+528] == b'\xa5' * 14 for i in range(0, len(raw), 528))
+        values = [struct.unpack_from('<H', raw, i+512)[0] for i in range(0, len(raw), 528)]
+        auxiliary = struct.pack('<4096H', *values)
+        assert sha(auxiliary) == summary['aux16_sha256'] == t['backup_aux16_sha256']
+        capture_dir = Path(t['backup_raw_path']).parent
+        assert pinned_input(capture_dir/f'block{physical}.main.bin', summary['main_sha256']) == oldmain
+        assert pinned_input(capture_dir/f'block{physical}.aux16.bin', summary['aux16_sha256']) == auxiliary
+        templates, indices = [], []
+        for page_index in range(256):
+            template = values[page_index*16:(page_index+1)*16]
+            if template not in templates:
+                templates.append(template)
+            indices.append(templates.index(template))
+        assert 1 <= len(templates) <= 256 and [v for i in indices for v in templates[i]] == values
+        d = OUT / f'block{physical}'
+        d.mkdir(exist_ok=True)
+        (d/'oldmain.bin').write_bytes(oldmain)
+        (d/'native_aux_u16.bin').write_bytes(auxiliary)
+        header = (f'#define TARGET_BLOCK {physical}u\n#define TARGET_SECTOR {hex(physical*4096)}u\n'
+                  f'#define SOURCE_CRC {hex(zlib.crc32(source))}u\n#define OLD_MAIN_CRC {hex(zlib.crc32(oldmain))}u\n'
+                  f'#define AUX_CRC {hex(zlib.crc32(auxiliary))}u\n#define AUX_TEMPLATES {len(templates)}u\n'
+                  'static const unsigned char aux_page_index[256]={' + ','.join(map(str, indices)) + '};\n'
+                  'static const unsigned short aux_templates[AUX_TEMPLATES*16]={' + ','.join(str(v) for a in templates for v in a) + '};\n')
+        (d/'block_manifest.h').write_text(header, encoding='ascii')
+        report['blocks'][str(physical)] = {'logical':logical, 'source_path':t['source_path'],
+            'source_sha256':sha(source), 'source_crc32':hex(zlib.crc32(source)),
+            'old_main_path':str(d/'oldmain.bin'), 'old_main_sha256':sha(oldmain), 'old_main_crc32':hex(zlib.crc32(oldmain)),
+            'native_backup_sha256':sha(raw), 'native_aux_path':str(d/'native_aux_u16.bin'),
+            'native_aux_u16_sha256':sha(auxiliary), 'native_aux_crc32':hex(zlib.crc32(auxiliary)),
+            'aux_templates':len(templates), 'aux_compressed_bytes':len(templates)*32+256,
+            'fresh_main_equals_current_linux_slice':True, 'native_aux_from_this_physical_backup':True,
+            'source_equals_stock_with_fresh_tail_slice':True}
+        for variant in ('dry', 'write'):
+            elf = d / (variant+'.elf')
+            flags = [zig,'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-mfloat-abi=soft','-Oz','-g','-ffreestanding','-fno-builtin','-fno-stack-protector','-ffunction-sections','-nostdlib','-I'+str(d)]
+            if variant == 'dry':
+                flags += ['-DRF_DRY_RUN']
+            subprocess.run(flags+[str(OUT/'writer.c'),str(OUT/'original.S'),'-Wl,-T,'+str(OUT/'core.ld'),'-Wl,-e,boot_physical_write','-o',str(elf)], check=True, cwd=OUT)
+            code = helper.elf_code(elf.read_bytes(),0x61800000,0x1300)
+            syms = helper.symbols(elf.read_bytes())
+            assert len(code)%4 == 0 and syms['boot_physical_write'] == 0x61800000
+            assert struct.unpack_from('<I',elf.read_bytes(),0x18)[0] == 0x61800000
+            for name, off in (('original_program',0xba10),('original_erase',0xbc1c)):
+                at = syms[name]-0x61800000
+                assert code[at:at+8] == original[off:off+8]
+            core_path = d/(variant+'.core.bin')
+            core_path.write_bytes(code)
+            helf = d/(variant+'.handoff.elf')
+            subprocess.run([zig,'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-nostdlib','-DCORE_BYTES='+str(len(code)),str(OUT/'handoff.S'),'-Wl,-T,'+str(OUT/'handoff.ld'),'-Wl,-e,writer_before','-o',str(helf)],check=True,cwd=OUT)
+            hc = helper.elf_code(helf.read_bytes(),0x60007040,0x180)
+            hs = helper.symbols(helf.read_bytes())
+            data = bytearray(parent[:110080])
+            data[0x2800:0x2800+len(code)] = code
+            data[0x7040:0x71c0] = hc + bytes(0x180-len(hc))
+            patches = {4:helper.branch(0x60000004,hs['writer_before']),0x18d18:helper.branch(0x600982e4,hs['writer_after'])}
+            for off, name in ((0xba10,'gate_program'),(0xbc1c,'gate_erase')):
+                assert data[off:off+8] == bytes.fromhex('0000e0e31eff2fe1')
+                patches[off] = helper.branch(0x6007f5cc+off,syms[name])
+            if variant == 'write':
+                for off in (0xbbc8,0xbc90):
+                    patches[off] = struct.unpack_from('<I',original,off)[0]
+            for off, word in patches.items():
+                struct.pack_into('<I',data,off,word)
+            helper.fix_crc(data)
+            payload = bytes(data)+bytes(272)
+            allowed = [(4,8),(0x1e0,0x1e4),(0x2800,0x2800+len(code)),(0x7040,0x71c0)]+[(p,p+4) for p in patches]
+            assert all(any(a<=i<b for a,b in allowed) for i,(x,y) in enumerate(zip(parent,payload)) if x!=y)
+            assert payload[0xb408:0xb40c] == bytes.fromhex('0101a0e3') and payload[0xaf60:0xaf64] == bytes.fromhex('0003a0e1')
+            assert payload[0x76f8:0x76fc] == bytes.fromhex('0100a0e3')
+            assert all(payload[o:o+8] == bytes.fromhex('0000e0e31eff2fe1') for o in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xbd5c))
+            assert all(payload[o+4:o+8] == bytes.fromhex('1eff2fe1') for o in (0xba10,0xbc1c))
+            assert all(payload[o:o+4] == (original[o:o+4] if variant=='write' else bytes.fromhex('feffffea')) for o in (0xbbc8,0xbc90))
+            assert len(payload) == 110352 and zlib.crc32(payload[:110080]) == 0xad0dadee and payload[110080:] == bytes(272)
+            path = d/(variant+'.raw')
+            path.write_bytes(payload)
+            report['variants'][f'{physical}_{variant}'] = {'payload':str(path), 'sha256':sha(payload),
+                'physical_block':physical,'sector':physical*4096,'source_path':t['source_path'],'source_sha256':sha(source),
+                'core_path':str(core_path),'core_sha256':sha(code),'core_bytes':len(code),'helper_bytes':len(hc),
+                'symbols':{n:hex(syms[n]) for n in ('boot_physical_write','gate_program','gate_erase','gate_copy','gate_forbidden','original_program','original_erase')},
+                'handoff_symbols':{n:hex(hs[n]) for n in ('writer_before','writer_after')},
+                'allowed_changes_proved':True,'nonphysical_denials_exact':True,
+                'confirm_stops_preserved':variant=='dry','confirm_original_restored':variant=='write'}
+    assert set(report['variants']) == {f'{p}_{v}' for p,_ in APPROVED_TARGETS for v in ('dry','write')}
+    assert plan_path.read_bytes() == plan_bytes, 'Plan changed during build'
+    for path_text, expected in inputs.items():
+        pin(path_text, expected)
+    report['input_file_pins'] = inputs
+    report['source_sha256'] = {name:digest(OUT/name) for name in SOURCE_NAMES}
+    for physical,_ in APPROVED_TARGETS:
+        name = f'block{physical}/block_manifest.h'
+        report['source_sha256'][name] = digest(OUT/name)
+    report['build_pass'] = True
+    dump(OUT/'manifest.json',report)
+    print(json.dumps({'build_pass':True,'hardware_ready':False,'targets':plan['execution_order'],
+                      'plan_sha256':report['plan_sha256'],'variants':len(report['variants'])},indent=2))
+
+
+if __name__ == '__main__':
+    main()

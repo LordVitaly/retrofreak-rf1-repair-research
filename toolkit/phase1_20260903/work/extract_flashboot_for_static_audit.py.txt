@@ -1,0 +1,44 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/extract_flashboot_for_static_audit.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Extract type-4 FlashBoot with independent 512-byte RC4 packets; PC only."""
+import hashlib
+import json
+import re
+import struct
+from pathlib import Path
+from audit_ram_loader_container import BASE, crc32, rc4
+
+root = Path(__file__).resolve().parents[1]
+container = (BASE / 'components/RetronLoader.bin').read_bytes()
+assert crc32(container[:-4]) == struct.unpack_from('<I', container, len(container)-4)[0]
+header = struct.unpack_from('<H', container, 4)[0]
+for i in range(4):
+    p = header + i * 57
+    name = container[p+5:p+45].decode('utf-16le').split('\0')[0]
+    if name == 'FlashBoot':
+        assert struct.unpack_from('<I', container, p+1)[0] == 4
+        offset, size = struct.unpack_from('<II', container, p+45)
+        break
+else:
+    raise AssertionError('Missing FlashBoot')
+encrypted = container[offset:offset+size]
+assert len(encrypted) == size and size % 512 == 0
+decoded = b''.join(rc4(encrypted[i:i+512]) for i in range(0, size, 512))
+assert b''.join(rc4(decoded[i:i+512]) for i in range(0, size, 512)) == encrypted
+strings = [{'offset': hex(m.start()), 'text': m.group().decode('ascii')}
+           for m in re.finditer(rb'[\x20-\x7e]{7,}', decoded)]
+out = root / 'work/FlashBoot.packet512.STATIC_ONLY.bin'
+with out.open('xb') as f:
+    f.write(decoded)
+report = {'scope': 'PC-side decoding only, not a RAM-loadable package or authorization to execute',
+          'container_sha256': hashlib.sha256(container).hexdigest(),
+          'container_offset': offset, 'size': size,
+          'encrypted_sha256': hashlib.sha256(encrypted).hexdigest(),
+          'decoded_sha256': hashlib.sha256(decoded).hexdigest(),
+          'packet_size': 512, 'reencryption_exact': True, 'strings': strings}
+with (root / 'outputs/flashboot_packet512_static_inventory.json').open('x', encoding='utf-8') as f:
+    json.dump(report, f, ensure_ascii=False, indent=2)
+print(json.dumps(report, ensure_ascii=False, indent=2))

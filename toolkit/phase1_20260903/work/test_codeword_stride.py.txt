@@ -1,0 +1,49 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_codeword_stride.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+from pathlib import Path
+from collections import Counter
+import argparse
+parser=argparse.ArgumentParser()
+parser.add_argument('--recovery',action='store_true')
+args=parser.parse_args()
+old=Path(r'<HOST_PATH>')
+boot=Path(r'<HOST_PATH>').read_bytes()
+if args.recovery:
+    boot=Path(r'<HOST_PATH>').read_bytes()
+# Hypothesis: reader consumes 1024+46 physical bytes; stored codeword 1024+74.
+mapping=[]
+for source in range(8192):
+    physical=(source//1024)*1070+source%1024
+    step,within=divmod(physical,1098)
+    if step<8 and within<1024:
+        mapping.append((source,step*1024+within))
+print('mapped',len(mapping),'unmapped',8192-len(mapping))
+aux_mapping=[]
+for step in range(8):
+    for byte in range(4):
+        physical=step*1070+1024+byte
+        dst_step,within=divmod(physical,1098)
+        if dst_step<8 and within<1024:
+            record=step*2+byte//2
+            aux_mapping.append((record*528+512+byte%2,dst_step*1024+within))
+print('aux_user_bytes',len(aux_mapping),'combined_missing',8192-len(mapping)-len(aux_mapping))
+aux_errors=0
+counts=Counter(); exact=[]; bits=Counter()
+with old.open('rb') as f:
+    f.seek((0x1E000 if args.recovery else 0x16000)*528)
+    for page in range(len(boot)//8192):
+        raw=f.read(8448)
+        data=b''.join(raw[i:i+512] for i in range(0,8448,528))
+        expected=boot[page*8192:(page+1)*8192]
+        aux_errors+=sum(raw[src]!=expected[dst] for src,dst in aux_mapping)
+        errors=0
+        for src,dst in mapping:
+            delta=data[src]^expected[dst]
+            if delta: errors+=1; bits[delta.bit_count()]+=1
+        counts['pages']+=1; counts['errors']+=errors
+        if not errors: exact.append(page)
+print(dict(counts),'exact_pages',len(exact),'examples',exact[:20],'xor_bit_counts',dict(bits))
+print('aux_errors',aux_errors)

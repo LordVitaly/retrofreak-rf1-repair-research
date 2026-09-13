@@ -1,0 +1,88 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/emulate_flashboot_system_rewrite.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Whole official image write/readback in RAM NAND model; NEVER device I/O."""
+import argparse
+import hashlib
+import json
+import struct
+import time
+from emulate_flashboot_overlay import OverlayReplay
+from emulate_flashboot_offline import ROOT,FLASH,FTL,REGS,address
+
+def initialize(record,pages=None,erased=None):
+    emu=OverlayReplay(record)
+    emu.allow_statistics_data()
+    emu.allow_zero_length_copy=True
+    assert emu.call(0xa158,0x50f4)==0
+    emu.uc.mem_write(FLASH+0xa0,struct.pack('<H',12))
+    emu.call(0x74e0)
+    emu.dump_mode=True
+    if pages is not None:
+        emu.pages=dict(pages);emu.erased=set(erased)
+        emu.enabled=True
+        emu.write_entries.remove(address(0x3b0c))
+    assert emu.call(0x6a24)==0
+    assert emu.call(0x6050,1,instruction_limit=10_000_000,timeout_us=30_000_000)==0
+    if not emu.enabled:
+        emu.write_entries.remove(address(0x3b0c));emu.enabled=True
+    return emu
+
+def main():
+    parser=argparse.ArgumentParser();parser.add_argument('--attempt',required=True,type=int)
+    args=parser.parse_args()
+    report_path=ROOT/f'outputs/flashboot_system_rewrite_attempt{args.attempt}.json'
+    assert not report_path.exists()
+    official=ROOT.parent.parent/'2026-09-01/retro-freak-retrofreak-systemupdate-0-2/work/rkfw_contents/components/system.img'
+    data=official.read_bytes();assert len(data)==155185152
+    record=(ROOT/'work/idb_ecc24_parameter_attempt2/block05_page15.raw').read_bytes()[:512]
+    report=dict(scope='RAM NAND model only, no physical NAND writes or ECC/controller emulation',
+                image_size=len(data),image_sha256=hashlib.sha256(data).hexdigest(),written_bytes=0,verified_bytes=0,
+                phase='initialization',success=False)
+    emu=None;restarted=None;start=time.monotonic()
+    try:
+        emu=initialize(record)
+        before_map=list(struct.unpack('<1896H',emu.uc.mem_read(FTL+0xd80,3792)))
+        report['phase']='write'
+        for offset in range(0,len(data),65536):
+            chunk=data[offset:offset+65536]
+            sector=186*4096+offset//512
+            assert sector>=186*4096 and sector+len(chunk)//512<=186*4096+len(data)//512
+            emu.uc.mem_write(0x60600000,chunk)
+            for reg,value in zip(REGS[1:],(sector,len(chunk)//512,0x60600000)):emu.uc.reg_write(reg,value)
+            assert emu.call(0x7dcc,0,instruction_limit=3_000_000,timeout_us=10_000_000)==0
+            report['written_bytes']=offset+len(chunk)
+            if offset%2097152==0:print(json.dumps(dict(phase='write',bytes=report['written_bytes'],operations=len(emu.operations))),flush=True)
+        report['phase']='restart'
+        restarted=initialize(record,emu.pages,emu.erased)
+        report['restart_operations']=restarted.operations
+        report['phase']='verify'
+        digest=hashlib.sha256()
+        for offset in range(0,len(data),65536):
+            expected=data[offset:offset+65536]
+            for reg,value in zip(REGS[1:],(186*4096+offset//512,len(expected)//512,0x60600000)):restarted.uc.reg_write(reg,value)
+            assert restarted.call(0x50d4,0,instruction_limit=3_000_000,timeout_us=10_000_000)==0
+            actual=bytes(restarted.uc.mem_read(0x60600000,len(expected)))
+            assert actual==expected,f'readback differs at image offset {offset}'
+            digest.update(actual);report['verified_bytes']=offset+len(expected)
+            if offset%2097152==0:print(json.dumps(dict(phase='verify',bytes=report['verified_bytes'])),flush=True)
+        report['readback_sha256']=digest.hexdigest()
+        touched=set(emu.erased)|{p//256 for p in emu.pages}
+        report['baseline_owners_of_touched_blocks']={str(b):[i for i,p in enumerate(before_map) if p==b] for b in sorted(touched)}
+        report['success']=True;report['phase']='complete'
+    except Exception as error:
+        report['error']=repr(error)
+        report['stop']=restarted.stopped if restarted is not None else emu.stopped if emu is not None else None
+    finally:
+        report['elapsed_seconds']=time.monotonic()-start
+        if emu is not None:
+            report['operations']=emu.operations
+            report['erased_blocks']=sorted(emu.erased)
+            report['programmed_page_count']=len(emu.pages)
+            report['zero_length_copy_calls']=emu.zero_length_copy_calls
+        with report_path.open('x') as f:json.dump(report,f,indent=2)
+        print(json.dumps({k:v for k,v in report.items() if k not in ('operations','restart_operations','baseline_owners_of_touched_blocks')},indent=2),flush=True)
+
+if __name__=='__main__':main()

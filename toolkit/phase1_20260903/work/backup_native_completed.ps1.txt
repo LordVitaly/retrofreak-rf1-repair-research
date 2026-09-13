@@ -1,0 +1,26 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/backup_native_completed.ps1
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+$ErrorActionPreference = 'Stop'
+$sourceDir = Join-Path $PSScriptRoot 'nand_native_ecc40'
+$backupDir = '<HOST_PATH>'
+if (-not (Test-Path -LiteralPath $backupDir)) {
+    New-Item -ItemType Directory -Path $backupDir | Out-Null
+}
+$records = Get-Content -LiteralPath (Join-Path $sourceDir 'manifest.jsonl') | ForEach-Object { $_ | ConvertFrom-Json }
+foreach ($record in $records) {
+    if ($record.file -notmatch '^NAND_\d{2}\.RAW$') { continue }
+    $sourcePath = Join-Path $sourceDir $record.file
+    $backupPath = Join-Path $backupDir $record.file
+    if ((Get-Item -LiteralPath $sourcePath).Length -ne $record.bytes) { throw 'Source size mismatch' }
+    $sourceHash = (Get-FileHash -LiteralPath $sourcePath -Algorithm SHA256).Hash
+    if ($sourceHash -ne $record.sha256) { throw 'Source hash mismatch' }
+    if (-not (Test-Path -LiteralPath $backupPath)) {
+        Copy-Item -LiteralPath $sourcePath -Destination $backupPath
+    }
+    $backupHash = (Get-FileHash -LiteralPath $backupPath -Algorithm SHA256).Hash
+    if ($backupHash -ne $record.sha256) { throw 'Backup hash mismatch; existing file preserved for inspection' }
+    Write-Output "VERIFIED $($record.file) $backupHash"
+}

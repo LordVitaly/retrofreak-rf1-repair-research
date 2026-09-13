@@ -1,0 +1,69 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_arm_lzma_decode.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Run compiled freestanding decoder on PC; no USB and no payload execution."""
+import hashlib
+import json
+import lzma
+import struct
+import sys
+import zlib
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'work/emulator_deps'))
+from unicorn import Uc, UcError, UC_ARCH_ARM, UC_MODE_ARM, UC_HOOK_MEM_WRITE, UC_PROT_READ, UC_PROT_WRITE, UC_PROT_EXEC
+from unicorn.arm_const import UC_ARM_REG_R0, UC_ARM_REG_R1, UC_ARM_REG_R2, UC_ARM_REG_R3, UC_ARM_REG_SP, UC_ARM_REG_LR, UC_ARM_REG_PC
+
+elf=(ROOT/'work/ram_lzma_decode_test.elf').read_bytes()
+assert elf[:6]==b'\x7fELF\x01\x01'
+assert struct.unpack_from('<H',elf,18)[0]==40
+entry,phoff=struct.unpack_from('<II',elf,24)
+phsize,phnum=struct.unpack_from('<HH',elf,42)
+segments=[]
+for n in range(phnum):
+    typ,off,va,pa,filesz,memsz,flags,align=struct.unpack_from('<8I',elf,phoff+n*phsize)
+    if typ==1: segments.append((off,va,filesz,memsz,flags))
+source=(ROOT/'work/FlashBoot.machine_guards.UNPACKAGED_NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(source).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+stream=lzma.compress(source,format=lzma.FORMAT_ALONE)
+assert len(stream)==51974
+SRC,DST,STACK,STOP=0x62000000,0x63000000,0x64000000,0x65000000
+
+def run(name,data,checksum):
+    u=Uc(UC_ARCH_ARM,UC_MODE_ARM)
+    pages={}
+    for off,va,fs,ms,flags in segments:
+        prot=(UC_PROT_READ if flags&4 else 0)|(UC_PROT_WRITE if flags&2 else 0)|(UC_PROT_EXEC if flags&1 else 0)
+        for page in range(va&~4095,(va+ms+4095)&~4095,4096): pages[page]=pages.get(page,0)|prot
+    for page,prot in pages.items(): u.mem_map(page,4096,prot)
+    for off,va,fs,ms,flags in segments: u.mem_write(va,elf[off:off+fs])
+    u.mem_map(SRC,0x10000,UC_PROT_READ); u.mem_write(SRC,data)
+    u.mem_map(DST,0x20000,UC_PROT_READ|UC_PROT_WRITE); u.mem_write(DST,b'\xa5'*0x20000)
+    u.mem_map(STACK,0x10000,UC_PROT_READ|UC_PROT_WRITE); u.mem_map(STOP,4096,UC_PROT_READ|UC_PROT_EXEC)
+    allowed=[(va,va+ms) for off,va,fs,ms,flags in segments if flags&2]+[(DST,DST+len(source)),(STACK,STACK+0x10000)]
+    violations=[]
+    def check_write(uc,access,address,size,value,context):
+        if not any(lo<=address and address+size<=hi for lo,hi in allowed):
+            violations.append((hex(address),size)); uc.emu_stop()
+    u.hook_add(UC_HOOK_MEM_WRITE,check_write)
+    for reg,val in [(UC_ARM_REG_R0,SRC),(UC_ARM_REG_R1,len(data)),(UC_ARM_REG_R2,DST),(UC_ARM_REG_R3,checksum),(UC_ARM_REG_SP,STACK+0xfff0),(UC_ARM_REG_LR,STOP)]: u.reg_write(reg,val)
+    error=None
+    try: u.emu_start(entry,STOP,timeout=30000000,count=100000000)
+    except UcError as e: error=str(e)
+    pc=u.reg_read(UC_ARM_REG_PC); result=u.reg_read(UC_ARM_REG_R0)
+    output=bytes(u.mem_read(DST,len(source)))
+    assert not error and not violations and pc==STOP,(name,error,violations,hex(pc))
+    assert bytes(u.mem_read(DST+len(source),0x20000-len(source)))==b'\xa5'*(0x20000-len(source))
+    if name=='valid': assert result==0 and output==source
+    else: assert result!=0
+    print('PASS:',name,'return',result,flush=True)
+    return dict(case=name,result=result,output_sha256=hashlib.sha256(output).hexdigest(),outside_output_unchanged=True,write_violations=violations)
+
+crc=zlib.crc32(source)
+bad=bytearray(stream); bad[len(bad)//2]^=0x80
+cases=[run('valid',stream,crc),run('truncated',stream[:-1],crc),run('bad_properties',b'\x00'+stream[1:],crc),run('bit_flip',bytes(bad),crc),run('wrong_checksum',stream,crc^1)]
+report=dict(elf_sha256=hashlib.sha256(elf).hexdigest(),entry=hex(entry),load_segments=segments,cases=cases,device_access=False,limitation='Decoder only, fixed test addresses. Not a relocating startup wrapper or upload container.')
+(ROOT/'outputs/arm_lzma_decode_execution.json').write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps(report,indent=2))

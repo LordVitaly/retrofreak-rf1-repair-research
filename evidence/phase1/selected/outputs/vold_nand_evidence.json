@@ -1,0 +1,88 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "outputs/vold_nand_evidence.json",
+  "interpretation": "Inode 671 and corrupted system indirect pointers.",
+  "data": {
+    "scope": "Verified actual inode and base-map indirect block; /bin directory comparison reported separately, full repair plan pending",
+    "file": "/system/bin/vold",
+    "inode": 671,
+    "inode_offset": 73588480,
+    "inode_bytes": 128,
+    "actual_inode_matches_reference": true,
+    "actual_bin_directory_matches_reference": false,
+    "directory_differing_bytes": 2048,
+    "directory_all_ff": false,
+    "inode_provenance": [
+      {
+        "logical_block": 221,
+        "physical_block": 230,
+        "page": 22,
+        "offset": 7936,
+        "bytes": 128
+      }
+    ],
+    "directory_provenance": [
+      {
+        "logical_block": 227,
+        "physical_block": 652,
+        "page": 133,
+        "offset": 4096,
+        "bytes": 1024
+      },
+      {
+        "logical_block": 232,
+        "physical_block": 241,
+        "page": 73,
+        "offset": 6144,
+        "bytes": 1024
+      },
+      {
+        "logical_block": 235,
+        "physical_block": 656,
+        "page": 11,
+        "offset": 5120,
+        "bytes": 1024
+      },
+      {
+        "logical_block": 240,
+        "physical_block": 251,
+        "page": 148,
+        "offset": 1024,
+        "bytes": 1024
+      }
+    ],
+    "indirect_filesystem_block": 94110,
+    "indirect_provenance": [
+      {
+        "logical_block": 231,
+        "physical_block": 2014,
+        "page": 243,
+        "offset": 6144,
+        "bytes": 1024
+      }
+    ],
+    "indirect_all_ff": true,
+    "indirect_reference_matches": false,
+    "first8_actual_pointers": [
+      4294967295,
+      4294967295,
+      4294967295,
+      4294967295,
+      4294967295,
+      4294967295,
+      4294967295,
+      4294967295
+    ],
+    "first8_reference_pointers": [
+      94111,
+      94112,
+      94113,
+      94114,
+      94115,
+      94116,
+      94117,
+      94118
+    ],
+    "filesystem_block_count": 151548
+  }
+}

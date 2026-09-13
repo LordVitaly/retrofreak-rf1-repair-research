@@ -1,0 +1,68 @@
+{
+  "all_pass": true,
+  "physical_blocks": [
+    {
+      "physical_block": 22,
+      "logical_block": 6,
+      "source_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "reopened_readback_exact": true,
+      "maps_unchanged": true,
+      "map_checks": {
+        "capture_mode0": {
+          "snapshot_sha256": "<HISTORICAL_HASH_REDACTED>",
+          "map_changes": [],
+          "target_physical": 22
+        },
+        "capture_mode1": {
+          "snapshot_sha256": "<HISTORICAL_HASH_REDACTED>",
+          "map_changes": [],
+          "target_physical": 1028
+        }
+      }
+    },
+    {
+      "physical_block": 25,
+      "logical_block": 9,
+      "source_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "reopened_readback_exact": true,
+      "maps_unchanged": true,
+      "map_checks": {
+        "capture_mode0": {
+          "snapshot_sha256": "<HISTORICAL_HASH_REDACTED>",
+          "map_changes": [],
+          "target_physical": 25
+        },
+        "capture_mode1": {
+          "snapshot_sha256": "<HISTORICAL_HASH_REDACTED>",
+          "map_changes": [],
+          "target_physical": 1032
+        }
+      }
+    },
+    {
+      "physical_block": 26,
+      "logical_block": 10,
+      "source_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "reopened_readback_exact": true,
+      "maps_unchanged": true,
+      "map_checks": {
+        "capture_mode0": {
+          "snapshot_sha256": "<HISTORICAL_HASH_REDACTED>",
+          "map_changes": [],
+          "target_physical": 26
+        },
+        "capture_mode1": {
+          "snapshot_sha256": "<HISTORICAL_HASH_REDACTED>",
+          "map_changes": [],
+          "target_physical": 1036
+        }
+      }
+    }
+  ],
+  "total_erases": 3,
+  "total_page_programs": 768,
+  "total_native_postwrite_pages_exact": 768,
+  "mode0_reopened_bytes_exact": 6291456,
+  "cold_ordinary_boot_after_repair_tested": false,
+  "live_android_log_obtained": false
+}

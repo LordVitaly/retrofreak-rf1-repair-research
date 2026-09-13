@@ -1,0 +1,39 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/read_linux_system.py
+Role: historical_device_runner_or_stateful_scenario_review_before_any_use
+Original repair session must not be resumed from this public copy.
+
+from pathlib import Path
+import subprocess,hashlib,json,sys
+adb = r'<EXTERNAL_STAGE_02>/work/AndroidTool_Release_v2.43/AndroidTool_Release_v2.43/bin/adb.exe'
+userdata=sys.argv[1:] in (['--userdata'],['--userdata-cold'],['--userdata-before-native-repair'],['--userdata-working'])
+boot=sys.argv[1:]==['--boot-working']
+assert not sys.argv[1:] or userdata or boot
+name='boot' if boot else ('userdata' if userdata else 'system')
+device=2 if boot else (6 if userdata else 8)
+total=4096 if boot else (65536 if userdata else 37887)
+parent='live_adb_working_backup' if boot or sys.argv[1:]==['--userdata-working'] else ('live_adb_before_userdata_repair' if sys.argv[1:]==['--userdata-before-native-repair'] else ('live_adb_cold_after_system' if sys.argv[1:]==['--userdata-cold'] else 'live_adb_after_cache'))
+out=Path(__file__).resolve().parent/parent/(name+'_raw')
+out.parent.mkdir(exist_ok=True)
+out.mkdir(exist_ok=False)
+prefix=[adb,'-s','<DEVICE_SERIAL_REDACTED>']
+parts=[]
+for skip in range(0,total,8192):
+ count=min(8192,total-skip)
+ command=f'/sbin/busybox dd if=/dev/block/mtdblock{device} of=/mnt/ram/rf1-system-read.bin bs=4096 skip={skip} count={count}'
+ p=subprocess.run(prefix+['shell',command],capture_output=True,timeout=40)
+ (out/f'{skip}.log').write_bytes(p.stdout+p.stderr)
+ assert p.returncode==0 and f'{count}+0 records out'.encode() in p.stdout+p.stderr
+ dest=out/f'{skip}.bin'
+ p=subprocess.run(prefix+['pull','/mnt/ram/rf1-system-read.bin',str(dest)],capture_output=True,timeout=40)
+ assert p.returncode==0 and dest.stat().st_size==count*4096,(p.stdout,p.stderr)
+ data=dest.read_bytes()
+ parts.append({'skip4096':skip,'count4096':count,'sha256':hashlib.sha256(data).hexdigest()})
+ print(parts[-1],flush=True)
+data=b''.join((out/f'{p["skip4096"]}.bin').read_bytes() for p in parts)
+assert len(data)==total*4096
+(out/(name+'_linux.img')).write_bytes(data)
+result={'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest(),'md5':hashlib.md5(data).hexdigest(),'parts':parts,'nand_writes':False}
+(out/'result.json').write_text(json.dumps(result,indent=2))
+print(json.dumps(result,indent=2))

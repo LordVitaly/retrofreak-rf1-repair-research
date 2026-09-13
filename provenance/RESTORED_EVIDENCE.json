@@ -1,0 +1,228 @@
+{
+  "source_archive": "RF1_20260903_THREAD_PUBLIC_2026-09-09.zip",
+  "scope": "Public redacted records recovered from the provided source archive; no original device dumps imported.",
+  "records": [
+    {
+      "path": "evidence/phase1/selected/outputs/boot.from_nand.verified.json",
+      "source_public_member": "evidence/selected/outputs/boot.from_nand.verified.json",
+      "source_public_sha256": "c15515c00c962561115fd65a7b6592fd9b30b29ffe80344a062ac9bdb4226ef6",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/external_bootrom_usb_length_test.json",
+      "source_public_member": "evidence/selected/outputs/external_bootrom_usb_length_test.json",
+      "source_public_sha256": "424e14c713f04a2dab9e8a7b29c4fd01bf754bc8d9a744c4cb97aa5ef0b6a291",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/fixed_boundary03_verification.json",
+      "source_public_member": "evidence/selected/outputs/fixed_boundary03_verification.json",
+      "source_public_sha256": "61a49a3b95a90adf13e9fb16561da70266901a2709996b8aec850e255c4d0a42",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/flashboot_full_remap_verified.json",
+      "source_public_member": "evidence/selected/outputs/flashboot_full_remap_verified.json",
+      "source_public_sha256": "9aba9c3cd07f4855b3338ef52de24a43542939b196c4bf82db7d68076af85890",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/flashboot_system_rewrite_attempt3.json",
+      "source_public_member": "evidence/selected/outputs/flashboot_system_rewrite_attempt3.json",
+      "source_public_sha256": "1ab5fb3908e395a48b450b8516a6e56785f4edc460ba75cb54b50313bc5449ef",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/live_idb_ecc24_comparison.json",
+      "source_public_member": "evidence/selected/outputs/live_idb_ecc24_comparison.json",
+      "source_public_sha256": "d346a746cf47d0df20b9c824783bb81d68b620b5fe24f9160727597f4d084292",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/native_dump_complete_verification.json",
+      "source_public_member": "evidence/selected/outputs/native_dump_complete_verification.json",
+      "source_public_sha256": "7902b6b9842d1ae6d0a882f4e37c321cad59700e0daa0916914996f51ceebf90",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/native_system_block_audit_2048blocks.json",
+      "source_public_member": "evidence/selected/outputs/native_system_block_audit_2048blocks.json",
+      "source_public_sha256": "5ac3528b60f3504ce1efd799a8ffa4d5d7977305c0e49a80794197e9389e7dff",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/vold_nand_evidence.json",
+      "source_public_member": "evidence/selected/outputs/vold_nand_evidence.json",
+      "source_public_sha256": "ac860b3e2c6c3bf94b0f6a1764d737d25d3ea23f1059b3c1d6cb246331e86fc8",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/bbt_copy12_restore_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/bbt_copy12_restore_attempt01/result.json",
+      "source_public_sha256": "e5aae60d155efcbd900e34db173c6dc81750f000b58935e8167a99e52289650d",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/bbt_copy12_writer_v2/offline_test.json",
+      "source_public_member": "evidence/selected/work/bbt_copy12_writer_v2/offline_test.json",
+      "source_public_sha256": "4d23a4af0fd12a4ba97698dae657d2b3f3fa9fbdf1168aca307328e556e6353e",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/bbt_count_ram_only_hardware_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/bbt_count_ram_only_hardware_attempt01/result.json",
+      "source_public_sha256": "f5508a194527cfe4df626ebb4fdd19a177c50dda808a87b09a6d169e5274186e",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/bbt_physical_ecc40_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/bbt_physical_ecc40_attempt01/result.json",
+      "source_public_sha256": "4672b6210e82f8af4c4da2f7e0a77003a867926406a29ed2aba5a09c9e859c45",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/copy6_cold_readonly_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/copy6_cold_readonly_attempt01/result.json",
+      "source_public_sha256": "80ed4509d5aa5c68d833b150b43021812dbe054f334207a369c1d96aabda0deb",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/early_boot_ecc24_attempt01/interpretation.json",
+      "source_public_member": "evidence/selected/work/early_boot_ecc24_attempt01/interpretation.json",
+      "source_public_sha256": "583490a078004f18170b9a2a376c432859c24d5eac5255215c71ca2583b88f70",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/first_system_write188_hardware_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/first_system_write188_hardware_attempt01/result.json",
+      "source_public_sha256": "b3684cb55f5287b77f5fe812e7658f9d4ee593beaf881ab948558797ed73f07e",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/ftl_boundaries_after_idb_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/ftl_boundaries_after_idb_attempt01/result.json",
+      "source_public_sha256": "20ad984016912c8f66492d59588340e6413e6b582091a1f71429ecc3f1919690",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/ftl_bridge_read_hardware_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/ftl_bridge_read_hardware_attempt01/result.json",
+      "source_public_sha256": "eb8d7b6de62001a5e93e56b1fcc3d55ce765a3cc8e0196ec52f1ec08e899e00e",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/idb_copy6_restore_hardware_attempt03/result.json",
+      "source_public_member": "evidence/selected/work/idb_copy6_restore_hardware_attempt03/result.json",
+      "source_public_sha256": "987ccf19453de26d74b5112a32689f647bcddf998b7aa8448f3b1c1037f0cf6d",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/nand_init_after_idb_readonly_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/nand_init_after_idb_readonly_attempt01/result.json",
+      "source_public_sha256": "4a98a72f6188511b5d0e3b4d19d6b05e73d9db5992a065027599969a80c317ba",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/normal_warm_reset_hardware_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/normal_warm_reset_hardware_attempt01/result.json",
+      "source_public_sha256": "60cdc5d2f1059d08287d5e1f9ec16f8824ea0b498f53478a1917e0c0beab3d99",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/pmic_devon_hardware_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/pmic_devon_hardware_attempt01/result.json",
+      "source_public_sha256": "37744be03ea44c02195b0efde64fb6e07d8561a545bbf2d7a021165361a8f13b",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/pmic_devon_usb_return_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/pmic_devon_usb_return_attempt01/result.json",
+      "source_public_sha256": "2f30999fd083a85da77cb166fec3cbb044415e4111b5f5390be2bcea90c66d93",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/pmic_readonly_hardware_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/pmic_readonly_hardware_attempt01/result.json",
+      "source_public_sha256": "910d17e26f1fa536f5f29efd9d2c7e55ccf51c2adb5a982812a480d3211d68af",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/post_idb_powerheld_boot_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/post_idb_powerheld_boot_attempt01/result.json",
+      "source_public_sha256": "2423bdffed64ddcf8d8562f4d77afd3ca198eb6c10c50e2fbf77fc32946f6001",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/power_hold_snapshot_hardware_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/power_hold_snapshot_hardware_attempt01/result.json",
+      "source_public_sha256": "67d6e3724361a9e9c381a55aa4ac5c98cfb4542bcebd2d7aca20e4128eff5349",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/remap_bbt_count_ram_only_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/remap_bbt_count_ram_only_attempt01/result.json",
+      "source_public_sha256": "3ff6aeae33be64c225e6b4fbab1647965937c90b31910c2e4b055423ce2323ab",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/second_system_write189_hardware_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/second_system_write189_hardware_attempt01/result.json",
+      "source_public_sha256": "98584da6e4ae84c9c4ec35d96695229560e6d135ea3cb35e77a210b568d9fb46",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/startup_actual_usb_entry_hardware_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/startup_actual_usb_entry_hardware_attempt01/result.json",
+      "source_public_sha256": "2f3daccf7944af8f9f563fc2e784dc3b7a702451cadf6d3c927b92f3d90442e7",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/startup_ftl_capacity_hardware_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/startup_ftl_capacity_hardware_attempt01/result.json",
+      "source_public_sha256": "6d818c409b0b34567f5efa74c655240f8c9b0a1375e90d87288ef9ce54484c65",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/system_batches16_hardware_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/system_batches16_hardware_attempt01/result.json",
+      "source_public_sha256": "e7930059cec2a32f95f8b60786a23cba2d6a64f105b4dc0acbeb356eed5c9e92",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/system_finish236_259_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/system_finish236_259_attempt01/result.json",
+      "source_public_sha256": "5fa0ba1e3e0f5cecc7fc18f3dd64483ef280608ac8bba77926417a30e4a54b70",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/system_next32_220_235_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/system_next32_220_235_attempt01/result.json",
+      "source_public_sha256": "992675804428c0a680f6ef5fd884021ad5c54406054b726237a9d62279b7c6c7",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/system_next32_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/system_next32_attempt01/result.json",
+      "source_public_sha256": "f5ee0aebfb914b89fe0651e72a8eb74e3bd865cb39f8c52dfee336c75b275b63",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/system_recovery_b1_next16_attempt03/result.json",
+      "source_public_member": "evidence/selected/work/system_recovery_b1_next16_attempt03/result.json",
+      "source_public_sha256": "9f8a389a48a2963cc90207da36248cc89a52ba1506186f087352bd54ca175e50",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/system_writer_dry_hardware_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/system_writer_dry_hardware_attempt01/result.json",
+      "source_public_sha256": "c74d3fb8258389454af1e099f874b352d0f8f1b4ef5fb83caee6848a7d3016d1",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    },
+    {
+      "path": "evidence/phase1/selected/work/usb_ram_bridge_capacity_fixed_hardware_attempt01/result.json",
+      "source_public_member": "evidence/selected/work/usb_ram_bridge_capacity_fixed_hardware_attempt01/result.json",
+      "source_public_sha256": "85b98d0f45a1e326bef64747917417aa9f946925dda5ba9848636aa164a6fd4c",
+      "transformation": "Only interpretation translated to English; remaining JSON fields unchanged."
+    }
+  ]
+}

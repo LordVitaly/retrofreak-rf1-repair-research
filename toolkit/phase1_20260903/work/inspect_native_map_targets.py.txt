@@ -1,0 +1,33 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/inspect_native_map_targets.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Read-only mapping references and page structure for divergent system candidates."""
+import json
+import struct
+from pathlib import Path
+from verify_native_ecc_page import extract
+ROOT = Path(__file__).parent
+rows = {}
+for p in sorted((ROOT/'native_ecc40_index').glob('NAND_*.json')):
+    for row in json.loads(p.read_text())['blocks']:
+        rows[row['physical_block']] = row
+
+def page(block, index=0):
+    chunk, local = divmod(block, 64)
+    with (ROOT/'nand_native_ecc40'/f'NAND_{chunk:02d}.RAW').open('rb') as f:
+        f.seek((local*256+index)*8448)
+        return extract(f.read(8448))
+
+for block in (151,640,652,656,664,668):
+    row=rows[block]
+    print('BLOCK',block,'META',row['page0_meta'][:8],'AUX COUNTS',row['first_aux0_counts'])
+    for index in (0,1,2,128,254,255):
+        data=page(block,index)
+        print(' PAGE',index,'ff',data.count(255),'zero',data.count(0),'head',data[:32].hex())
+for block,row in rows.items():
+    if row['page0_meta'][:3] == [0,0,256]:
+        words=struct.unpack('<4096H',page(block))
+        print('MAP',block,'targets',[(i,words[i]) for i in (186,192,214,227,235,248)],
+              'refs-to-differing',[(i,v) for i,v in enumerate(words[:2016]) if v in (640,652,656,664,668)])

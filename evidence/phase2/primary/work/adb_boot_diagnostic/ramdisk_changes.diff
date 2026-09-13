@@ -1,0 +1,56 @@
+--- stock/default.prop
++++ diagnostic/default.prop
+@@ -1,6 +1,6 @@
+ #
+ # ADDITIONAL_DEFAULT_PROPERTIES
+ #
+-ro.secure=1
++ro.secure=0
+ ro.allow.mock.location=0
+-ro.debuggable=0
++ro.debuggable=1
+--- stock/init.rc
++++ diagnostic/init.rc
+@@ -124,6 +124,19 @@
+ # create general purpose RAM fs for Retron use
+     mkdir /mnt/ram 0777 root system
+     mount tmpfs tmpfs /mnt/ram size=40M
++
++# RF1 diagnostic: start USB ADB before NAND module/filesystem waits.
++# /system is still the RAM rootfs here; the real system mount hides this shim.
++    mkdir /system/bin 0755 root root
++    symlink /sbin/busybox /system/bin/sh
++    write /sys/class/android_usb/android0/enable 0
++    write /sys/bus/platform/drivers/usb20_otg/force_usb_mode 2
++    write /sys/class/android_usb/android0/idVendor 0bb4
++    write /sys/class/android_usb/android0/idProduct 0c01
++    write /sys/class/android_usb/android0/functions adb
++    write /sys/class/android_usb/android0/enable 1
++    setprop sys.usb.config adb
++    start adbd
+ 
+ on fs
+     insmod /rk30xxnand_ko.ko
+@@ -383,10 +396,8 @@
+ 
+ # Added for retron charging only (force_usb_mode = 1 for host, 2 for device)
+ on property:sys.usb.config=host_pwr
+-    write /sys/class/android_usb/android0/enable 0
+-	write /sys/bus/platform/drivers/usb20_otg/force_usb_mode 1
+-    write /sys/class/android_usb/android0/enable 1
+-    setprop sys.usb.state ${sys.usb.config}
++    # Diagnostic boot keeps the cable in USB device/ADB mode.
++    setprop sys.usb.config adb
+ 
+ # Used to disable USB when switching states
+ on property:sys.usb.config=none
+@@ -430,7 +441,8 @@
+ # Used to set USB configuration at boot and to switch the configuration
+ # when changing the default configuration
+ on property:persist.sys.usb.config=*
+-    setprop sys.usb.config ${persist.sys.usb.config}
++    # Volatile override only: do not modify the stored persist property.
++    setprop sys.usb.config adb
+ 
+ ## Daemon processes to be run by init.
+ ##

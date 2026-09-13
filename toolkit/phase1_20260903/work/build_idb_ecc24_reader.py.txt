@@ -1,0 +1,37 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_idb_ecc24_reader.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Known original IDB ECC24 behavior plus already-proved fixed boot boundary."""
+import ast,hashlib,json,struct,sys
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'work/emulator_deps'))
+path=ROOT/'work/prove_rs_boot_mapping.py';tree=ast.parse(path.read_text());prefix=[]
+for node in tree.body:
+    if isinstance(node,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='cases' for t in node.targets):break
+    prefix.append(node)
+env={'__file__':str(path),'__name__':'existing_rs_model'}
+exec(compile(ast.Module(body=prefix,type_ignores=[]),str(path),'exec'),env)
+code=bytearray(env['usb'])
+assert code[0x74cc:0x74d0]==bytes.fromhex('0400a021')
+code[0x74cc:0x74d0]=bytes.fromhex('1800a023') # Original movhs r0,#24, NOT new ECC algorithm.
+assert code[0x78c4:0x78c8]==bytes.fromhex('910201e0')
+code[0x78c4:0x78c8]=bytes.fromhex('0319a0e3') # Existing fixed IDB boundary 0xc000.
+proof=[]
+for s in (0x1000,0x3000,0x5000,0x50e0,0x50f0,0x6000,0xc000):
+    unused,calls=env['replay'](code,0xffff,s,16)
+    unused2,prior=env['replay'](env['patched'],0xffff,s,16)
+    assert calls==prior
+    proof.append(dict(sector=hex(s),address_calls_unchanged=True,calls=calls))
+known=env['known'];off=env['off'];size=env['size'];container=bytearray(known)
+container[off:off+size]=env['rc4'](code)
+struct.pack_into('<I',container,len(container)-4,env['crc32'](container[:-4]))
+diffs=[i for i,(a,b) in enumerate(zip(known,container)) if a!=b]
+assert all(off+0x74cc<=i<off+0x74d0 or off+0x78c4<=i<off+0x78c8 or i>=len(known)-4 for i in diffs)
+assert env['rc4'](container[off:off+size])==code and len(container)==len(known)
+out=ROOT/'work/idb_ecc24_reader_v1';out.mkdir(exist_ok=False)
+with (out/'reader.bin').open('xb') as f:f.write(container)
+report=dict(all_pass=True,device_access=False,file='work/idb_ecc24_reader_v1/reader.bin',sha256=hashlib.sha256(container).hexdigest(),entry472_bytes=size,proof=proof,scope='Restore original ECC24 RS setting; fixed0xc000 boot-page addressing, matches original IDB backup stream order. Not direct physical format.',nand_write_functions_changed=False,intrinsically_write_disabled=False,permitted_commands=['one RAM DB after fresh MaskROM','RID','RFI','bounded RS only'],hardware_ecc_status_available=False)
+with (out/'build.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

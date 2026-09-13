@@ -1,0 +1,75 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/cache_last_attempt/verify_live.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Verify saved live readbacks only; no USB, hardware, or NAND APIs."""
+from pathlib import Path
+import hashlib
+import json
+import os
+import subprocess
+
+OUT = Path(__file__).resolve().parent
+WORK = OUT.parent
+SIZE = 2097152
+sha = lambda data: hashlib.sha256(data).hexdigest()
+result = {"all_pass": False, "hardware_access": False}
+try:
+    manifest_path = OUT / "manifest.json"
+    manifest_bytes = manifest_path.read_bytes()
+    assert sha(manifest_bytes) == "<HISTORICAL_HASH_REDACTED>"
+    manifest = json.loads(manifest_bytes)
+    assert manifest["all_pass"] and manifest["logical_block_allowlist"] == [24, 25, 26]
+    reports = {}
+    for block in (26, 24):
+        path = WORK / f"cache_last_block{block}_attempt01/result.json"
+        raw = path.read_bytes()
+        report = json.loads(raw)
+        assert report["all_pass"], f"Live block {block} did not complete successfully"
+        reports[str(block)] = {"path": str(path), "sha256": sha(raw)}
+    source = (OUT / "cache64.img").read_bytes()
+    assert len(source) == 67108864 and sha(source) == manifest["image_sha256"]
+    paths = {
+        24: WORK / "cache_last_block24_attempt01/reopen/data.bin",
+        25: WORK / "white_screen_reads_cache_last_backup2526/cache_last_block25/data.bin",
+        26: WORK / "cache_last_block26_attempt01/reopen/data.bin",
+    }
+    assembled = bytearray(source)
+    inputs = {}
+    for block, path in paths.items():
+        data = path.read_bytes()
+        assert len(data) == SIZE, f"Wrong readback length for block {block}"
+        assert sha(data) == manifest["source_blocks"][str(block)]["sha256"]
+        start = (block - 24) * SIZE
+        assert data == source[start:start + SIZE]
+        assembled[start:start + SIZE] = data
+        inputs[str(block)] = {"path": str(path), "bytes": len(data), "sha256": sha(data)}
+    assert assembled[:3 * SIZE] == source[:3 * SIZE]
+    assert sha(assembled) == sha(source)
+    image_path = OUT / "cache_live_reconstructed.img"
+    image_path.write_bytes(assembled)
+    before = sha(image_path.read_bytes())
+    env = dict(os.environ)
+    env["PATH"] = str(OUT / "portable/usr/bin") + os.pathsep + env.get("PATH", "")
+    cygwin_path = "/cygdrive/c/" + image_path.as_posix()[3:]
+    command = [str(OUT / "portable/usr/sbin/e2fsck.exe"), "-f", "-n", cygwin_path]
+    check = subprocess.run(command, env=env, capture_output=True, text=True, timeout=30)
+    after = sha(image_path.read_bytes())
+    (OUT / "live_verify_fsck.log").write_text(check.stdout + "\n" + check.stderr, encoding="utf-8")
+    result.update(live_result_pins=reports, readbacks=inputs,
+                  first_6MiB_exact=True, reconstructed_image=str(image_path),
+                  reconstructed_sha256=before, source_image_sha256=sha(source),
+                  e2fsck_command=command, e2fsck_returncode=check.returncode,
+                  image_hash_unchanged=before == after,
+                  note="Unwritten free space is reconstructed from the clean image; only allocated filesystem blocks are covered by the three actual readbacks.")
+    assert check.returncode == 0, check.stdout + check.stderr
+    assert before == after, "Read-only fsck changed the reconstruction"
+    result["all_pass"] = True
+except Exception as error:
+    result["error"] = str(error)
+    raise
+finally:
+    (OUT / "live_verify_result.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps(result, indent=2))

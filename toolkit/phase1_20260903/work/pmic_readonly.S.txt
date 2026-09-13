@@ -1,0 +1,225 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/pmic_readonly.S
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+.syntax unified
+.arm
+.section .text,"ax",%progbits
+.global power_snapshot
+power_snapshot:
+    ldr r0, =0x6101ae00
+    ldr r1, =0x50314652
+    str r1, [r0]
+    .ifdef DEVON_TEST
+    ldr r1, =0x31444c48 /* RF1PHLD1 */
+    .else
+    ldr r1, =0x3130434d /* RF1PMC01 */
+    .endif
+    str r1, [r0, #4]
+    mov r1, #1
+    str r1, [r0, #8] /* overall status 1 until complete */
+    mov r1, #0
+    str r1, [r0, #12] /* completed reads */
+    ldr r4, =0x2002f000
+    ldr r1, =0x200000f0
+    ldr r2, [r1]
+    tst r2, #0x20
+    bne return
+    ldr r1, =0x200080d4 /* GPIO2D IOMUX: pins 6,7 */
+    ldr r5, [r1]
+    str r5, [r0, #16]
+    ldr r1, =0x20008154
+    ldr r6, [r1]
+    str r6, [r0, #20]
+    ldr r7, [r4, #4]
+    str r7, [r0, #24]
+    /* Require the observed idle controller, no interrupt pending. */
+    ldr r1, [r4]
+    ldr r2, [r4, #24]
+    orr r1, r1, r2
+    ldr r2, [r4, #28]
+    orrs r1, r1, r2
+    bne return
+    ldr r1, [r4, #8]
+    ldr r2, [r4, #12]
+    orrs r1, r1, r2
+    bne return
+    ldr r1, =0x200080d4
+    ldr r2, =0xf0005000 /* only SDA/SCL mux fields */
+    str r2, [r1]
+    ldr r1, =0x20008154
+    ldr r2, =0x10001000 /* only bus1 new-interface selector */
+    str r2, [r1]
+    ldr r1, =0x03ff03ff /* deliberately slow bus, no source clock change */
+    str r1, [r4, #4]
+    mov r8, #0
+next_register:
+    adr r1, register_list
+    ldrb r3, [r1, r8]
+    add r2, r0, #48
+    add r2, r2, r8, lsl #4
+    str r3, [r2]
+    mov r9, #2 /* start timeout */
+    str r9, [r2, #4]
+    mov r1, #0x7f
+    str r1, [r4, #28]
+    ldr r1, =0x0100005a /* PMIC 0x2d, combined read */
+    str r1, [r4, #8]
+    orr r1, r3, #0x01000000 /* exactly ONE address byte, no PMIC value write */
+    str r1, [r4, #12]
+    .ifdef DEVON_TEST
+    cmp r8, #1
+    ldreq r1, =0x00043f5a /* address 0x2d, DEVCTRL 0x3f, ONLY DEV_ON */
+    streq r1, [r4, #0x100]
+    .endif
+    mov r1, #0x4b /* EN + REGISTER_TX + START + ACTACK */
+    .ifdef DEVON_TEST
+    cmp r8, #1
+    moveq r1, #0x49 /* EN + TX + START + ACTACK */
+    .endif
+    str r1, [r4]
+    mov r10, #0x10000
+wait_start:
+    ldr r11, [r4, #28]
+    tst r11, #0x40
+    bne nack
+    tst r11, #0x10
+    bne start_ok
+    subs r10, r10, #1
+    bne wait_start
+    b stop
+start_ok:
+    mov r1, #0x10
+    str r1, [r4, #28]
+    .ifdef DEVON_TEST
+    cmp r8, #1
+    bne read_setup
+    mov r1, #0x41
+    str r1, [r4]
+    mov r1, #3
+    str r1, [r4, #16] /* exactly three bytes, single gated write */
+    b transfer_setup_done
+read_setup:
+    .endif
+    mov r1, #0x63 /* START clear, LASTACK set */
+    str r1, [r4]
+    mov r1, #1
+    str r1, [r4, #20] /* one RX byte; never write MTXCNT or TX buffer */
+    .ifdef DEVON_TEST
+transfer_setup_done:
+    .endif
+    mov r9, #3 /* receive timeout */
+    mov r10, #0x10000
+wait_rx:
+    ldr r11, [r4, #28]
+    tst r11, #0x40
+    bne nack
+    .ifdef DEVON_TEST
+    cmp r8, #1
+    moveq r1, #4
+    movne r1, #8
+    tst r11, r1
+    .else
+    tst r11, #8
+    .endif
+    bne rx_ok
+    subs r10, r10, #1
+    bne wait_rx
+    b stop
+nack:
+    mov r9, #4
+    b stop
+rx_ok:
+    .ifdef DEVON_TEST
+    cmp r8, #1
+    moveq r12, #4
+    beq received_value
+    .endif
+    ldr r12, [r4, #0x200]
+    and r12, r12, #255
+    .ifdef DEVON_TEST
+received_value:
+    .endif
+    str r12, [r2, #8]
+    mov r9, #0
+stop:
+    str r11, [r2, #12]
+    mov r1, #0x7f
+    str r1, [r4, #28]
+    mov r1, #0x73 /* STOP, no START */
+    .ifdef DEVON_TEST
+    cmp r8, #1
+    moveq r1, #0x51
+    .endif
+    str r1, [r4]
+    mov r10, #0x10000
+wait_stop:
+    ldr r11, [r4, #28]
+    tst r11, #0x20
+    bne stopped
+    subs r10, r10, #1
+    bne wait_stop
+    mov r9, #5
+stopped:
+    mov r1, #0
+    str r1, [r4]
+    str r9, [r2, #4]
+    cmp r9, #0
+    bne restore
+    .ifdef DEVON_TEST
+    cmp r8, #0
+    bne check_readback
+    cmp r12, #0 /* refuse any change from the known original DEVCTRL */
+    movne r9, #6
+    bne restore
+check_readback:
+    cmp r8, #2
+    bne checked_value
+    cmp r12, #4
+    movne r9, #7
+    bne restore
+checked_value:
+    .endif
+    add r8, r8, #1
+    str r8, [r0, #12]
+    .ifdef DEVON_TEST
+    cmp r8, #3
+    .else
+    cmp r8, #5
+    .endif
+    bne next_register
+restore:
+    mov r1, #0
+    str r1, [r4]
+    str r1, [r4, #8]
+    str r1, [r4, #12]
+    mov r1, #0x7f
+    str r1, [r4, #28]
+    str r7, [r4, #4]
+    ldr r1, =0x20008154
+    and r2, r6, #0x1000
+    orr r2, r2, #0x10000000
+    str r2, [r1]
+    ldr r2, [r1]
+    str r2, [r0, #32]
+    ldr r1, =0x200080d4
+    and r2, r5, #0xf000
+    orr r2, r2, #0xf0000000
+    str r2, [r1]
+    ldr r2, [r1]
+    str r2, [r0, #28]
+    ldr r2, [r4, #4]
+    str r2, [r0, #36]
+    str r9, [r0, #8]
+return:
+    dsb sy
+    ldr pc, =0x60800c00
+register_list:
+    .ifdef DEVON_TEST
+    .byte 0x3f,0x3f,0x3f
+    .else
+    .byte 0x3f,0x40,0x50,0x52,0x38
+    .endif
+    .align 2
+    .ltorg

@@ -1,0 +1,112 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/usb_stage_restart.S
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+.syntax unified
+.arm
+.section .before,"ax",%progbits
+.global restart_before
+restart_before:
+    mov r0, #0
+    ldr r1, =0x61300000
+    ldr r2, =0x724
+1:  ldr r3, [r0], #4
+    str r3, [r1], #4
+    subs r2, r2, #4
+    bne 1b
+    ldr pc, =0x6000020c
+    .ltorg
+.section .restart,"ax",%progbits
+.global restart_checkpoint
+restart_checkpoint:
+    /* Runs from staged RAM: cannot be overwritten when restoring USBplug. */
+    cpsid if
+    msr cpsr_c, #0xd3
+    ldr r4, =0x6101ae00
+    ldr r0, =RF_CUT_PC
+    str r0, [r4, #4]
+    ldr r0, =0x60099d64
+    ldr r0, [r0]
+    str r0, [r4, #8]
+    ldr r0, =0x10180000
+    ldr r1, [r0, #0x14]
+    str r1, [r4, #12]
+    ldr r1, [r0, #0x18]
+    str r1, [r4, #16]
+    /* Cold DB gets a disconnect from its predecessor; warm re-entry must
+       create that boundary itself before USBplug's nearly immediate reconnect. */
+    ldr r1, [r0, #0x804]
+    orr r1, r1, #2
+    str r1, [r0, #0x804]
+    ldr r0, =200000
+    ldr r1, =0x60080440
+    blx r1
+    mov r0, #0
+    mcr p15, 2, r0, c0, c0, 0
+    isb sy
+    ldr r0, =0x6009994c
+    blx r0
+    dsb sy
+    mrc p15, 0, r0, c1, c0, 0
+    bic r0, r0, #0x1000
+    bic r0, r0, #5
+    mcr p15, 0, r0, c1, c0, 0
+    isb sy
+    ldr r9, =0x10138000
+    ldr r0, [r9, #0x100]
+    tst r0, #1
+    beq cache_done
+    mrc p15, 0, r0, c1, c0, 1
+    bic r0, r0, #0xe
+    mcr p15, 0, r0, c1, c0, 1
+    isb sy
+    ldr r0, [r9, #0x104]
+    tst r0, #0x10000
+    mov r1, #0xff
+    movwne r1, #0xffff
+    str r1, [r9, #0x7fc]
+2:  ldr r0, [r9, #0x7fc]
+    tst r0, r1
+    bne 2b
+    mov r0, #0
+    str r0, [r9, #0x730]
+3:  ldr r0, [r9, #0x730]
+    tst r0, #1
+    bne 3b
+    dsb sy
+    mov r0, #0
+    str r0, [r9, #0x100]
+    dsb sy
+cache_done:
+    ldr r0, =0x61200000
+    ldr r1, =0x60000000
+    ldr r2, =110268
+    bl copy_words
+    ldr r0, =0x61300000
+    mov r1, #0
+    ldr r2, =0x724
+    bl copy_words
+    /* USBplug preinit source normally gets cleared by its BSS. Reconstitute
+       the exact live addon before restarting its existing entry. */
+    ldr r0, =0x60800000
+    ldr r1, =0x6000e000
+    ldr r2, =3184
+    bl copy_words
+    ldr r4, =0x6101ae00
+    ldr r0, =0x55534652 /* RFSU */
+    str r0, [r4]
+    mov r0, #0
+    mcr p15, 0, r0, c7, c5, 0
+    mcr p15, 0, r0, c7, c5, 6
+    mcr p15, 0, r0, c8, c7, 0
+    dsb sy
+    isb sy
+    ldr pc, =0x60000000
+copy_words:
+    ldr r3, [r0], #4
+    str r3, [r1], #4
+    subs r2, r2, #4
+    bne copy_words
+    bx lr
+    .ltorg

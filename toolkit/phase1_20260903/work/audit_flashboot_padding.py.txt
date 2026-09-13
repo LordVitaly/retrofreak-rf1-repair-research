@@ -1,0 +1,35 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/audit_flashboot_padding.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Resolve observed bytes beyond FlashBoot component from same NAND acquisitions."""
+import hashlib
+import json
+import struct
+from pathlib import Path
+from idb_ecc24_targeted_read import decode_page
+root=Path(__file__).resolve().parents[1]
+official=(root/'work/FlashBoot.packet512.STATIC_ONLY.bin').read_bytes()
+rows=[];tails=[]
+for block in (3,6):
+    path=root/f'work/idb_ecc24_targeted_attempt1/block{block:02d}_page15.raw'
+    raw=path.read_bytes()
+    extra=raw[3*528:3*528+512]
+    assert extra==bytes(512)
+    decoded=decode_page(raw)[1536:2048]
+    tails.append(decoded)
+    rows.append(dict(block=block,source=str(path),raw_extra_sector_all_zero=True,
+                     decoded_extra_sector_sha256=hashlib.sha256(decoded).hexdigest(),
+                     copied188_sha256=hashlib.sha256(decoded[:188]).hexdigest()))
+assert tails[0]==tails[1]
+literal_refs=[hex(i) for i in range(0,len(official)-3,4)
+              if 0x6009a3cc<=struct.unpack_from('<I',official,i)[0]<0x6009a488]
+report=dict(scope='Observed padding bytes only, not proof of BootROM decryption span or hardware launch compatibility',
+            component_bytes=len(official),required_source_bytes=110268,extra_bytes=188,
+            two_nand_copies_exact=True,copies=rows,
+            aligned_literal_pointers_into_extra_region=literal_refs,
+            limit='No literal pointer does not prove absence of computed accesses. Raw zeros decrypt to nonzero bytes if the sector is included in RC4 processing.',
+            decision='Do not diagnose this as corruption or silently zero-fill; determine actual loader transfer/decryption contract before packaging.')
+with (root/'outputs/flashboot_padding_audit.json').open('x') as output:json.dump(report,output,indent=2)
+print(json.dumps(report,indent=2))

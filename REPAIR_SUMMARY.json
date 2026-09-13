@@ -1,0 +1,44 @@
+{
+  "project": "Retro Freak RF-1 recovery research",
+  "platform": {
+    "soc": "Rockchip RK3066",
+    "nand": "Micron 4 GiB parallel NAND",
+    "maskrom_usb": "2207:300A"
+  },
+  "initial_symptoms": [
+    "persistent white screen",
+    "intermittent/failed power hold",
+    "recovery path became unavailable"
+  ],
+  "confirmed_repair_stages": [
+    "restore correct early IDB/FlashInfo/BBT geometry path",
+    "diagnostic boot and root ADB",
+    "minimal cache filesystem recovery",
+    "repair four 2 MiB logical system blocks 192/195/198/204 through live Linux",
+    "repair userdata filesystem with stock e2fsck while unmounted",
+    "validate temporary USB host path and cartridge adapter",
+    "restore stock boot using fresh mode0/mode1 FTL maps"
+  ],
+  "final_validation": [
+    "cold boot after complete power removal",
+    "Retro Freak GUI",
+    "settings persistence",
+    "controller",
+    "cartridge adapter",
+    "GBC cartridge detection",
+    "save import",
+    "game launch"
+  ],
+  "important_non_conclusions": [
+    "not proof all NAND cells are healthy",
+    "not a universal physical block map",
+    "not a one-click flasher"
+  ],
+  "validation_limits": {
+    "final_stock_boot_readback": "same powered session before final power removal",
+    "final_cold_boot": "operator-reported functional test; no new binary NAND read",
+    "save_import": "observed in earlier temporary-host test",
+    "historical_corruption_origin": "not established",
+    "three_startup_nand_diagnostics": "not classified in the supplied final record"
+  }
+}

@@ -1,0 +1,30 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/locate_current_read_records.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Locate actual returned sectors in the preserved dump, without device writes."""
+import hashlib,json,mmap
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1]
+cases=[]
+with (ROOT/'work/nand_native_ecc40/NAND_00.RAW').open('rb') as f:
+    with mmap.mmap(f.fileno(),0,access=mmap.ACCESS_READ) as old:
+        for name,pages,base in [('boot',(0,1,2,3,12),0x16000),('recovery',(0,3,25),0x1e000)]:
+            for page in pages:
+                raw=(ROOT/f'work/plain_control_native_ecc40_{name}_page{page}.raw').read_bytes()
+                assert len(raw)==8448
+                rows=[]
+                for i in range(16):
+                    main=raw[i*528:i*528+512]
+                    pos=old.find(main)
+                    second=old.find(main,pos+1) if pos>=0 else -1
+                    unique=pos>=0 and second<0 and pos%528==0
+                    rows.append(dict(output_record=i,unique_main_match=unique,first_old_offset=pos,old_sector=hex(pos//528) if unique else None,full_528_record_equal=unique and old[pos:pos+528]==raw[i*528:(i+1)*528]))
+                cases.append(dict(name=name,page=page,requested_sector=hex(base+page*16),raw_sha256=hashlib.sha256(raw).hexdigest(),records=rows))
+fresh=(ROOT/'work/after_plain01_probe_native_ecc40_page2.raw').read_bytes()
+plain=(ROOT/'work/plain_control_native_ecc40_boot_page2.raw').read_bytes()
+assert fresh==plain
+report=dict(fresh_original_loader_page2_equals_plain_control=True,cases=cases,device_access=False,scope='Exact returned 512-byte records located in old chunk00. Only unique aligned matches identify old sectors. Shows wrong expected data includes intact data from other locations; does not prove cause or whole-NAND invariance.')
+(ROOT/'outputs/current_read_record_locations.json').write_text(json.dumps(report,indent=2)+'\n')
+for c in cases:print(c['name'],c['page'],c['requested_sector'],[(r['output_record'],r['old_sector'],r['full_528_record_equal']) for r in c['records'] if r['unique_main_match']])

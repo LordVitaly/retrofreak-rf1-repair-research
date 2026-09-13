@@ -1,0 +1,100 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/bbt_read_trace.S
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+.syntax unified
+.arm
+.section .text,"ax",%progbits
+.global trace_bbt, trace_read
+trace_bbt:
+    push {r4, lr}
+    ldr r4, =0x6101af10
+    mov r1, #0
+    mov r2, #264
+    mov r3, r4
+1:  str r1, [r3], #4
+    subs r2, r2, #1
+    bne 1b
+    ldr r1, =0x31544242 /* BBT1 */
+    str r1, [r4]
+    ldr r12, =0x60085ff0 /* original BBT */
+    blx r12
+    ldr r1, =0x602b3180
+    add r2, r4, #800
+    mov r3, #8
+3:  ldr r12, [r1], #4
+    str r12, [r2], #4
+    subs r3, r3, #1
+    bne 3b
+    pop {r4, pc}
+trace_read:
+    push {r4, r5, r6, r7, r8, lr}
+    mov r4, r0
+    mov r5, r2
+    mov r7, r1
+    mov r8, r3
+    ldr r12, [sp, #24] /* preserve original fifth argument */
+    sub sp, sp, #8
+    str r12, [sp]
+    ldr r12, =0x600894c0 /* original read wrapper */
+    blx r12
+    add sp, sp, #8
+    mov r6, r0
+    ldr r12, =0x6101af10
+    cmp r8, #8
+    bne 4f
+    mov r1, #0
+    add r3, r12, #832
+5:  ldrh r2, [r5, r1]
+    strh r2, [r3], #2
+    add r1, r1, #16
+    cmp r1, #128
+    blo 5b
+    /* Diagnostic substitution in the returned RAM aux only. Never NAND. */
+    cmp r6, #0
+    bne 4f
+    cmp r4, #0xc000
+    bne 4f
+    ldrh r1, [r5]
+    cmp r1, #0xf000
+    bne 4f
+    ldrh r1, [r5, #16]
+    movw r2, #0x438
+    cmp r1, r2
+    bne 4f
+    ldrh r1, [r5, #32]
+    movw r2, #0xff70
+    cmp r1, r2
+    bne 4f
+    movw r1, #1896
+    strh r1, [r5, #32]
+    str r1, [r12, #848]
+4:
+    ldr r1, [r12, #4]
+    add r2, r1, #1
+    str r2, [r12, #4]
+    cmp r6, #0
+    ldrne r2, [r12, #8]
+    addne r2, r2, #1
+    strne r2, [r12, #8]
+    ldrh r2, [r5]
+    cmp r2, #0xf000
+    ldreq r3, [r12, #12]
+    addeq r3, r3, #1
+    streq r3, [r12, #12]
+    cmp r1, #32
+    bhs 2f
+    add r3, r1, r1, lsl #1
+    add r3, r12, r3, lsl #3
+    str r4, [r3, #16]
+    str r6, [r3, #20]
+    str r2, [r3, #24]
+    ldrh r2, [r5, #16]
+    str r2, [r3, #28]
+    ldr r2, [r7]
+    str r2, [r3, #32]
+    str r8, [r3, #36]
+2:  mov r0, r6
+    pop {r4, r5, r6, r7, r8, pc}
+    .ltorg

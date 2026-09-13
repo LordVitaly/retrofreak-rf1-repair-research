@@ -1,0 +1,14 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_ram_lzma_decode_test.ps1
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+$ErrorActionPreference = 'Stop'
+$rfRoot = Split-Path $PSScriptRoot -Parent
+Set-Location $rfRoot
+$rfZig = Join-Path $PSScriptRoot 'toolchain/zig-x86_64-windows-0.14.1/zig.exe'
+if (!(Test-Path -LiteralPath $rfZig)) { throw 'Verified local Zig toolchain not extracted yet' }
+& $rfZig cc -target arm-freestanding-eabi -mcpu=cortex_a9 -marm -mfloat-abi=soft -Oz -ffreestanding -fno-builtin -fno-stack-protector -ffunction-sections -fdata-sections -nostdlib '-Iwork/ram_stub_include' '-Iwork/lzma_sdk_2603/C' work/ram_lzma_decode_test.c work/lzma_sdk_2603/C/LzmaDec.c '-Wl,-T,work/ram_lzma_decode_test.ld' '-Wl,--gc-sections' -o work/ram_lzma_decode_test.elf
+if ($LASTEXITCODE -ne 0) { throw 'ARM decoder build failed' }
+python work/test_arm_lzma_decode.py
+if ($LASTEXITCODE -ne 0) { throw 'ARM decoder execution tests failed' }

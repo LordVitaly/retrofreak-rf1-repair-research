@@ -1,0 +1,94 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_system_gated_persistence.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""NEW compiled write gates around original FTL; existing virtual physical boundary.
+Four representative portions only. No peripheral expansion or device access.
+"""
+import hashlib,json,struct,time
+from emulate_flashboot_overlay import OverlayReplay
+from emulate_flashboot_offline import ROOT,FLASH,REGS,address,UC_ARM_REG_SP,UC_ARM_REG_LR,UC_ARM_REG_PC,STOP
+from ram_artifact import branch
+build=json.loads((ROOT/'outputs/system_writer_gated_v3_build.json').read_text());spec=build['variants']['write']
+syms={k:int(v,16) for k,v in spec['symbols'].items()}
+code=(ROOT/'work/system_writer_gated_v3/write.NOT_FOR_UPLOAD.bin').read_bytes();assert hashlib.sha256(code).hexdigest()==spec['sha256']
+patched={address(o):syms[n] for o,n in [(0x3b0c,'gate_wrapper'),(0x7dcc,'gate_logical'),(0xba10,'gate_program'),(0xbc1c,'gate_erase'),(0xbd5c,'gate_copy'),(0x1934,'gate_forbidden'),(0x5b60,'gate_forbidden'),(0x7038,'gate_forbidden')]}
+class GatedReplay(OverlayReplay):
+    def __init__(self,record):
+        self.installed=False
+        super().__init__(record)
+    def code_hook(self,uc,pc,size,ctx):
+        if self.installed:
+            if pc in patched:return
+            if pc==syms['original_program']:
+                assert self.enabled
+                return OverlayReplay.code_hook(self,uc,address(0xba10),size,ctx)
+            if pc==syms['original_erase']:
+                assert self.enabled
+                return OverlayReplay.code_hook(self,uc,address(0xbc1c),size,ctx)
+        super().code_hook(uc,pc,size,ctx)
+record=(ROOT/'work/idb_ecc24_parameter_attempt2/block05_page15.raw').read_bytes()[:512]
+donor=(ROOT.parent.parent/'2026-09-01/retro-freak-retrofreak-systemupdate-0-2/work/rkfw_contents/components/system.img').read_bytes()
+assert hashlib.sha256(donor).hexdigest()=='b9ca511124e6c3d9ee2a1e31220f6bf5a858f06d88f9003f5fd7f7e25cf5676a'
+def initialize(pages,erased):
+    e=GatedReplay(record);e.allow_statistics_data();e.allow_zero_length_copy=True
+    for p,n in ((0x61800000,0x2000),(0x61700000,0x5000),(0x63000000,0x210000)):e.uc.mem_map(p,n)
+    e.uc.mem_write(0x61800000,code)
+    for pc,target in patched.items():e.uc.mem_write(pc,struct.pack('<I',branch(pc,target)))
+    e.installed=True;e.pages=dict(pages);e.erased=set(erased);e.enabled=True
+    e.write_entries.remove(address(0x3b0c))
+    assert e.call(0xa158,0x50f4)==0
+    e.uc.mem_write(FLASH+0xa0,struct.pack('<H',12));e.call(0x74e0);e.dump_mode=True
+    assert e.call(0x6a24)==0
+    try: assert e.call(0x6050,1,instruction_limit=10000000,timeout_us=60000000)==0
+    except BaseException:
+        print('INIT stop',hex(e.uc.reg_read(UC_ARM_REG_PC)),e.stopped,flush=True)
+        raise
+    assert not e.operations
+    return e
+def call(e,pc,args):
+    for r,v in zip(REGS,args):e.uc.reg_write(r,v)
+    e.uc.reg_write(UC_ARM_REG_SP,0x603d3a3c);e.uc.reg_write(UC_ARM_REG_LR,STOP)
+    e.uc.emu_start(pc,STOP,count=3000000,timeout=15000000)
+    assert e.uc.reg_read(UC_ARM_REG_PC)==STOP,hex(e.uc.reg_read(UC_ARM_REG_PC))
+    return e.uc.reg_read(REGS[0])
+def read(e,lba,data):
+    for off in range(0,len(data),65536):
+        part=data[off:off+65536];e.uc.mem_write(0x63200000,bytes(x^255 for x in part))
+        assert call(e,address(0x50d4),(0,lba+off//512,len(part)//512,0x63200000))==0
+        assert bytes(e.uc.mem_read(0x63200000,len(part)))==part
+start=time.monotonic();e=None;report=dict(all_pass=False,device_access=False,core_sha256=spec['sha256'],cases=[])
+try:
+    e=initialize({},set());saved=[]
+    for logical in (186,188,231,259):
+        data=donor[(logical-186)*2097152:(logical-185)*2097152]
+        if logical==259:
+            assert call(e,address(0x50d4),(0,0x103ff0,16,0x63200000))==0
+            tail=bytes(e.uc.mem_read(0x63201000,4096));data+=tail
+            report['preserved_tail_sha256']=hashlib.sha256(tail).hexdigest()
+        e.uc.mem_write(0x63000000,data)
+        assert call(e,syms['gate_prepare'],(logical*4096,))==0
+        for off in range(0,len(data),65536):
+            report['current']={'logical':logical,'offset':off}
+            e.uc.mem_write(0x61700000,struct.pack('<I',0x31575246))
+            rc=call(e,address(0x7dcc),(0,logical*4096+off//512,128,0x63000000+off))
+            e.uc.mem_write(0x61700000,bytes(4))
+            assert rc==0,('logical failure',hex(rc),bytes(e.uc.mem_read(0x61700000,32)).hex())
+            read(e,logical*4096+off//512,data[off:off+65536])
+        state=struct.unpack('<8I',e.uc.mem_read(0x61700000,32));assert state[1]==0
+        operations=list(e.operations);pages,erased=dict(e.pages),set(e.erased)
+        saved.append((logical*4096,data));del e;e=initialize(pages,erased)
+        for lba,expected in saved:read(e,lba,expected)
+        assert call(e,syms['gate_prepare'],(logical*4096,))==0 # unchanged non-system map
+        entry=dict(logical=logical,bytes=len(data),gate_state=[hex(v) for v in state],operations=operations,immediate_exact=True,reinitialized_exact=True,earlier_portions_exact=True,non_system_map_guard_passed=True)
+        report['cases'].append(entry);print('PASS compiled gates + original FTL portion',logical,flush=True)
+    report.update(all_pass=True,limits=['Original physical backend represented by existing virtual main/aux program/erase; no ECC/controller/new-bad-block proof','Core CRC/loop checked separately, calls here use the same 64KiB sequence','No real NAND writes or new peripheral model'])
+except BaseException as ex:
+    report['error']=repr(ex)
+    if e:report.update(gate_state=bytes(e.uc.mem_read(0x61700000,32)).hex(),last_operations=e.operations[-8:],pc=hex(e.uc.reg_read(UC_ARM_REG_PC)))
+    raise
+finally:
+    report['elapsed_seconds']=time.monotonic()-start
+    with (ROOT/'outputs/system_gated_persistence_v3_attempt2.json').open('x') as f:json.dump(report,f,indent=2)
+    print(json.dumps({k:v for k,v in report.items() if k!='cases'},indent=2),flush=True)

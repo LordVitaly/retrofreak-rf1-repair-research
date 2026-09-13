@@ -1,0 +1,44 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/audit_native_system_superblock.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Decode physical and F100-cached system superblocks, never writes NAND.
+Fields: https://www.kernel.org/doc/html/latest/filesystems/ext4/super.html
+"""
+import json
+import struct
+from pathlib import Path
+from verify_native_ecc_page import BOOT,extract
+ROOT=Path(__file__).parent
+def read_page(block,page):
+    chunk,local=divmod(block,64)
+    with (ROOT/'nand_native_ecc40'/f'NAND_{chunk:02d}.RAW').open('rb') as f:
+        f.seek((local*256+page)*8448)
+        return extract(f.read(8448))
+def decode(data):
+    u16=lambda o:struct.unpack_from('<H',data,o)[0]
+    u32=lambda o:struct.unpack_from('<I',data,o)[0]
+    u64=lambda o:struct.unpack_from('<Q',data,o)[0]
+    txt=lambda o,n:data[o:o+n].split(b'\0')[0].decode('ascii','replace')
+    assert u16(0x38)==0xef53
+    return dict(magic=hex(u16(0x38)),state=u16(0x3a),errors_policy=u16(0x3c),
+        mount_count=u16(0x34),mtime=u32(0x2c),wtime=u32(0x30),
+        uuid=data[0x68:0x78].hex(),label=txt(0x78,16),error_count=u32(0x194),
+        first_error_time=u32(0x198),first_error_inode=u32(0x19c),first_error_block=u64(0x1a0),
+        first_error_func=txt(0x1a8,32),first_error_line=u32(0x1c8),
+        last_error_time=u32(0x1cc),last_error_inode=u32(0x1d0),last_error_line=u32(0x1d4),
+        last_error_block=u64(0x1d8),last_error_func=txt(0x1e0,32))
+reference=(BOOT.parent/'system.img').read_bytes()[1024:2048]
+base=read_page(151,0)[1024:2048]
+cache=json.loads((ROOT.parent/'outputs/native_cache_inventory_2048blocks.json').read_text())
+candidate=next(e for e in cache['entries'] if e['logical_sector']==186*4096)
+assert candidate['valid_sector_mask']&12==12
+cached=read_page(candidate['physical_block'],candidate['page'])[1024:2048]
+report=dict(scope='Superblock evidence and cache candidate; not a complete logical filesystem reconstruction',
+    reference=decode(reference),physical_base=decode(base),cached=decode(cached),cache_provenance=candidate,
+    cache_reference_differing_offsets=[i for i,(a,b) in enumerate(zip(cached,reference)) if a!=b])
+out=ROOT.parent/'outputs/native_system_superblock_audit.json'
+if not out.exists():
+    with out.open('x') as f: json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

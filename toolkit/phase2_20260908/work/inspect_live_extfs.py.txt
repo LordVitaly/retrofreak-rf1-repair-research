@@ -1,0 +1,65 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/inspect_live_extfs.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Parse only captured native logical data; missing ranges are never filled."""
+from pathlib import Path
+import io,sys,json,hashlib,stat
+HERE=Path(__file__).resolve().parent
+VENV=Path('<EXTERNAL_STAGE_01>/work/venv/Lib/site-packages')
+sys.path.insert(0,str(VENV))
+from dissect.extfs import ExtFS
+assert len(sys.argv)==2 and sys.argv[1].isalnum()
+label=sys.argv[1]
+segments=[]
+for result in HERE.glob('white_screen_reads_*/*/result.json'):
+    d=json.loads(result.read_text())
+    if not d.get('complete'):continue
+    b=Path(d['path']).read_bytes();assert hashlib.sha256(b).hexdigest()==d['sha256'] and len(b)==d['sectors']*512
+    segments.append((d['lba']*512,d['lba']*512+len(b),b))
+missing=set()
+class MissingRange(Exception):pass
+class View(io.RawIOBase):
+    def __init__(self,start,sectors):self.start=start*512;self.size=sectors*512;self.pos=0
+    def readable(self):return True
+    def seekable(self):return True
+    def tell(self):return self.pos
+    def seek(self,offset,whence=0):
+        self.pos=offset if whence==0 else self.pos+offset if whence==1 else self.size+offset
+        if self.pos<0:raise ValueError('negative seek')
+        return self.pos
+    def read(self,n=-1):
+        if n<0:n=self.size-self.pos
+        n=min(n,max(0,self.size-self.pos));at=self.start+self.pos;end=at+n;parts=[]
+        while at<end:
+            found=next(((a,z,b) for a,z,b in segments if a<=at<z),None)
+            if found is None:
+                page=(at//8192)*16;missing.add((page,16));raise MissingRange(f'Need native LBA {page:#x} count16')
+            a,z,b=found;stop=min(z,end);parts.append(b[at-a:stop-a]);at=stop
+        self.pos+=n;return b''.join(parts)
+targets={
+ 'data':['/','/property','/property/persist.sys.usb.config','/anr','/anr/traces.txt','/dontpanic','/dontpanic/apanic_console','/system','/system/dropbox','/tombstones','/system/packages.xml','/system/packages.list','/data','/data/com.datapower.retrofreak','/freak-daemon'],
+ 'cache':['/','/recovery','/recovery/last_log','/recovery/log','/recovery/last_install'],
+}
+report=dict(segments=len(segments),filesystems={},missing=[])
+for name,start,size in [('data',0x38000,0x80000),('cache',0x18000,0x20000)]:
+    res=dict(rows=[]);report['filesystems'][name]=res
+    try:
+        fs=ExtFS(View(start,size));res.update(block_size=fs.block_size,blocks=fs.block_count,uuid=str(fs.uuid),mount=fs.last_mount,state=fs.sb.s_state,errors_policy=fs.sb.s_errors)
+    except Exception as exc:res['open_error']=dict(type=type(exc).__name__,detail=str(exc));continue
+    for path in targets[name]:
+        row=dict(path=path);res['rows'].append(row)
+        try:
+            node=fs.get(path);row.update(inode=node.inum,size=node.size)
+            if node.filetype==stat.S_IFDIR:
+                row['entries']=[dict(name=n.filename,inode=n.inum) for n in node.iterdir()]
+            elif node.size<=2*1024*1024:
+                data=node.open().read();row.update(bytes=len(data),sha256=hashlib.sha256(data).hexdigest(),text_prefix=data[:8192].decode('utf-8',errors='replace'))
+            else:row['read_skipped']='File larger than2MiB; inspect metadata first'
+            row['status']='read_returned'
+        except Exception as exc:row.update(status='error',type=type(exc).__name__,detail=str(exc))
+report['missing']=[dict(lba=l,count=c) for l,c in sorted(missing)]
+path=HERE/f'live_extfs_{label}.json';path.write_text(json.dumps(report,indent=2,ensure_ascii=True))
+print(json.dumps(report,indent=2,ensure_ascii=True))

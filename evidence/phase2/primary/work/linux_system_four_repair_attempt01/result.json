@@ -1,0 +1,12 @@
+{
+  "all_pass": true,
+  "write_attempts": [
+    192,
+    195,
+    198,
+    204
+  ],
+  "data_writes": false,
+  "expected_full_md5": "<HISTORICAL_HASH_REDACTED>",
+  "whole_system_matches_official_except_preserved_superblock": true
+}

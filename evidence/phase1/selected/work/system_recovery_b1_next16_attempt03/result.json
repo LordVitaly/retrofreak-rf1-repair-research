@@ -1,0 +1,55 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/system_recovery_b1_next16_attempt03/result.json",
+  "interpretation": "Continued first-batch verification and next portion without rewriting the earlier portion.",
+  "data": {
+    "all_pass": true,
+    "authorization": "Finish batch1 read-only verification, then ONLY logical196..203 (16MiB); no retries",
+    "batch_mib": 16,
+    "batches": [
+      [
+        196,
+        197,
+        198,
+        199,
+        200,
+        201,
+        202,
+        203
+      ]
+    ],
+    "range_binding_pass": true,
+    "already_written": [
+      186,
+      187,
+      188,
+      189,
+      190,
+      191,
+      192,
+      193,
+      194,
+      195
+    ],
+    "write_attempts": [
+      196,
+      197,
+      198,
+      199,
+      200,
+      201,
+      202,
+      203
+    ],
+    "completed_batches": [
+      1,
+      2
+    ],
+    "executions": {
+      "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+      "original_items": 43
+    },
+    "phase": "NEXT16MIB_VERIFIED_STOP_NO_BATCH3",
+    "current_stage_sha256": "<REDACTED:HASH_OR_BYTES>"
+  }
+}

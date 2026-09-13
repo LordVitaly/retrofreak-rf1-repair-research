@@ -1,0 +1,48 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/search_boot_page_tails.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+
+def find_all(blob: bytes, needle: bytes) -> list[int]:
+    positions = []
+    start = 0
+    while True:
+        pos = blob.find(needle, start)
+        if pos < 0:
+            return positions
+        positions.append(pos)
+        start = pos + 1
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("raw", type=Path)
+    parser.add_argument("image", type=Path)
+    parser.add_argument("--image-offset", type=lambda value: int(value, 0), required=True)
+    parser.add_argument("--visible", type=int, default=7996)
+    parser.add_argument("--needle", type=int, default=32)
+    args = parser.parse_args()
+
+    raw = args.raw.read_bytes()
+    page = args.image.read_bytes()[args.image_offset : args.image_offset + 8192]
+    tail = page[args.visible:]
+    print(f"raw_bytes={len(raw)} tail_bytes={len(tail)}")
+    for offset in range(0, len(tail), args.needle):
+        needle = tail[offset : offset + args.needle]
+        if len(needle) < args.needle:
+            break
+        positions = find_all(raw, needle)
+        print(
+            f"tail_offset=0x{offset:03X} matches={len(positions)} "
+            f"positions={','.join(f'0x{pos:X}' for pos in positions[:16])}"
+        )
+
+
+if __name__ == "__main__":
+    main()

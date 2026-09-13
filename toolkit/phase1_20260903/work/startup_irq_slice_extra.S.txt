@@ -1,0 +1,257 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/startup_irq_slice_extra.S
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+.syntax unified
+.arm
+#ifdef RF_NAND_ENTRY
+.global rf_extra_base
+.set rf_extra_base, 0x60002000
+#endif
+.section .extra,"ax",%progbits
+.global irq_before_helper,irq_after_helper
+irq_before_helper:
+#ifdef RF_BOOT_SETUP
+    ldr r0, =0x6035c000
+    ldr r1, =0x61520000
+    ldr r2, =0x64000
+    bl copy_words
+#endif
+#ifdef RF_FTL_VARS
+    ldr r0, =0x602b3000
+    ldr r1, =0x61400000
+#ifdef RF_REMAP
+    ldr r2, =0xa6000
+#else
+    ldr r2, =0x9f000
+#endif
+    bl copy_words
+#ifdef RF_REMAP
+    ldr r0, =0x603c0000
+    ldr r1, =0x61500000
+    ldr r2, =0x13000
+    bl copy_words
+#endif
+#endif
+    ldr r4, =0x6101ae00
+#ifdef RF_MMU_SLICE
+    bl mmu_before_guard
+#endif
+    ldr r0, =0x60801000
+    ldr r0, [r0, #8]
+    str r0, [r4, #40]
+    add r1, r0, #60
+    str r1, [r4, #56]
+    ldr r1, [r0]
+    str r1, [r4, #44]
+    and r1, r1, #0x1f
+    cmp r1, #0x12
+    bne irq_refused
+    ldr r1, [r0, #44] /* bridge_execute's saved LR: tail chain to USB handler */
+    str r1, [r4, #48]
+    ldr r2, =0x600011fc
+    cmp r1, r2
+    bne irq_refused
+    ldr r1, [r0, #60] /* USB handler's saved LR: original outer EOI */
+    str r1, [r4, #52]
+    ldr r2, =0x600009c0
+    cmp r1, r2
+    bne irq_refused
+#ifdef RF_PREMMU_SLICE
+    ldr r0, =0x20004040
+    ldr r1, [r0]
+    ldr r0, =0x61328200
+    str r1, [r0]
+    ldr r0, =0x60040000
+    ldr r1, =0x61324000
+    mov r2, #0x4000
+    bl copy_words
+    ldr r0, =0x6036b400
+    ldr r1, =0x61328000
+    mov r2, #0x100
+    bl copy_words
+    ldr r0, =0x6035b300
+    ldr r1, =0x61328100
+    mov r2, #0x100
+    bl copy_words
+#endif
+#ifdef RF_COMMON_STORAGE
+ #ifdef RF_NAND_ENTRY
+    ldr r0, =0x602b3000
+    ldr r1, =0x6132c000
+    mov r2, #0xb000
+    bl copy_words
+    ldr r0, =0x60359000
+    ldr r1, =0x61337000
+    mov r2, #0x1000
+    bl copy_words
+ #endif
+    ldr r0, =0x6035a000
+    ldr r1, =0x61329000
+    mov r2, #0x2000
+    bl copy_words
+    ldr r0, =0x1013d834
+    ldr r1, =0x6132b000
+    mov r2, #8
+    bl copy_words
+#endif
+    adr r0, irq_registers
+    ldr r1, =0x61323000
+    mov r2, #8
+1:
+    ldr r3, [r0], #4
+    ldr r3, [r3]
+    str r3, [r1], #4
+    subs r2, r2, #1
+    bne 1b
+    ldr pc, =0x6000020c
+irq_refused:
+    mov r0, #0
+    str r0, [r4, #4]
+    ldr r0, =RF_STAGE_TAG
+    str r0, [r4]
+    dsb sy
+    ldr pc, =0x60800c00
+    .ltorg
+irq_after_helper:
+    msr cpsr_c, #0xd3
+#ifdef RF_ACTUAL_USB
+    mov r0, r4 /* Capture original main's control pointer before helper uses r4. */
+#endif
+    ldr r4, =0x6101ae00
+#ifdef RF_NAND_FIRST_READ
+#ifdef RF_LOCAL_CHECK
+    ldr r0, [sp, #0x24c]
+#endif
+#ifdef RF_FTL_VARS
+#ifndef RF_BBT
+    ldr r0, =0x602b3180
+    ldrh r0, [r0, #0xe]
+#endif
+#endif
+    str r0, [r4, #264]
+#endif
+#ifdef RF_NAND_ID
+    ldr r0, =0x6035a534
+    add r1, r4, #124
+    mov r2, #64
+    bl copy_words
+    ldr r0, =0x60359a34
+    ldr r0, [r0]
+    str r0, [r4, #188]
+#ifdef RF_NAND_GEOMETRY
+    ldr r0, =0x60359a3c
+    add r1, r4, #192
+    mov r2, #72
+    bl copy_words
+#endif
+#endif
+#ifdef RF_MMU_SLICE
+    bl mmu_after_restore
+#endif
+#ifdef RF_BOOT_SETUP
+    ldr r0, =0x61520000
+    ldr r1, =0x6035c000
+    ldr r2, =0x64000
+    bl copy_words
+#endif
+#ifdef RF_FTL_VARS
+    ldr r0, =0x61400000
+    ldr r1, =0x602b3000
+#ifdef RF_REMAP
+    ldr r2, =0xa6000
+#else
+    ldr r2, =0x9f000
+#endif
+    bl copy_words
+#ifdef RF_REMAP
+    ldr r0, =0x61500000
+    ldr r1, =0x603c0000
+    ldr r2, =0x13000
+    bl copy_words
+#endif
+#endif
+#ifdef RF_COMMON_STORAGE
+ #ifdef RF_NAND_ENTRY
+    ldr r0, =0x6132c000
+    ldr r1, =0x602b3000
+    mov r2, #0xb000
+    bl copy_words
+    ldr r0, =0x61337000
+    ldr r1, =0x60359000
+    mov r2, #0x1000
+    bl copy_words
+ #endif
+    ldr r0, =0x61329000
+    ldr r1, =0x6035a000
+    mov r2, #0x2000
+    bl copy_words
+    ldr r0, =0x6132b000
+    ldr r1, =0x1013d834
+    mov r2, #8
+    bl copy_words
+#endif
+#ifdef RF_PREMMU_SLICE
+    ldr r0, =0x61324000
+    ldr r1, =0x60040000
+    mov r2, #0x4000
+    bl copy_words
+    ldr r0, =0x61328000
+    ldr r1, =0x6036b400
+    mov r2, #0x100
+    bl copy_words
+    ldr r0, =0x61328100
+    ldr r1, =0x6035b300
+    mov r2, #0x100
+    bl copy_words
+    ldr r0, =0x61328200
+    ldr r0, [r0]
+    ldr r1, =0x20004040
+    ldr r2, [r1]
+    cmp r0, r2
+    strne r0, [r1]
+#endif
+#ifdef RF_EXEC_IRQ
+    /* FlashBoot already EOI'd USB IRQ30. Skip exactly one original outer EOI
+       by advancing this verified saved return address by one instruction.
+       No persistent code patch and no artificial GIC interrupt activation. */
+    ldr r0, [r4, #56]
+    ldr r1, =0x600009c4
+    str r1, [r0]
+#endif
+    ldr r5, =0x61323000
+    ldr r6, =0x1013c000
+    ldr r7, =0x1013d000
+    mov r0, #0
+    str r0, [r6, #0x100]
+    str r0, [r7]
+    mvn r0, #0
+    str r0, [r7, #0x180]
+    str r0, [r7, #0x184]
+    str r0, [r7, #0x188]
+    str r0, [r7, #0x18c]
+    ldr r0, [r5, #28]
+    str r0, [r7, #0xc0c]
+    ldr r0, [r5, #12]
+    str r0, [r7, #0x100]
+    ldr r0, [r5, #16]
+    str r0, [r7, #0x104]
+    ldr r0, [r5, #20]
+    str r0, [r7, #0x108]
+    ldr r0, [r5, #24]
+    str r0, [r7, #0x10c]
+    ldr r0, [r5, #4]
+    str r0, [r6, #0x104]
+    ldr r0, [r5, #8]
+    str r0, [r7]
+    ldr r0, [r5]
+    str r0, [r6, #0x100]
+    dsb sy
+    isb sy
+    ldr pc, =0x60000104
+    .ltorg
+.balign 4
+irq_registers:
+    .word 0x1013c100,0x1013c104,0x1013d000
+    .word 0x1013d100,0x1013d104,0x1013d108,0x1013d10c,0x1013dc0c

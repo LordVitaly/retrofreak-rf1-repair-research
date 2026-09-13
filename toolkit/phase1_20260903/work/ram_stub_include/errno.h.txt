@@ -1,0 +1,13 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/ram_stub_include/errno.h
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+/* Freestanding SDK header compatibility; decoder does not use OS errno. */
+#ifndef RF_ERRNO_H
+#define RF_ERRNO_H
+#define EINVAL 22
+#define EEXIST 17
+#define ENOENT 2
+#define ENOSPC 28
+#endif

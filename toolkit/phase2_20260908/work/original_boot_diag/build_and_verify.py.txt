@@ -1,0 +1,240 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/original_boot_diag/build_and_verify.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Offline-only preparation. No device APIs, subprocesses or hardware runner.
+
+Reverts precisely the forced-capacity MOV in the pinned BBT trace v2 payload.
+Uses the prior pure stdlib CRC helper without writing bytecode into its tree.
+"""
+import ast
+import hashlib
+import importlib.util
+import json
+from pathlib import Path
+import struct
+import sys
+import zlib
+
+sys.dont_write_bytecode = True
+OLD = Path('<EXTERNAL_STAGE_03>')
+OUT = Path(__file__).resolve().parent
+SOURCE = OLD / 'work/bbt_read_trace_v2/trace.raw'
+SOURCE_SHA = '<HISTORICAL_HASH_REDACTED>'
+CAPACITY = OLD / 'work/startup_slices_v21_ftl_capacity/ftl_capacity_original.raw'
+CAPACITY_SHA = '<HISTORICAL_HASH_REDACTED>'
+SIZE, BODY_SIZE = 110352, 110080
+GUARDS = (0x1934, 0x3b0c, 0x5b60, 0x7038, 0x7dcc, 0xba10, 0xbc1c, 0xbd5c)
+STOPS = (0xbbc8, 0xbc90)
+
+def sha(data):
+    return hashlib.sha256(data).hexdigest()
+
+def pinned(path, expected):
+    data = path.read_bytes()
+    assert sha(data) == expected, str(path)
+    return data
+
+helper_path = OLD / 'work/ram_artifact.py'
+helper_source = helper_path.read_text()
+helper_ast = ast.parse(helper_source)
+for node in helper_ast.body:
+    assert isinstance(node, (ast.Import, ast.FunctionDef)) or (
+        isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant)
+        and isinstance(node.value.value, str)), 'Unexpected helper import side effect'
+    if isinstance(node, ast.Import):
+        assert {alias.name for alias in node.names} <= {'struct', 'zlib'}
+spec = importlib.util.spec_from_file_location('checked_ram_artifact', helper_path)
+helper = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(helper)
+
+source = pinned(SOURCE, SOURCE_SHA)
+capacity = pinned(CAPACITY, CAPACITY_SHA)
+assert len(source) == len(capacity) == SIZE
+assert source[BODY_SIZE:] == capacity[BODY_SIZE:] == bytes(272)
+assert zlib.crc32(source[:BODY_SIZE]) == zlib.crc32(capacity[:BODY_SIZE]) == 0xad0dadee
+assert source[0xb408:0xb40c] == bytes.fromhex('0205a0e3')
+assert capacity[0xb408:0xb40c] == bytes.fromhex('0101a0e3')
+data = bytearray(source[:BODY_SIZE])
+data[0xb408:0xb40c] = bytes.fromhex('0101a0e3')
+helper.fix_crc(data)
+payload = bytes(data) + bytes(272)
+changed = [i for i, (a, b) in enumerate(zip(source, payload)) if a != b]
+assert changed == [0x1e0, 0x1e1, 0x1e2, 0x1e3, 0xb408, 0xb409], changed
+assert all(0x1e0 <= i < 0x1e4 or 0xb408 <= i < 0xb40c for i in changed)
+assert payload[0x7040:0x7140] == source[0x7040:0x7140]
+assert all(payload[o:o+8] == source[o:o+8] == bytes.fromhex('0000e0e31eff2fe1') for o in GUARDS)
+assert all(payload[o:o+4] == source[o:o+4] == bytes.fromhex('feffffea') for o in STOPS)
+assert len(payload) == SIZE and payload[BODY_SIZE:] == bytes(272)
+assert zlib.crc32(payload[:BODY_SIZE]) == 0xad0dadee
+
+def addr(off):
+    return 0x60080000 + off - 0xa34
+
+def branch_target(raw, off, pc, opcode):
+    word = struct.unpack_from('<I', raw, off)[0]
+    assert word >> 24 == opcode
+    disp = word & 0xffffff
+    if disp & 0x800000:
+        disp -= 0x1000000
+    return pc + 8 + disp * 4
+
+cut = 0x60086c84
+assert addr(0x76b8) == cut
+assert branch_target(payload, 0x76b8, cut, 0xea) == 0x60000100
+assert branch_target(payload, 0x76b4, addr(0x76b4), 0xeb) == 0x60007040
+assert branch_target(payload, 0x6ae8, addr(0x6ae8), 0xeb) == 0x60007090
+assert branch_target(payload, 0x6b88, addr(0x6b88), 0xeb) == 0x60007090
+assert branch_target(capacity, 0x7534, addr(0x7534), 0xea) == 0x60000100
+
+# Execute actual denial entries / stopped confirm instructions and 256-op gate.
+sys.path.insert(0, str(OLD / 'work/emulator_deps'))
+from unicorn import Uc, UC_ARCH_ARM, UC_MODE_ARM, UC_HOOK_CODE, UC_HOOK_MEM_WRITE
+from unicorn.arm_const import *
+
+def machine(raw):
+    u = Uc(UC_ARCH_ARM, UC_MODE_ARM)
+    u.mem_map(0x60080000, 0x20000)
+    u.mem_write(0x60080000, raw[0xa34:BODY_SIZE])
+    return u
+
+for raw in (payload, capacity):
+    for off in GUARDS:
+        u = machine(raw)
+        u.reg_write(UC_ARM_REG_R0, 0)
+        u.reg_write(UC_ARM_REG_LR, 0x6009f000)
+        writes = []
+        u.hook_add(UC_HOOK_MEM_WRITE, lambda *args: writes.append(args[2]))
+        u.emu_start(addr(off), 0x6009f000, count=3)
+        assert u.reg_read(UC_ARM_REG_PC) == 0x6009f000
+        assert u.reg_read(UC_ARM_REG_R0) == 0xffffffff and not writes
+    for off in STOPS:
+        u = machine(raw)
+        writes = []
+        u.hook_add(UC_HOOK_MEM_WRITE, lambda *args: writes.append(args[2]))
+        u.emu_start(addr(off), 0x6009f000, count=32)
+        assert u.reg_read(UC_ARM_REG_PC) == addr(off) and not writes
+    routes = {0: 0x2d24, 1: 0x2d2c, 3: 0x2d3c, 4: 0x2d44, 0x14: 0x2d5c}
+    for op in range(256):
+        u = machine(raw)
+        u.reg_write(UC_ARM_REG_R0, op)
+        def gate_stop(uc, pc, size, ctx):
+            if not addr(0x2c58) <= pc < addr(0x2c58 + 44):
+                uc.emu_stop()
+        u.hook_add(UC_HOOK_CODE, gate_stop)
+        u.emu_start(addr(0x2c58), 0, count=20)
+        assert u.reg_read(UC_ARM_REG_PC) == addr(routes.get(op, 0x2d10))
+
+# Wrapper ABI and write-bound test adapted from prior offline builder, but use
+# the PINNED v2 binary; the current .S source has since gained v3 substitutions.
+elf = (OLD / 'work/bbt_read_trace_v2/trace.elf').read_bytes()
+symbols = helper.symbols(elf)
+assert symbols['trace_bbt'] == 0x60007040 and symbols['trace_read'] == 0x60007090
+code = payload[0x7040:0x7140]
+assert helper.elf_code(elf, 0x60007040, 0x180) == code
+u = Uc(UC_ARCH_ARM, UC_MODE_ARM)
+u.mem_map(0x60000000, 0x400000)
+u.mem_map(0x61000000, 0x20000)
+u.mem_write(0x60007040, code)
+sp, stop, trace = 0x601f0000, 0x601e0000, 0x6101af10
+R = (UC_ARM_REG_R0, UC_ARM_REG_R1, UC_ARM_REG_R2, UC_ARM_REG_R3)
+active = {'rc': 0, 'tag': 0xf000, 'count': 8}
+calls, executed_writes = [], []
+ftl = bytes(range(32))
+u.mem_write(0x602b3180, ftl)
+
+def original_call(uc, pc, size, user):
+    if pc == 0x60085ff0:
+        assert bytes(uc.mem_read(trace, 16)) == struct.pack('<4I', 0x31544242, 0, 0, 0)
+        uc.reg_write(R[0], 0xffffffff)
+    elif pc == 0x600894c0:
+        a = [uc.reg_read(r) for r in R]
+        assert a == [0xc000, 0x60100000, 0x60101000, active['count']]
+        assert struct.unpack('<I', uc.mem_read(uc.reg_read(UC_ARM_REG_SP), 4))[0] == 0x12345678
+        uc.mem_write(a[1], struct.pack('<I', 0x005b005a))
+        # Host stand-in provides the known corrupted count; ARM must preserve it.
+        for off, val in ((0, active['tag']), (16, 0x438), (32, 0xff70)):
+            uc.mem_write(a[2] + off, struct.pack('<H', val))
+        calls.append(a)
+        uc.reg_write(R[0], active['rc'])
+    else:
+        return
+    uc.reg_write(UC_ARM_REG_PC, uc.reg_read(UC_ARM_REG_LR))
+
+def bounded_write(uc, access, address, size, value, user):
+    assert sp - 64 <= address and address + size <= sp or trace <= address and address + size <= trace + 1056, hex(address)
+    executed_writes.append((address, size))
+
+u.hook_add(UC_HOOK_CODE, original_call)
+u.hook_add(UC_HOOK_MEM_WRITE, bounded_write)
+saved = [(r, 0x13570000 + i) for i, r in enumerate((UC_ARM_REG_R4, UC_ARM_REG_R5, UC_ARM_REG_R6, UC_ARM_REG_R7, UC_ARM_REG_R8, UC_ARM_REG_R9, UC_ARM_REG_R10, UC_ARM_REG_R11))]
+
+def call(entry):
+    for r, value in saved:
+        u.reg_write(r, value)
+    u.reg_write(UC_ARM_REG_SP, sp)
+    u.reg_write(UC_ARM_REG_LR, stop)
+    u.emu_start(entry, stop, count=10000)
+    assert u.reg_read(UC_ARM_REG_SP) == sp and all(u.reg_read(r) == v for r, v in saved)
+
+call(symbols['trace_bbt'])
+assert u.reg_read(R[0]) == 0xffffffff
+assert bytes(u.mem_read(trace + 800, 32)) == ftl
+for i in range(40):
+    active.update(rc=0xffffffff if i % 2 else 0, tag=0xffff if i % 2 else 0xf000, count=8 if i % 2 else 1)
+    for r, value in zip(R, (0xc000, 0x60100000, 0x60101000, active['count'])):
+        u.reg_write(r, value)
+    u.mem_write(sp, struct.pack('<I', 0x12345678))
+    call(symbols['trace_read'])
+    assert u.reg_read(R[0]) == active['rc']
+    assert struct.unpack('<H', u.mem_read(0x60101020, 2))[0] == 0xff70
+assert struct.unpack('<4I', u.mem_read(trace, 16)) == (0x31544242, 40, 20, 20)
+records = bytes(u.mem_read(trace + 16, 32 * 24))
+for i in range(32):
+    assert struct.unpack_from('<6I', records, i * 24) == (0xc000, 0xffffffff if i % 2 else 0, 0xffff if i % 2 else 0xf000, 0x438, 0x005b005a, 8 if i % 2 else 1)
+for rc, tag, count in ((0, 0xf000, 8), (0xffffffff, 0xf000, 8), (0, 0xffff, 8), (0, 0xf000, 1)):
+    active.update(rc=rc, tag=tag, count=count)
+    for r, value in zip(R, (0xc000, 0x60100000, 0x60101000, count)):
+        u.reg_write(r, value)
+    call(symbols['trace_read'])
+    assert struct.unpack('<H', u.mem_read(0x60101020, 2))[0] == 0xff70
+assert bytes(u.mem_read(trace + 16, 32 * 24)) == records
+assert bytes(u.mem_read(trace + 848, 4)) == bytes(4)
+
+payload_name = 'bbt_trace_v2_original_capacity.raw'
+for name, raw in ((payload_name, payload), ('ftl_capacity_original.raw', capacity)):
+    path = OUT / name
+    if path.exists():
+        assert path.read_bytes() == raw, 'Never overwrite differing artifact'
+    else:
+        path.write_bytes(raw)
+
+report = {
+    'all_pass': True, 'device_access': False, 'hardware_executed': False,
+    'source': str(SOURCE), 'source_sha256': SOURCE_SHA,
+    'payload': str(OUT / payload_name), 'sha256': sha(payload), 'bytes': len(payload),
+    'body_bytes': BODY_SIZE, 'body_crc32': hex(zlib.crc32(payload[:BODY_SIZE])),
+    'tail_bytes': 272, 'tail_all_zero': True,
+    'allowed_ranges': [['0x1e0', '0x1e4'], ['0xb408', '0xb40c']],
+    'changed_offsets': [hex(i) for i in changed],
+    'capacity_instruction_before': source[0xb408:0xb40c].hex(),
+    'capacity_instruction_after': payload[0xb408:0xb40c].hex(),
+    'crc_compensation_before': source[0x1e0:0x1e4].hex(),
+    'crc_compensation_after': payload[0x1e0:0x1e4].hex(),
+    'helper_path': str(helper_path), 'helper_sha256': sha(helper_path.read_bytes()),
+    'helper_import_side_effects_checked': True, 'bytecode_writing_disabled': True,
+    'trace_bytes': len(code), 'trace_sha256': sha(code), 'trace_unchanged': True,
+    'no_ram_count_substitution_executed': True,
+    'eight_denials_executed_no_writes_each_payload': True,
+    'two_confirm_stops_executed_no_writes_each_payload': True,
+    'all_256_opcode_routes_checked_each_payload': True,
+    'cut_pc': hex(cut), 'cut_target': '0x60000100',
+    'wrapper_reads': len(calls), 'wrapper_max_records': 32,
+    'wrapper_ABI_saved_registers_fifth_argument_and_write_bounds': True,
+    'capacity_slice': {'path': str(OUT / 'ftl_capacity_original.raw'), 'source': str(CAPACITY), 'sha256': CAPACITY_SHA, 'bytes': len(capacity), 'cut_pc': '0x60086b00', 'body_crc32': hex(zlib.crc32(capacity[:BODY_SIZE])), 'exact_copy': True},
+    'limitations': ['ABI tests substitute original read and BBT callbacks; physical NAND, ECC, cache and hardware startup are not emulated.', 'Guards are inherited known entry denials, not a proof of every possible corrupted control-flow path.'],
+}
+(OUT / 'manifest.json').write_text(json.dumps(report, indent=2) + '\n')
+print(json.dumps(report, indent=2))

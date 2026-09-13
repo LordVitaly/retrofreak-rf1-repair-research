@@ -1,0 +1,29 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/read_early_headers_short.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Four single-record IDB header reads, existing running loader, no DB/write/reset."""
+import json,os,hashlib
+from pathlib import Path
+from ram_console_session import RamConsole
+ROOT=Path(__file__).resolve().parents[1]
+previous=ROOT/'work/early_boot_compare_attempt01'
+assert json.loads((previous/'result.json').read_text())['all_reads_complete']
+out=ROOT/'work/early_headers_short_attempt01';out.mkdir(exist_ok=False)
+c=None;result=dict(nand_writes=0,all_reads_complete=False,rows=[])
+try:
+    c=RamConsole(out);c.select()
+    with (ROOT/'work/nand_native_ecc40/NAND_00.RAW').open('rb') as f:
+        for b in (1,3,5,6):
+            p=out/f'block{b:02d}_header.raw';c.command(f'RS {hex(b*4096)} 0x1 {p}')
+            raw=p.read_bytes();assert len(raw)==528
+            f.seek(b*4096*528);old=f.read(528)
+            long=(previous/f'block{b:02d}.raw').read_bytes()[:528]
+            row=dict(block=b,short_equals_long=raw==long,short_equals_backup=raw==old,main_differences_vs_backup=sum(a!=z for a,z in zip(raw[:512],old[:512])),current_prefix=raw[:32].hex(),backup_prefix=old[:32].hex(),raw_sha256=hashlib.sha256(raw).hexdigest())
+            result['rows'].append(row);print(json.dumps(row),flush=True)
+    result['all_reads_complete']=True
+except BaseException as e:result['error']=repr(e);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    with (out/'result.json').open('x') as f:json.dump(result,f,indent=2);f.flush();os.fsync(f.fileno())

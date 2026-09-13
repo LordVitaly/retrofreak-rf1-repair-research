@@ -1,0 +1,34 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/disassemble_reference_kernel.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Read-only named-function ARM disassembly using validated reference kallsyms."""
+import argparse
+import bisect
+import json
+from pathlib import Path
+from capstone import Cs,CS_ARCH_ARM,CS_MODE_ARM
+ROOT=Path(__file__).parent
+KERNEL=Path(r'<HOST_PATH>')
+parser=argparse.ArgumentParser()
+parser.add_argument('names',nargs='+')
+args=parser.parse_args()
+rows=json.loads((ROOT.parent/'outputs/reference_kernel_symbols.json').read_text())
+data=KERNEL.read_bytes()
+base=next(r['address'] for r in rows if r['name']=='stext')
+addresses=sorted(set(r['address'] for r in rows))
+byaddr={r['address']:r['name'] for r in rows}
+md=Cs(CS_ARCH_ARM,CS_MODE_ARM)
+for name in args.names:
+    matches=[r for r in rows if r['name']==name]
+    for row in matches:
+        start=row['address']
+        stop=addresses[bisect.bisect_right(addresses,start)]
+        print('FUNCTION',name,hex(start),hex(stop),'fileoffset',hex(start-base))
+        for ins in md.disasm(data[start-base:stop-base],start):
+            annotation=''
+            if ins.mnemonic in ('bl','b') and ins.op_str.startswith('#'):
+                target=int(ins.op_str[1:],0)
+                annotation=byaddr.get(target,'')
+            print(hex(ins.address),ins.mnemonic,ins.op_str,annotation)

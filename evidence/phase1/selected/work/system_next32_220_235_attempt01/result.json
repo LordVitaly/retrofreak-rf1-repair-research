@@ -1,0 +1,62 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/system_next32_220_235_attempt01/result.json",
+  "interpretation": "Batch covering logical blocks 220 through 235.",
+  "data": {
+    "all_pass": true,
+    "authorization": "User approved next32MiB; ONLY logical220..235, first error STOP",
+    "batch_mib": 32,
+    "batches": [
+      [
+        220,
+        221,
+        222,
+        223,
+        224,
+        225,
+        226,
+        227,
+        228,
+        229,
+        230,
+        231,
+        232,
+        233,
+        234,
+        235
+      ]
+    ],
+    "range_binding_pass": true,
+    "already_written": {
+      "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+      "original_items": 34
+    },
+    "write_attempts": [
+      220,
+      221,
+      222,
+      223,
+      224,
+      225,
+      226,
+      227,
+      228,
+      229,
+      230,
+      231,
+      232,
+      233,
+      234,
+      235
+    ],
+    "completed_batches": [
+      4
+    ],
+    "executions": {
+      "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+      "original_items": 50
+    },
+    "phase": "NEXT32MIB_VERIFIED_STOP",
+    "current_stage_sha256": "<REDACTED:HASH_OR_BYTES>"
+  }
+}

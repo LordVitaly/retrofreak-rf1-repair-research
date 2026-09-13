@@ -1,0 +1,51 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/capture_cache_last_map.py
+Role: historical_device_runner_or_stateful_scenario_review_before_any_use
+Original repair session must not be resumed from this public copy.
+
+from pathlib import Path
+import hashlib,json,os,struct,sys,zlib
+if sys.flags.optimize:raise RuntimeError('Assertions required')
+assert sys.argv[1:]==['--verified-window']
+p=Path(__file__).resolve().parent
+sha=lambda b:hashlib.sha256(b).hexdigest()
+statefile=p/'white_screen_read_state.json';state=json.loads(statefile.read_text());assert state['valid']
+old=Path(state['ram_path']).read_bytes();assert sha(old)==state['ram_sha256']
+raw=(p/'boot_map_compare/capture_mode1.raw').read_bytes();assert sha(raw)=='<HISTORICAL_HASH_REDACTED>'
+assert zlib.crc32(raw[:110080])==0xad0dadee and raw[110080:]==bytes(272)
+for off in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):assert raw[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+for off in (0xbbc8,0xbc90):assert raw[off:off+4]==bytes.fromhex('feffffea')
+out=p/'cache_last_map_attempt01';out.mkdir(exist_ok=False);r=dict(all_pass=False,nand_writes=False);c=None
+sys.path.insert(0,'<EXTERNAL_STAGE_03>/work')
+from ram_console_session import RamConsole
+def read(name,lba,n):
+ assert (lba,n) in ((0x7effff,1),(0x7efffe,1),(0x7f0000,209),(0x7f00d1,2)) or (0x800000<=lba and lba+n<=0x800540 and n==16)
+ q=out/(name+'.raw');c.command(f'RS {hex(lba)} {hex(n)} {q}');b=q.read_bytes();assert len(b)==n*528;return b
+def update(s):
+ t=statefile.with_suffix('.tmp');t.write_text(json.dumps(s,indent=2));os.replace(t,statefile)
+try:
+ c=RamConsole(out);c.select()
+ marker=b'RF1CKP02'+struct.pack('<IIII',110080,0xad0dadee,1,0x60000004)+bytes(504)
+ assert read('marker',0x7effff,1)==marker
+ assert read('window',0x7efffe,1)==b'RF1WIN01'+struct.pack('<IIII',0x800000,4096,0x63000000,16)+bytes(504)
+ assert read('previous',0x7f0000,209)==old
+ for i,off in enumerate(range(0,110080,8192)):
+  q=out/f'part{i}.bin';q.write_bytes(raw[off:min(off+8192,110080)]);c.command(f'WS {hex(0x7f0000+off//512)} {q}')
+ assert read('before',0x7f0000,209)==raw
+ with (out/'DISPATCHED_NO_RETRY.json').open('x') as f:json.dump({'sha256':sha(raw)},f);f.flush();os.fsync(f.fileno())
+ update(dict(valid=False,phase='cache_last_capture_dispatched'));c.command('RD')
+ assert read('marker_after',0x7effff,1)==marker
+ after=read('after',0x7f0000,209);assert after[:110080]==raw[:110080] and struct.unpack_from('<2I',after,110080)==(0x44475453,0x600982e4)
+ status=read('status',0x7f00d1,2);assert status[:8]==b'RF1READ1' and struct.unpack_from('<4I',status,8)==(0x6020,1,0,0xa8000)
+ data=bytearray()
+ for off in range(0,1344,16):
+  b=read(f'data{off}',0x800000+off,16);assert all(b[j+512:j+528]==bytes(16) for j in range(0,len(b),528));data.extend(b''.join(b[j:j+512] for j in range(0,len(b),528)))
+ (out/'data.bin').write_bytes(data)
+ mapping=list(struct.unpack_from('<1896H',data,0xf00));assert all(x<2048 for x in mapping)
+ r.update(all_pass=True,logical_to_physical=mapping,snapshot_sha256=sha(data),cache_mapping=mapping[24:56])
+ update(dict(valid=True,ram_path=str(out/'after.raw'),ram_sha256=sha(after),last_case='cache_last_map',batch='cache_last_map'))
+finally:
+ if c:c.close();r['commands']=c.commands
+ with (out/'result.json').open('x') as f:json.dump(r,f,indent=2)
+ print(json.dumps({k:v for k,v in r.items() if k not in ('logical_to_physical','commands')},indent=2))

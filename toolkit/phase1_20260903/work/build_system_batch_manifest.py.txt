@@ -1,0 +1,73 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_system_batch_manifest.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Bind every system-range portion to the proven writer; no device access.
+Only arguments/CRC change in writer. Readers use the proven bounded template.
+"""
+import hashlib,json,struct,subprocess,zlib
+from pathlib import Path
+from ram_artifact import elf_code,fix_crc
+ROOT=Path(__file__).resolve().parents[1];OUT=ROOT/'work/system_batch_artifacts_v1';OUT.mkdir(exist_ok=False)
+parent=(ROOT/'work/system_writer_write_payload_v1/write.NOT_FOR_UPLOAD.raw').read_bytes()
+assert hashlib.sha256(parent).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+reader_parent=(ROOT/'work/ftl_fullmap_system_read_v1/read.raw').read_bytes()
+assert hashlib.sha256(reader_parent).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+donor_path=ROOT.parent.parent/'2026-09-01/retro-freak-retrofreak-systemupdate-0-2/work/rkfw_contents/components/system.img'
+donor=donor_path.read_bytes();assert hashlib.sha256(donor).hexdigest()=='b9ca511124e6c3d9ee2a1e31220f6bf5a858f06d88f9003f5fd7f7e25cf5676a'
+prior=json.loads((ROOT/'work/second_system_write189_hardware_attempt01/result.json').read_text());assert prior['all_pass']
+mapping=prior['reopened_ftl']['logical_to_physical'];assert len(mapping)==1896 and mapping[188:190]==[312,960]
+protected=set(json.loads((ROOT/'outputs/system_writer_gated_v3_build.json').read_text())['protected_blocks'])
+assert all(p<2048 and (not p or p not in protected) for p in mapping[186:260])
+non_system=struct.pack('<'+str(1896-74)+'H',*[p for i,p in enumerate(mapping) if not 186<=i<=259])
+assert zlib.crc32(non_system)==<REDACTED:ARTIFACT_CRC>
+crcs=[zlib.crc32(donor[i:i+2097152]) for i in range(0,len(donor),2097152)]
+assert parent.count(struct.pack('<74I',*crcs))==1
+def save_binary(name,data):
+    p=OUT/name
+    with p.open('xb') as f:f.write(data)
+    return dict(file=str(p.relative_to(ROOT)),sha256=hashlib.sha256(data).hexdigest())
+def mov_imm(reg,value):
+    for rot in range(16):
+        for imm in range(256):
+            v=((imm>>(2*rot))|(imm<<(32-2*rot)))&0xffffffff if rot else imm
+            if v==value:return 0xe3a00000|(reg<<12)|(rot<<8)|imm
+    return None
+def writer(logical,sectors):
+    data=bytearray(parent[:110080]);allowed=[(0x1e0,0x1e4)]
+    for at,reg,value,pool in ((0x7098,1,logical*4096,0x7180),(0x709c,2,sectors,0x7184)):
+        word=mov_imm(reg,value)
+        if word is None:
+            delta=pool-at-8;assert 0<=delta<=4095
+            word=0xe59f0000|(reg<<12)|delta
+            struct.pack_into('<I',data,pool,value);allowed.append((pool,pool+4))
+        struct.pack_into('<I',data,at,word);allowed.append((at,at+4))
+    fix_crc(data)
+    assert all(any(a<=i<b for a,b in allowed) for i,(x,y) in enumerate(zip(data,parent)) if x!=y)
+    assert data[0x2800:0x3b00]==parent[0x2800:0x3b00] # actual compiled core/guards EXACT
+    for at in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c,0xbbc8,0xbc90):assert data[at:at+8]==parent[at:at+8]
+    return save_binary(f'writer{logical}.raw',bytes(data)+bytes(272))
+def reader(lba,sectors,name):
+    assert 0xba000<=lba and lba+sectors<=0x104000 and 0<sectors<=4096
+    elf=OUT/(name+'.elf')
+    subprocess.run([str(ROOT/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe'),'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-nostdlib','-DREAD_LBA='+str(lba),'-DREAD_SECTORS='+str(sectors),'work/system_read_portion.S','-Wl,-T,work/ftl_bridge_read.ld','-Wl,-e,ftl_bridge_read','-o',str(elf)],cwd=ROOT,check=True)
+    code=elf_code(elf.read_bytes(),0x60007040,0x180)
+    data=bytearray(reader_parent[:110080]);data[0x7040:0x71c0]=code+bytes(0x180-len(code));fix_crc(data)
+    for off in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):assert data[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+    for off in (0xbbc8,0xbc90):assert data[off:off+4]==bytes.fromhex('feffffea')
+    return save_binary(name+'.raw',bytes(data)+bytes(272))
+cases=[]
+for logical in range(186,260):
+    offset=(logical-186)*2097152;data=donor[offset:offset+2097152];sectors=len(data)//512
+    assert len(data)>0 and len(data)%512==0 and logical*4096+sectors<=0x103ff8
+    cases.append(dict(logical=logical,lba=logical*4096,sectors=sectors,offset=offset,bytes=len(data),sha256=hashlib.sha256(data).hexdigest(),crc32=hex(crcs[logical-186]),writer=writer(logical,sectors),reader=reader(logical*4096,sectors,f'reader{logical}')))
+    if (logical-185)%8==0:print('Bounded full-range manifest',logical-185,'/74',flush=True)
+assert sum(c['bytes'] for c in cases)==len(donor)==155185152
+assert [c['offset'] for c in cases]==list(range(0,len(donor),2097152))
+remaining=[c['logical'] for c in cases if c['logical'] not in (188,189)]
+batches=[remaining[i:i+4] for i in range(0,len(remaining),4)]
+assert len(remaining)==72 and len(batches)==18 and len(set(remaining))==72
+report=dict(all_pass=True,device_access=False,scope='Full system range/CRC/physical-protection binding; no additional peripheral tests',donor=str(donor_path),donor_sha256=hashlib.sha256(donor).hexdigest(),system_partition=[0xba000,0x13a000],donor_range=[0xba000,0x103ff8],preserved_tail=[0x103ff8,0x104000],already_written=[188,189],remaining=remaining,batches=batches,cases=cases,tail_reader=reader(0x103ff0,16,'tail_reader'),non_system_map_crc32='<REDACTED:ARTIFACT_CRC>',protected_blocks=sorted(protected),core_and_guards_unchanged=True)
+with (OUT/'manifest.json').open('x') as f:json.dump(report,f,indent=2)
+print('PASS full range:74/74,72 remaining,18 batches; final4KiB preserved',flush=True)

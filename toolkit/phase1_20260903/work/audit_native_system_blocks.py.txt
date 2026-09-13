@@ -1,0 +1,52 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/audit_native_system_blocks.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Compare available F200 block-ID candidates against official system; no map selection."""
+import json
+from pathlib import Path
+from verify_native_ecc_page import BOOT, extract
+
+ROOT=Path(__file__).parent
+
+
+def main():
+    rows=[]
+    for file in (ROOT/'native_ecc40_index').glob('NAND_*.json'):
+        rows.extend(json.loads(file.read_text())['blocks'])
+    reference=(BOOT.parent/'system.img').read_bytes()
+    block_bytes=256*8192
+    count=(len(reference)+block_bytes-1)//block_bytes
+    results=[]
+    for row in rows:
+        words=row['page0_meta']
+        if words[0]!=0xf200 or not 186<=words[2]<186+count:
+            continue
+        physical=row['physical_block']
+        chunk,local=divmod(physical,64)
+        with (ROOT/'nand_native_ecc40'/f'NAND_{chunk:02d}.RAW').open('rb') as source:
+            source.seek(local*256*8448)
+            raw=source.read(256*8448)
+        main=b''.join(extract(raw[p*8448:(p+1)*8448]) for p in range(256))
+        offset=(words[2]-186)*block_bytes
+        expected=reference[offset:offset+block_bytes]
+        compared=main[:len(expected)]
+        errors=sum(a!=b for a,b in zip(compared,expected))
+        results.append(dict(logical_candidate=words[2],physical_block=physical,
+            metadata=words[:8],compared_bytes=len(expected),mismatching_bytes=errors,
+            exact_reference_match=errors==0))
+    report=dict(indexed_physical_blocks=len(rows),reference=str(BOOT.parent/'system.img'),
+        scope='F200 aux-word2 candidate blocks only, not active logical reconstruction',
+        candidates=sorted(results,key=lambda r:(r['logical_candidate'],r['physical_block'])))
+    output=ROOT.parent/'outputs'/f'native_system_block_audit_{len(rows)}blocks.json'
+    if not output.exists():
+        with output.open('x',encoding='utf-8') as stream:
+            json.dump(report,stream,indent=2)
+    print('available system candidates',len(results),'exact matches',sum(r['exact_reference_match'] for r in results))
+    for row in report['candidates']:
+        print(row['logical_candidate'],'->',row['physical_block'],'mismatches',row['mismatching_bytes'])
+
+
+if __name__=='__main__':
+    main()

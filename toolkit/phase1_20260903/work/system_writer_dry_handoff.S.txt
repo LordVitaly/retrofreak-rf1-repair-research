@@ -1,0 +1,66 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/system_writer_dry_handoff.S
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+.syntax unified
+.arm
+.section .text,"ax",%progbits
+.global writer_before,writer_after
+writer_before:
+    /* Bridge enters with caches disabled. Install before original startup. */
+    ldr r0, =0x60002800
+    ldr r1, =0x61800000
+    ldr r2, =CORE_BYTES
+1:  ldr r3, [r0], #4
+    str r3, [r1], #4
+    subs r2, r2, #4
+    bne 1b
+    ldr r0, =0x61700000
+    mov r1, #0
+    mov r2, #8
+2:  str r1, [r0], #4
+    subs r2, r2, #1
+    bne 2b
+    dsb sy
+    mcr p15, 0, r1, c7, c5, 0
+    mcr p15, 0, r1, c7, c5, 6
+    dsb sy
+    isb sy
+    ldr pc, =0x60000020
+writer_after:
+    push {r4,lr}
+    cpsid if
+    mov r0, #0
+    ldr r1, =0xbc000 /* Fixed donor portion 188, no host-selected operation. */
+    mov r2, #4096
+    ldr r3, =0x63000000
+    ldr r12, =0x61800000
+    blx r12
+    ldr r1, =0x6101af2c
+    str r0, [r1]
+    /* Export context + bounded journal; input is no longer needed. */
+    ldr r0, =0x61700000
+    ldr r1, =0x63000000
+    mov r2, #32
+3:  ldr r3, [r0], #4
+    str r3, [r1], #4
+    subs r2, r2, #4
+    bne 3b
+    ldr r0, =0x61702000
+    ldr r1, =0x63001000
+    mov r2, #8192
+4:  ldr r3, [r0], #4
+    str r3, [r1], #4
+    subs r2, r2, #4
+    bne 4b
+    ldr r0, =0x602b3f00
+    ldr r1, =0x63003000
+    ldr r2, =3792
+5:  ldr r3, [r0], #4
+    str r3, [r1], #4
+    subs r2, r2, #4
+    bne 5b
+    pop {r4,lr}
+    ldr pc, =0x60000100
+    .ltorg

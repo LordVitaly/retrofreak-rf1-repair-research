@@ -1,0 +1,120 @@
+[
+  {
+    "path": "work/cache_last_attempt/cygwin.tar.xz",
+    "sha256": "6e03770a593cc4dbf5ad9639b07239064bbe5936cc63680a9dcdd939bda4bc3f",
+    "bytes": 1638248,
+    "role": "original_cygwin_package_with_original_notices",
+    "dependency_manifest": "work/cache_last_attempt/portable_manifest.json",
+    "publication_mode": "archive_original_package_or_acquisition_manifest; original_docs_retained; redistribution_source_obligations_not_audited"
+  },
+  {
+    "path": "work/cache_last_attempt/e2fsprogs.tar.xz",
+    "sha256": "0af9c38ddf8fe39d6af16fe9c3bad6a10f02b96b62e3b097d447e7ced7526f44",
+    "bytes": 783804,
+    "role": "original_cygwin_package_with_original_notices",
+    "dependency_manifest": "work/cache_last_attempt/portable_manifest.json",
+    "publication_mode": "archive_original_package_or_acquisition_manifest; original_docs_retained; redistribution_source_obligations_not_audited"
+  },
+  {
+    "path": "work/cache_last_attempt/libblkid1.tar.xz",
+    "sha256": "8f927aeb52a54ad3cf3d1acbbe0a3a691bf4fd94e781e37d0c529f9989ec7270",
+    "bytes": 120936,
+    "role": "original_cygwin_package_with_original_notices",
+    "dependency_manifest": "work/cache_last_attempt/portable_manifest.json",
+    "publication_mode": "archive_original_package_or_acquisition_manifest; original_docs_retained; redistribution_source_obligations_not_audited"
+  },
+  {
+    "path": "work/cache_last_attempt/libcom_err2.tar.xz",
+    "sha256": "ce3d6826165e61142ba2ca45318e94bfb345a814983a614f7b0b452affe80817",
+    "bytes": 4132,
+    "role": "original_cygwin_package_with_original_notices",
+    "dependency_manifest": "work/cache_last_attempt/portable_manifest.json",
+    "publication_mode": "archive_original_package_or_acquisition_manifest; original_docs_retained; redistribution_source_obligations_not_audited"
+  },
+  {
+    "path": "work/cache_last_attempt/libe2p2.tar.xz",
+    "sha256": "8919f779cf2600fd2b490e1460f8d3f7e84da5c1d47c850d4ea183603038e5ab",
+    "bytes": 10024,
+    "role": "original_cygwin_package_with_original_notices",
+    "dependency_manifest": "work/cache_last_attempt/portable_manifest.json",
+    "publication_mode": "archive_original_package_or_acquisition_manifest; original_docs_retained; redistribution_source_obligations_not_audited"
+  },
+  {
+    "path": "work/cache_last_attempt/libext2fs2.tar.xz",
+    "sha256": "2ba5f23be47a9b79ac36140035487fb8e4866f379f4a291e49b240655e811a53",
+    "bytes": 126164,
+    "role": "original_cygwin_package_with_original_notices",
+    "dependency_manifest": "work/cache_last_attempt/portable_manifest.json",
+    "publication_mode": "archive_original_package_or_acquisition_manifest; original_docs_retained; redistribution_source_obligations_not_audited"
+  },
+  {
+    "path": "work/cache_last_attempt/libgcc1.tar.xz",
+    "sha256": "81df68770dd59e1e451d6bce1ba75c020339ce05cf262c6ea5e76aea233ef1f0",
+    "bytes": 59166,
+    "role": "original_cygwin_package_with_original_notices",
+    "dependency_manifest": "work/cache_last_attempt/portable_manifest.json",
+    "publication_mode": "archive_original_package_or_acquisition_manifest; original_docs_retained; redistribution_source_obligations_not_audited"
+  },
+  {
+    "path": "work/cache_last_attempt/libiconv2.tar.xz",
+    "sha256": "c424218c7ef7d82a3481d5aa7f1f1dda8364524fb86b687871184647ec59fcbf",
+    "bytes": 555664,
+    "role": "original_cygwin_package_with_original_notices",
+    "dependency_manifest": "work/cache_last_attempt/portable_manifest.json",
+    "publication_mode": "archive_original_package_or_acquisition_manifest; original_docs_retained; redistribution_source_obligations_not_audited"
+  },
+  {
+    "path": "work/cache_last_attempt/libintl8.tar.xz",
+    "sha256": "aa981c2583e187c5c07c75132d714fe3b8a4a81f585e9b5de64f0bf8c8dd211f",
+    "bytes": 43256,
+    "role": "original_cygwin_package_with_original_notices",
+    "dependency_manifest": "work/cache_last_attempt/portable_manifest.json",
+    "publication_mode": "archive_original_package_or_acquisition_manifest; original_docs_retained; redistribution_source_obligations_not_audited"
+  },
+  {
+    "path": "work/cache_last_attempt/libss2.tar.xz",
+    "sha256": "b54b737b132a0d7a43b54dc1aee2ce4463b0911d1170b5d20c87408c98758ea3",
+    "bytes": 8132,
+    "role": "original_cygwin_package_with_original_notices",
+    "dependency_manifest": "work/cache_last_attempt/portable_manifest.json",
+    "publication_mode": "archive_original_package_or_acquisition_manifest; original_docs_retained; redistribution_source_obligations_not_audited"
+  },
+  {
+    "path": "work/cache_last_attempt/libuuid1.tar.xz",
+    "sha256": "8f6a8147388f37fba51f4d27b88d5d1ec97b09b2767309a27222d8b7361e10c2",
+    "bytes": 12532,
+    "role": "original_cygwin_package_with_original_notices",
+    "dependency_manifest": "work/cache_last_attempt/portable_manifest.json",
+    "publication_mode": "archive_original_package_or_acquisition_manifest; original_docs_retained; redistribution_source_obligations_not_audited"
+  },
+  {
+    "path": "work/cache_last_attempt/libzstd1.tar.xz",
+    "sha256": "a40b3734633dd7a03a8bc0f5fbd09e1e3935cb415b7e1529d45c0f0da731d6e4",
+    "bytes": 253786,
+    "role": "original_cygwin_package_with_original_notices",
+    "dependency_manifest": "work/cache_last_attempt/portable_manifest.json",
+    "publication_mode": "archive_original_package_or_acquisition_manifest; original_docs_retained; redistribution_source_obligations_not_audited"
+  },
+  {
+    "path": "work/cache_last_attempt/zlib0.tar.xz",
+    "sha256": "b0314c05b5ed130ddc1f0fe988e1f2aec15723d609d912e7d6300f47aa3c540e",
+    "bytes": 46254,
+    "role": "original_cygwin_package_with_original_notices",
+    "dependency_manifest": "work/cache_last_attempt/portable_manifest.json",
+    "publication_mode": "archive_original_package_or_acquisition_manifest; original_docs_retained; redistribution_source_obligations_not_audited"
+  },
+  {
+    "path": "work/adb_host/platform-tools-latest-windows.zip",
+    "sha256": "45f4d63113e895ebde0c90f194099a4676b6ac653bd28d54314a9e022bbc1a99",
+    "bytes": 8044989,
+    "role": "unmodified_downloaded_upstream_package",
+    "publication_mode": "archive_with_upstream_notice_and_origin_or_acquisition_manifest; exclude_all_adjacent_adb_keys"
+  },
+  {
+    "path": "work/adb_driver_prepare/usb_driver.zip",
+    "sha256": "360b01d3dfb6c41621a3a64ae570dfac2c9a40cca1b5a1f136ae90d02f5e9e0b",
+    "bytes": 8682039,
+    "role": "unmodified_downloaded_upstream_package",
+    "publication_mode": "archive_with_upstream_notice_and_origin_or_acquisition_manifest; exclude_all_adjacent_adb_keys"
+  }
+]

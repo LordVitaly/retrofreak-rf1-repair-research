@@ -1,0 +1,49 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_readonly_ram_delivery.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Execute new RAM bootstrap only, stopping before FlashBoot's first opcode."""
+import argparse,hashlib,json,sys
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'work/emulator_deps'))
+from unicorn import Uc,UC_ARCH_ARM,UC_MODE_ARM,UC_HOOK_CODE,UC_HOOK_MEM_WRITE
+from unicorn.arm_const import UC_CPU_ARM_CORTEX_A9,UC_ARM_REG_PC
+p=argparse.ArgumentParser();p.add_argument('--usbplug-control',action='store_true');p.add_argument('--native-cpu-entry',action='store_true');p.add_argument('--initial-dcache',action='store_true');args=p.parse_args()
+assert not args.native_cpu_entry or args.usbplug_control
+assert not args.initial_dcache or args.native_cpu_entry
+stem='usbplug_control_ram' if args.usbplug_control else 'readonly_ram'
+if args.native_cpu_entry:stem='usbplug_native_entry_ram'
+report=json.loads((ROOT/f'outputs/{stem}_package.json').read_text())
+blob=(ROOT/f'work/{stem}.bootstrap.NOT_FOR_UPLOAD.bin').read_bytes()
+expected=(ROOT/f'work/{stem}.FlashBoot.NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(blob).hexdigest()==report['bootstrap_sha256']
+assert hashlib.sha256(expected).hexdigest()==report['flashboot_sha256']
+cases=[]
+for fill in (0,0xa5):
+    u=Uc(UC_ARCH_ARM,UC_MODE_ARM,cpu=UC_CPU_ARM_CORTEX_A9)
+    for base,size in [(0x60000000,0x20000),(0x61000000,0x20000),(0x61200000,0x10000)]:u.mem_map(base,size)
+    u.mem_write(0x60000000,bytes([fill])*0x20000)
+    u.mem_write(0x60000000,blob)
+    if args.initial_dcache:
+        u.cpr_write(15,0,1,0,0,0,False,u.cpr_read(15,0,1,0,0,0,False)|4)
+    state=dict(entries=0)
+    def entry(uc,pc,size,ctx):
+        state['entries']+=1
+        if state['entries']==2:uc.emu_stop()
+    def write(uc,access,addr,size,value,ctx):
+        assert any(a<=addr and addr+size<=b for a,b in [(0x60000000,0x60000000+len(expected)),(0x61000000,0x61000000+len(blob)),(0x61010000,0x61018008),(0x61200000,0x61210000)])
+    u.hook_add(UC_HOOK_CODE,entry,begin=0x60000000,end=0x60000000)
+    u.hook_add(UC_HOOK_MEM_WRITE,write)
+    u.emu_start(0x60000000,0x60020000,timeout=30000000,count=100000000)
+    assert state['entries']==2 and u.reg_read(UC_ARM_REG_PC)==0x60000000
+    if args.native_cpu_entry:assert u.cpr_read(15,0,1,0,0,0,False)&0x10003805==0
+    assert bytes(u.mem_read(0x60000000,len(expected)))==expected
+    assert bytes(u.mem_read(0x60000000+len(expected),188))==bytes([fill])*188
+    cases.append(dict(tail_fill=fill,output_exact=True,tail_unchanged=True))
+    print('PASS new bootstrap',fill,flush=True)
+result=dict(bootstrap_sha256=report['bootstrap_sha256'],flashboot_sha256=report['flashboot_sha256'],cases=cases,device_access=False,limitation='Flat ARM model. Stops BEFORE FlashBoot execution; does not prove actual ROM/DDR state or hardware startup.')
+result['initial_dcache_enabled']=args.initial_dcache
+suffix='_dcache' if args.initial_dcache else ''
+(ROOT/f'outputs/{stem}_delivery{suffix}.json').write_text(json.dumps(result,indent=2)+'\n')

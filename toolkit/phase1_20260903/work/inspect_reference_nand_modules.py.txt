@@ -1,0 +1,31 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/inspect_reference_nand_modules.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Read-only inventory of reference system modules; no device access or extraction."""
+from pathlib import Path
+import re
+from dissect.extfs import ExtFS
+
+BASE = Path(r'<HOST_PATH>')
+
+def walk(node, parent=''):
+    for child in node.iterdir():
+        if child.filename in ('.', '..'):
+            continue
+        path = parent + '/' + child.filename
+        if child.filetype == 0x4000:
+            yield from walk(child, path)
+        elif child.filetype == 0x8000:
+            yield path, child
+
+with (BASE/'rkfw_contents/components/system.img').open('rb') as stream:
+    fs = ExtFS(stream)
+    for path, node in walk(fs.get('/')):
+        if path.endswith('.ko') or 'nand' in path.lower():
+            print(path, node.size)
+            data = node.open().read()
+            for s in re.findall(rb'[ -~]{6,}', data):
+                if any(term in s.lower() for term in (b'ftl', b'nand', b'vermagic', b'gc refresh')):
+                    print(' ', s.decode('ascii')[:250])

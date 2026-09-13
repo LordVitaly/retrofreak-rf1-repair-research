@@ -1,0 +1,78 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/audit_vold_nand_evidence.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Verify actual NAND inode/directory and failing indirect block, without hole filling."""
+import json
+import struct
+from pathlib import Path
+from dissect.extfs import ExtFS
+from verify_native_ecc_page import BOOT,extract
+ROOT=Path(__file__).parent
+inventory=json.loads((ROOT.parent/'outputs/native_ftl_inventory_2048blocks.json').read_text())
+groups=inventory['all_candidates']
+def read_system(offset,length):
+    result=bytearray()
+    provenance=[]
+    while length:
+        logical=186+offset//2097152
+        within=offset%2097152
+        candidates=groups.get(str(logical),[])
+        assert len(candidates)==1, 'Requires unique physical source, never fills missing mappings'
+        physical=candidates[0]['physical_block']
+        chunk,local=divmod(physical,64)
+        page,inner=divmod(within,8192)
+        take=min(length,8192-inner)
+        with (ROOT/'nand_native_ecc40'/f'NAND_{chunk:02d}.RAW').open('rb') as f:
+            f.seek((local*256+page)*8448)
+            main=extract(f.read(8448))
+        result.extend(main[inner:inner+take])
+        provenance.append(dict(logical_block=logical,physical_block=physical,page=page,offset=inner,bytes=take))
+        length-=take
+        offset+=take
+    return bytes(result),provenance
+
+with (BOOT.parent/'system.img').open('rb') as f:
+    fs=ExtFS(f)
+    node=fs.get('/bin/vold')
+    assert node.inum==671
+    group,index=divmod(670,fs.sb.s_inodes_per_group)
+    gd=fs._read_group_desc(group)
+    inode_offset=gd.bg_inode_table_lo*fs.block_size+index*fs.sb.s_inode_size
+    f.seek(inode_offset)
+    expected=f.read(fs.sb.s_inode_size)
+    actual,where=read_system(inode_offset,len(expected))
+    assert actual==expected, 'Actual inode must match before following reference-derived pointers'
+    # Legacy direct/indirect pointer format; inode i_block beginsat40.
+    pointers=struct.unpack_from('<15I',actual,40)
+    indirect_offset=pointers[12]*fs.block_size
+    indirect,indirect_where=read_system(indirect_offset,fs.block_size)
+    f.seek(indirect_offset)
+    reference_indirect=f.read(fs.block_size)
+    bindir=fs.get('/bin')
+    directory=b''
+    directory_where=[]
+    for block,count in bindir.dataruns():
+        assert block is not None
+        piece,p=read_system(block*fs.block_size,count*fs.block_size)
+        directory+=piece
+        directory_where.extend(p)
+    directory=directory[:bindir.size]
+    expected_directory=bindir.open().read()
+    report=dict(scope='Verified actual inode and base-map indirect block; /bin directory comparison reported separately, full repair plan pending',
+        file='/system/bin/vold',inode=671,inode_offset=inode_offset,inode_bytes=len(actual),
+        actual_inode_matches_reference=True,actual_bin_directory_matches_reference=directory==expected_directory,
+        directory_differing_bytes=sum(a!=b for a,b in zip(directory,expected_directory)),
+        directory_all_ff=all(b==255 for b in directory),
+        inode_provenance=where,directory_provenance=directory_where,
+        indirect_filesystem_block=pointers[12],indirect_provenance=indirect_where,
+        indirect_all_ff=all(b==255 for b in indirect),
+        indirect_reference_matches=indirect==reference_indirect,
+        first8_actual_pointers=list(struct.unpack_from('<8I',indirect)),
+        first8_reference_pointers=list(struct.unpack_from('<8I',reference_indirect)),
+        filesystem_block_count=fs.sb.s_blocks_count_lo)
+out=ROOT.parent/'outputs/vold_nand_evidence.json'
+if not out.exists():
+    with out.open('x') as f: json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

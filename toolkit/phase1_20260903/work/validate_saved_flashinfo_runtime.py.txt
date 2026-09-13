@@ -1,0 +1,52 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/validate_saved_flashinfo_runtime.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Reproduce inspected saved-parameter copy and geometry arithmetic offline."""
+import hashlib,json,struct
+from pathlib import Path
+root=Path(__file__).resolve().parents[1]
+def gate(p,read_result=0,manufacturer=4,interface=1):
+    return (read_result==0 and struct.unpack_from('<I',p,16)[0]==0x4e414e44
+            and struct.unpack_from('<H',p,20)[0]==0x120
+            and p[0x24]==manufacturer and p[0x1c]==interface)
+samples=[(root/f'work/idb_ecc24_parameter_attempt2/block{b:02d}_page15.raw').read_bytes() for b in (5,6)]
+assert len(samples[0])==528 and samples[0]==samples[1]
+p=samples[0][:512]
+assert gate(p)
+tests={}
+for name,offset in [('magic',16),('length',20),('manufacturer',0x24),('interface',0x1c)]:
+    changed=bytearray(p);changed[offset]^=1
+    tests[name]=not gate(changed)
+tests['failed_hardware_read']=not gate(p,read_result=-1)
+assert all(tests.values())
+# A204..A210: record+0x18 -> flash+8, exactly 0x78 bytes.
+flash=bytearray(0xb0)
+flash[8:0x80]=p[0x18:0x90]
+u32=lambda o:struct.unpack_from('<I',flash,o)[0]
+page=flash[0x15]
+block=u32(0x18)*flash[0x10]
+capacity=u32(0x28)
+blocks=(capacity//block)&0xffff
+fields=dict(page_sectors=page,page_bytes=page*512,block_sectors=block,block_bytes=block*512,
+            capacity_sectors=capacity,capacity_bytes=capacity*512,ftl_blocks=blocks,
+            ecc=flash[0x12],timing=flash[0x13],manufacturer=flash[0x14],
+            optional_read_retry_callback=u32(0x4c),second_chip_capacity=u32(0x30),
+            third_chip_capacity=u32(0x34),fourth_chip_capacity=u32(0x38))
+assert (page,block,capacity,blocks,flash[0x12])==(16,4096,8388608,2048,40)
+assert u32(0x4c)==0
+bbt=json.loads((root/'outputs/native_bbt_saved_state_audit.json').read_text())
+bbt_results=[]
+for copy in bbt['bbt_copies']:
+    usable=copy['meta'][2]
+    passed=(copy['meta'][1]>>8==4 and blocks//2<=usable<blocks and len(copy['bad_blocks'])<=blocks//4)
+    assert passed
+    bbt_results.append(dict(block=copy['physical_block'],final_predicates_pass=passed))
+report=dict(scope='Offline gate and memory-copy model; no actual FTL initialization',
+            raw528_sha256=hashlib.sha256(samples[0]).hexdigest(),runtime_fields=fields,
+            negative_tests=tests,bbt_final_predicates=bbt_results,
+            not_proven=['actual hardware ECC success on future boot','selection of this copy on future boot',
+                        'absence of NAND writes in BBT synchronization, exchange recovery, allocation or read refresh'])
+with (root/'outputs/saved_flashinfo_runtime_validation.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

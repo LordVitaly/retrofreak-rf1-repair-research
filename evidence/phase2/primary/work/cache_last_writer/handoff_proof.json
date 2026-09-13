@@ -1,0 +1,67 @@
+{
+  "all_pass": true,
+  "device_access": false,
+  "actual_ARM_helper": true,
+  "variants": [
+    {
+      "variant": "24_dry",
+      "elf_entry_and_first_core_function": true,
+      "carrier_fits": true,
+      "before_install_exact": true,
+      "fixed_core_arguments": true,
+      "export_all_four_regions_exact": true,
+      "return_status_word_exact": true,
+      "registers_stack_return_preserved": true
+    },
+    {
+      "variant": "24_write",
+      "elf_entry_and_first_core_function": true,
+      "carrier_fits": true,
+      "before_install_exact": true,
+      "fixed_core_arguments": true,
+      "export_all_four_regions_exact": true,
+      "return_status_word_exact": true,
+      "registers_stack_return_preserved": true
+    },
+    {
+      "variant": "25_dry",
+      "elf_entry_and_first_core_function": true,
+      "carrier_fits": true,
+      "before_install_exact": true,
+      "fixed_core_arguments": true,
+      "export_all_four_regions_exact": true,
+      "return_status_word_exact": true,
+      "registers_stack_return_preserved": true
+    },
+    {
+      "variant": "25_write",
+      "elf_entry_and_first_core_function": true,
+      "carrier_fits": true,
+      "before_install_exact": true,
+      "fixed_core_arguments": true,
+      "export_all_four_regions_exact": true,
+      "return_status_word_exact": true,
+      "registers_stack_return_preserved": true
+    },
+    {
+      "variant": "26_dry",
+      "elf_entry_and_first_core_function": true,
+      "carrier_fits": true,
+      "before_install_exact": true,
+      "fixed_core_arguments": true,
+      "export_all_four_regions_exact": true,
+      "return_status_word_exact": true,
+      "registers_stack_return_preserved": true
+    },
+    {
+      "variant": "26_write",
+      "elf_entry_and_first_core_function": true,
+      "carrier_fits": true,
+      "before_install_exact": true,
+      "fixed_core_arguments": true,
+      "export_all_four_regions_exact": true,
+      "return_status_word_exact": true,
+      "registers_stack_return_preserved": true
+    }
+  ]
+}

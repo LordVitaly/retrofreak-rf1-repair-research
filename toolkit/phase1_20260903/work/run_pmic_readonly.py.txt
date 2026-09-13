@@ -1,0 +1,64 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/run_pmic_readonly.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Single PMIC-read payload on the authenticated, already-running RAM bridge."""
+import hashlib,json,os,struct,sys
+from pathlib import Path
+from ram_console_session import RamConsole
+ROOT=Path(__file__).resolve().parents[1]
+devon=sys.argv[1:]==['--authorized-devon-once']
+assert sys.argv[1:] in ([],['--authorized-devon-once'])
+prior=ROOT/('work/pmic_readonly_hardware_attempt01' if devon else 'work/power_hold_snapshot_hardware_attempt01')
+previous=json.loads((prior/'result.json').read_text());assert previous['all_pass']
+build=json.loads((ROOT/('work/pmic_devon_v1/build.json' if devon else 'work/pmic_readonly_v1/build.json')).read_text());assert build['all_pass']
+payload=(ROOT/build['file']).read_bytes()
+assert hashlib.sha256(payload).hexdigest()==build['sha256']==('<REDACTED:HASH_OR_BYTES>' if devon else '<REDACTED:HASH_OR_BYTES>')
+assert len(payload)==110352
+OUT=ROOT/('work/pmic_devon_hardware_attempt01' if devon else 'work/pmic_readonly_hardware_attempt01');OUT.mkdir(exist_ok=False)
+result=dict(all_pass=False,nand_writes=0,pmic_value_writes=0,phase='authenticate',payload_sha256=build['sha256'],devon_authorized=devon)
+c=None
+def save(path,obj):
+    with path.open('x',encoding='utf-8') as f:json.dump(obj,f,indent=2);f.flush();os.fsync(f.fileno())
+try:
+    c=RamConsole(OUT);intro=c.wait('Select input');assert 'Found 1 rockusb' in intro
+    result['intro']=intro;c.select()
+    p=OUT/'marker_before.raw';c.command(f'RS 0x7effff 0x1 {p}')
+    assert p.read_bytes()==(prior/'marker_after.raw').read_bytes()
+    p=OUT/'stage_previous.raw';c.command(f'RS 0x7f0000 0xd1 {p}')
+    assert hashlib.sha256(p.read_bytes()).hexdigest()==previous['current_stage_sha256']
+    for i,off in enumerate(range(0,110080,8192)):
+        p=OUT/f'payload{i:02d}.bin'
+        with p.open('xb') as f:f.write(payload[off:min(off+8192,110080)])
+        c.command(f'WS {hex(0x7f0000+off//512)} {p}')
+    p=OUT/'before.raw';c.command(f'RS 0x7f0000 0xd1 {p}');assert p.read_bytes()==payload
+    result['phase']='execute_devon_once' if devon else 'execute_pmic_read_once'
+    save(OUT/'EXECUTION_ATTEMPTED_NO_RETRY.json',dict(payload_sha256=build['sha256']))
+    if devon:result['pmic_value_writes']='unknown until readback; at most one permitted attempt'
+    c.command('RD')
+    p=OUT/'after.raw';c.command(f'RS 0x7f0000 0xd1 {p}');after=p.read_bytes()
+    assert len(after)==110352 and after[:110080]==payload[:110080]
+    snap=after[110080:];assert snap[:8]==(b'RF1PHLD1' if devon else b'RF1PMC01') and snap[128:]==bytes(144)
+    status,count=struct.unpack_from('<II',snap,8)
+    mux0,soc0,div0,mux1,soc1,div1=struct.unpack_from('<6I',snap,16)
+    rows=[]
+    expected_count=3 if devon else 5
+    for i in range(min(count+1,expected_count)):
+        reg,err,val,ipd=struct.unpack_from('<4I',snap,48+i*16)
+        rows.append(dict(register=hex(reg),status=err,value=hex(val),i2c_ipd=hex(ipd)))
+    p=OUT/'marker_after.raw';c.command(f'RS 0x7effff 0x1 {p}')
+    marker=p.read_bytes();assert marker[:16]==b'RF1CKP02'+struct.pack('<II',110080,<REDACTED:ARTIFACT_CRC>)
+    assert marker[20:24]==struct.pack('<I',0x60000004) and marker[24:]==bytes(504)
+    result.update(status=status,completed_reads=count,registers=rows,bus_before=[hex(x) for x in (mux0,soc0,div0)],bus_after=[hex(x) for x in (mux1,soc1,div1)],current_stage_sha256=hashlib.sha256(after).hexdigest(),usb_return_verified=True,marker_status=struct.unpack_from('<I',marker,16)[0])
+    assert (mux0,soc0,div0)==(mux1,soc1,div1),'Bus configuration not restored'
+    assert status==0 and count==expected_count,'PMIC operation failed; no retry'
+    assert [int(r['register'],16) for r in rows]==build['registers'] and all(r['status']==0 for r in rows)
+    if devon:
+        assert [int(r['value'],16) for r in rows]==[0,4,4]
+        result.update(pmic_value_writes=1,devctrl_before=0,devctrl_after=4,devon_enabled=True)
+    result.update(all_pass=True,phase='DEV_ON_SET_READBACK_PASS_AWAIT_USB_UNPLUG_REPLUG' if devon else 'FIVE_PMIC_REGISTERS_READ_BUS_RESTORED')
+except BaseException as e:result['error']=repr(e);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    save(OUT/'result.json',result);print(json.dumps(result,indent=2),flush=True)

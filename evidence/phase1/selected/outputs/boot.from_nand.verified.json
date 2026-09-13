@@ -1,0 +1,45 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "outputs/boot.from_nand.verified.json",
+  "interpretation": "Boot extracted without donor fill; equality at the time of the original snapshot.",
+  "data": {
+    "scope": "Boot image payload only, physical mapping agrees with known candidates; not a repair or full active FTL proof",
+    "output": "<THREAD_WORKSPACE>\\outputs\\boot.from_nand.verified.img",
+    "bytes": 8781824,
+    "sha256": "<REDACTED:HASH_OR_BYTES>",
+    "reference": "<HOST_PATH>",
+    "exact_reference_match": true,
+    "blocks": [
+      {
+        "logical_block": 6,
+        "physical_block": 22,
+        "source": "<THREAD_WORKSPACE>\\work\\nand_native_ecc40\\NAND_00.RAW",
+        "source_sha256": "<REDACTED:HASH_OR_BYTES>"
+      },
+      {
+        "logical_block": 7,
+        "physical_block": 23,
+        "source": "<THREAD_WORKSPACE>\\work\\nand_native_ecc40\\NAND_00.RAW",
+        "source_sha256": "<REDACTED:HASH_OR_BYTES>"
+      },
+      {
+        "logical_block": 8,
+        "physical_block": 24,
+        "source": "<THREAD_WORKSPACE>\\work\\nand_native_ecc40\\NAND_00.RAW",
+        "source_sha256": "<REDACTED:HASH_OR_BYTES>"
+      },
+      {
+        "logical_block": 9,
+        "physical_block": 25,
+        "source": "<THREAD_WORKSPACE>\\work\\nand_native_ecc40\\NAND_00.RAW",
+        "source_sha256": "<REDACTED:HASH_OR_BYTES>"
+      },
+      {
+        "logical_block": 10,
+        "physical_block": 26,
+        "source": "<THREAD_WORKSPACE>\\work\\nand_native_ecc40\\NAND_00.RAW",
+        "source_sha256": "<REDACTED:HASH_OR_BYTES>"
+      }
+    ]
+  }
+}

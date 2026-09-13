@@ -1,0 +1,30 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_system_ram_window.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Installer for bounded 2MiB RAM data window, not a NAND writer/new loader."""
+import hashlib,json,struct,subprocess
+from pathlib import Path
+from ram_artifact import elf_code,symbols,branch,fix_crc
+ROOT=Path(__file__).resolve().parents[1];out=ROOT/'work/system_ram_window_v3';out.mkdir(exist_ok=False)
+zig=str(ROOT/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe')
+flags=[zig,'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-Oz','-g','-ffreestanding','-fno-builtin','-fno-stack-protector','-ffunction-sections','-nostdlib']
+subprocess.run(flags+['work/system_ram_window.c','-Wl,-T,work/system_ram_window.ld','-Wl,-e,window_read','-o',str(out/'window.elf')],check=True,cwd=ROOT)
+elf=(out/'window.elf').read_bytes();code=elf_code(elf,0x60802000,2048);syms=symbols(elf)
+code+=bytes((-len(code))%4)
+rb=branch(0x60800068,syms['window_read']);wb=branch(0x60800194,syms['window_write'])
+subprocess.run(flags+['work/install_system_ram_window.S','-Wl,-T,work/ftl_bridge_read.ld','-Wl,-e,install_window',f'-DWINDOW_BYTES={len(code)}',f'-DREAD_BRANCH={rb}',f'-DWRITE_BRANCH={wb}','-o',str(out/'install.elf')],check=True,cwd=ROOT)
+install=elf_code((out/'install.elf').read_bytes(),0x60007040,0x180)
+old=(ROOT/'work/usb_ram_bridge_checkpoint_modefix.guarded_payload.RAM_ONLY.raw').read_bytes()
+assert old[:8]==bytes.fromhex('d3f021e3fd0220ea')
+data=bytearray(old[:110080]);data[4:8]=struct.pack('<I',branch(0x60000004,0x60007040))
+data[0x4000:0x4000+len(code)]=code;data[0x7040:0x7040+len(install)]=install;fix_crc(data)
+for off in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):assert data[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+for off in (0xbbc8,0xbc90):assert data[off:off+4]==bytes.fromhex('feffffea')
+raw=bytes(data)+bytes(272)
+with (out/'install.raw').open('xb') as f:f.write(raw)
+with (out/'window.bin').open('xb') as f:f.write(code)
+report=dict(device_access=False,nand_access=False,raw_sha256=hashlib.sha256(raw).hexdigest(),extension_sha256=hashlib.sha256(code).hexdigest(),extension_bytes=len(code),symbols={k:hex(syms[k]) for k in ('window_read','window_write')},read_patch=hex(rb),write_patch=hex(wb),data_base='0x63000000',sectors=4096,max_transfer_sectors=16,marker='RF1WIN01',source_bridge_sha256='<REDACTED:HASH_OR_BYTES>')
+with (ROOT/'outputs/system_ram_window_build.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

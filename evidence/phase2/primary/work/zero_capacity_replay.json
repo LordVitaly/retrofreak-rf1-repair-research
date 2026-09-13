@@ -1,0 +1,66 @@
+{
+  "scope": "PC ARM replay, injected previously observed fallback capacity, post-write BBT input; no USB/controller/ECC emulation",
+  "ftl_fields": [
+    1080,
+    16,
+    4096,
+    12,
+    0
+  ],
+  "bbt_result": 4294967295,
+  "stop": {
+    "reason": "unmapped_or_protected_memory",
+    "address": "0x60099e34",
+    "access": 22,
+    "pc": "0x60086674"
+  },
+  "error": "{'error': 'Write to write-protected memory (UC_ERR_WRITE_PROT)', 'stop': {'reason': 'unmapped_or_protected_memory', 'address': '0x60099e34', 'access': 22, 'pc': '0x60086674'}, 'pc': '0x60086674'}",
+  "write_attempts": [],
+  "reads": [
+    {
+      "sector": 49152,
+      "count": 1,
+      "first_tag": "0xf000"
+    },
+    {
+      "sector": 49168,
+      "count": 1,
+      "first_tag": "0xffff"
+    },
+    {
+      "sector": 53248,
+      "count": 1,
+      "first_tag": "0xf000"
+    },
+    {
+      "sector": 53264,
+      "count": 1,
+      "first_tag": "0xffff"
+    },
+    {
+      "sector": 49152,
+      "count": 8,
+      "first_tag": "0xf000"
+    },
+    {
+      "sector": 4294963200,
+      "count": 2,
+      "assumed_error": "outside physical NAND"
+    },
+    {
+      "sector": 4294959104,
+      "count": 2,
+      "assumed_error": "outside physical NAND"
+    },
+    {
+      "sector": 4294955008,
+      "count": 2,
+      "assumed_error": "outside physical NAND"
+    },
+    {
+      "sector": 4294950912,
+      "count": 2,
+      "assumed_error": "outside physical NAND"
+    }
+  ]
+}

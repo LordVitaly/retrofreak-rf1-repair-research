@@ -1,0 +1,88 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/ram_bootstrap.S
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+/* OFFLINE PROTOTYPE: cache/CPU startup and FlashBoot USB gate not yet proved. */
+.syntax unified
+.arm
+.section .text.bootstrap,"ax",%progbits
+.global _start
+_start:
+    msr cpsr_c, #0xd3
+    mrs r0, cpsr
+    tst r0, #0x200
+    bne failure
+    mrc p15, 0, r0, c0, c0, 5
+    tst r0, #0xff
+    bne failure
+    mrc p15, 0, r0, c1, c0, 0
+#ifdef RF_NATIVE_CPU_ENTRY
+    /* Same SCTLR normalization as the hardware-tested USBplug entry 1C..2C.
+       Only for fresh ROM+official DDR entry, not arbitrary running firmware. */
+    bic r0, r0, #5
+    bic r0, r0, #0x10000000
+    bic r0, r0, #0x3800
+    mcr p15, 0, r0, c1, c0, 0
+    dsb sy
+    isb sy
+#else
+    tst r0, #5
+    bne failure
+#endif
+    ldr r0, =0x60000000
+    ldr r1, =0x61000000
+    ldr r2, =__load_size
+1:
+    ldr r3, [r0], #4
+    str r3, [r1], #4
+    subs r2, r2, #4
+    bne 1b
+    dsb sy
+    mov r0, #0
+    mcr p15, 0, r0, c7, c5, 0
+    mcr p15, 0, r0, c7, c5, 6
+    dsb sy
+    isb sy
+    ldr r0, =relocated
+    bx r0
+relocated:
+    ldr sp, =0x61210000
+    ldr r0, =__bss_start
+    ldr r1, =__bss_end
+    mov r2, #0
+2:
+    cmp r0, r1
+    strlo r2, [r0], #4
+    blo 2b
+    ldr r0, =payload_start
+    ldr r1, =RF_PAYLOAD_SIZE
+    ldr r2, =0x60000000
+    ldr r3, =RF_EXPECTED_CRC
+    bl rf_decode
+    cmp r0, #0
+    bne failure
+.global handoff
+handoff:
+    dsb sy
+    mov r0, #0
+    mcr p15, 0, r0, c7, c5, 0
+    mcr p15, 0, r0, c7, c5, 6
+    dsb sy
+    isb sy
+    ldr r0, =0x60000000
+    bx r0
+.global failure
+failure:
+    b failure
+    .ltorg
+.section .payload,"a",%progbits
+.balign 4
+.global payload_start
+payload_start:
+#ifndef RF_PAYLOAD_FILE
+#define RF_PAYLOAD_FILE "work/FlashBoot.guarded.lzma.OFFLINE_ONLY.bin"
+#endif
+    .incbin RF_PAYLOAD_FILE
+payload_end:
+.balign 4

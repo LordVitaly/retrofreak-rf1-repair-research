@@ -1,0 +1,76 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/boot_map_compare/build.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Cold boot map-mode comparison, read-only offline artifacts. No device API."""
+import hashlib,importlib.util,json,struct,subprocess,sys,zlib
+from pathlib import Path
+sys.dont_write_bytecode=True
+OUT=Path(__file__).resolve().parent;HERE=OUT.parents[1]
+OLD=Path('<EXTERNAL_STAGE_03>')
+def sha(b):return hashlib.sha256(b).hexdigest()
+def pin(p,s):
+ b=p.read_bytes();assert sha(b)==s,str(p);return b
+hp=OLD/'work/ram_artifact.py';pin(hp,'<HISTORICAL_HASH_REDACTED>')
+s=importlib.util.spec_from_file_location('pure_helper',hp);h=importlib.util.module_from_spec(s);s.loader.exec_module(h)
+header=pin(HERE/'work/white_screen_ftl_read/boot_header.raw','<HISTORICAL_HASH_REDACTED>')
+capture=pin(HERE/'work/boot_diagnostic_writer/fresh_ftl_capture.raw','<HISTORICAL_HASH_REDACTED>')
+asm=OLD/'work/ftl_bridge_read.S';ld=OLD/'work/ftl_bridge_read.ld';elf=OUT/'capture.elf'
+subprocess.run([str(OLD/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe'),'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-nostdlib','-DRF_EXPORT_FTL',str(asm),'-Wl,-T,'+str(ld),'-Wl,-e,ftl_bridge_read','-o',str(elf)],check=True,cwd=OUT)
+capture_code=h.elf_code(elf.read_bytes(),0x60007040,0x180)
+sys.path.insert(0,str(OLD/'work/emulator_deps'))
+from unicorn import Uc,UC_ARCH_ARM,UC_MODE_ARM,UC_HOOK_CODE
+from unicorn.arm_const import UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3,UC_ARM_REG_R4,UC_ARM_REG_LR,UC_ARM_REG_PC,UC_ARM_REG_SP
+guards=(0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c)
+report={'all_pass':False,'device_access':False,'profiles':{}}
+for kind in ('boot_header','capture'):
+ for mode in (0,1):
+  name=f'{kind}_mode{mode}';before=header if kind=='boot_header' else capture
+  data=bytearray(before[:110080]);assert data[0x76f8:0x76fc]==bytes.fromhex('0100a0e3')
+  data[0x76f8]=mode
+  if kind=='capture':data[0x7040:0x71c0]=capture_code+bytes(0x180-len(capture_code))
+  h.fix_crc(data);raw=bytes(data)+bytes(272)
+  assert all(0x1e0<=i<0x1e4 or i==0x76f8 or (kind=='capture' and 0x7040<=i<0x71c0) for i,(a,b) in enumerate(zip(raw,before)) if a!=b)
+  assert len(raw)==110352 and zlib.crc32(raw[:110080])==0xad0dadee and raw[110080:]==bytes(272)
+  assert raw[0xb408:0xb40c]==bytes.fromhex('0101a0e3') and raw[0xaf60:0xaf64]==bytes.fromhex('0003a0e1')
+  assert all(raw[o:o+8]==bytes.fromhex('0000e0e31eff2fe1') for o in guards)
+  assert all(raw[o:o+4]==bytes.fromhex('feffffea') for o in (0xbbc8,0xbc90))
+  assert all(raw[o:o+4]==before[o:o+4] for o in (0x6ae8,0x6b88,0x76b4,0x76fc,0x18d18))
+  tests=[]
+  for native_rc in (0,0xffffffff):
+   u=Uc(UC_ARCH_ARM,UC_MODE_ARM)
+   for p,n in ((0x60000000,0x400000),(0x61000000,0x20000),(0x62fff000,0x202000)):u.mem_map(p,n)
+   u.mem_write(0x60007040,raw[0x7040:0x71c0]);u.mem_write(0x62fff000,b'\x69'*0x202000)
+   context=bytes((i*13+3)&255 for i in range(0xa6000));nand=bytes((i*17+7)&255 for i in range(0x2000))
+   u.mem_write(0x602b3000,context);u.mem_write(0x60359000,nand)
+   # NAND area lies outside the copied FTL region, so sources are independent.
+   u.reg_write(UC_ARM_REG_SP,0x603ff000);u.reg_write(UC_ARM_REG_LR,0x601e0000);u.reg_write(UC_ARM_REG_R4,0x6009a1f8)
+   lba=0x6000 if kind=='boot_header' else 0x6020;count=16 if kind=='boot_header' else 1;dst=0x63000000 if kind=='boot_header' else 0x6101b000;calls=[]
+   def read(uc,pc,size,ctx):
+    args=[uc.reg_read(r) for r in (UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3)];assert args==[0,lba,count,dst];calls.append(args)
+    if not native_rc:uc.mem_write(dst,b'\x3c'*(count*512))
+    uc.reg_write(UC_ARM_REG_R0,native_rc);uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR))
+   u.hook_add(UC_HOOK_CODE,read,begin=0x600846a0,end=0x600846a0)
+   u.emu_start(0x60007040,0x60000100,count=1000000)
+   assert u.reg_read(UC_ARM_REG_PC)==0x60000100 and u.reg_read(UC_ARM_REG_SP)==0x603ff000 and u.reg_read(UC_ARM_REG_R4)==0x6009a1f8 and len(calls)==1
+   meta=bytes(u.mem_read(0x6101af10,24));assert meta[:8]==(b'RF1READ2' if kind=='boot_header' else b'RF1READ1')
+   assert struct.unpack_from('<3I',meta,8)==(lba,count,native_rc)
+   if kind=='capture':
+    expected=context+nand;assert struct.unpack_from('<I',meta,20)[0]==0xa8000
+   else:
+    expected=b'\x3c'*8192 if not native_rc else b'\x69'*8192;assert struct.unpack_from('<I',meta,20)[0]==(16 if not native_rc else 0)
+   assert bytes(u.mem_read(0x63000000,len(expected)))==expected
+   assert bytes(u.mem_read(0x62fff000,4096))==b'\x69'*4096
+   assert bytes(u.mem_read(0x63000000+len(expected),0x201000-len(expected)))==b'\x69'*(0x201000-len(expected))
+   tests.append({'native_rc':native_rc,'native_calls':1,'metadata_exact':True,'export_bytes_exact':True,'bounds_sentinels_intact':True,'stack_registers_return_exact':True})
+  path=OUT/(name+'.raw');path.write_bytes(raw)
+  item={'all_pass':True,'name':name,'path':str(path),'sha256':sha(raw),'source_sha256':sha(before),'mode':mode,'lba':lba,'sectors':count,'cut_pc':'0x600982e4','return_pc':'0x60000100','all8guards_2stops_retained':True,'no_capacity_geometry_or_BBT_RAM_corrections':True,'metadata':{'RS':'0x7f00d1','count':2,'tuple_offset':0,'magic':'RF1READ2' if kind=='boot_header' else 'RF1READ1','lba_offset':8,'count_offset':12,'native_rc_offset':16,'extra_offset':20,'extra_expected':16 if kind=='boot_header' else 0xa8000},'export':{'RS_first':'0x800000','sectors':16 if kind=='boot_header' else 1344,'bytes':8192 if kind=='boot_header' else 0xa8000,'max_sectors_per_call':16,'strip_aux16':True},'tests':tests}
+  if kind=='capture':item['snapshot_layout']={'FTL_RAM_offset':0,'FTL_RAM_address':'0x602b3000','FTL_RAM_bytes':'0xa6000','NAND_RAM_offset':'0xa6000','NAND_RAM_address':'0x60359000','NAND_RAM_bytes':'0x2000','header_offset':'0x180','map_offset':'0xf00','map_u16_entries':1896}
+  (OUT/(name+'.json')).write_text(json.dumps(item,indent=2)+'\n');report['profiles'][name]=item
+ for offset,(a,b) in enumerate(zip((OUT/f'{kind}_mode0.raw').read_bytes(),(OUT/f'{kind}_mode1.raw').read_bytes())):
+  if a!=b:assert 0x1e0<=offset<0x1e4 or offset==0x76f8
+report['all_pass']=True;report['mode_pair_only_diff_is_76f8_and_crc']=True
+(OUT/'manifest.json').write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps({'all_pass':True,'profiles':{k:v['sha256'] for k,v in report['profiles'].items()}},indent=2))

@@ -1,0 +1,3101 @@
+{
+  "schema_version": 2,
+  "generated": "2026-09-13",
+  "language": "English",
+  "excluded_self_manifests": [
+    "MANIFEST.json",
+    "MANIFEST.sha256"
+  ],
+  "files": [
+    {
+      "path": ".editorconfig",
+      "bytes": 222,
+      "sha256": "c7f23ef2bc8910c3d052fdfe539dfce07316c3fe88c5c83e73c4b4455d87275d"
+    },
+    {
+      "path": ".gitattributes",
+      "bytes": 262,
+      "sha256": "e1a79bdf991bc13f42db0876507ab452d419cedd503701cf46cc5733f0fdb325"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/report.md",
+      "bytes": 742,
+      "sha256": "78f422f744e9b9d57f97c80f01065db3c210a7e3225f63dbb8b99759f5aed1a3"
+    },
+    {
+      "path": ".github/PULL_REQUEST_TEMPLATE.md",
+      "bytes": 488,
+      "sha256": "5000016672c7ab7a5ac4f9801a72313cd8e53ebfbae0622de218f036182790e0"
+    },
+    {
+      "path": ".github/workflows/validate.yml",
+      "bytes": 762,
+      "sha256": "cc0179d65ee5dd938ae69a3c549a6cd2cab7c013d633991457680d8f47a5b6d1"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 406,
+      "sha256": "30f27de95a8861c217cffc4d1897708c8dfb6cbda90266cc49fa7f08c1febc48"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 1630,
+      "sha256": "d0558d9f287b853c932e8726d0c34f2846aab6798651308e36fe391c76442729"
+    },
+    {
+      "path": "CITATION.cff",
+      "bytes": 730,
+      "sha256": "5b8bc10187200ee37fe56670a20fcf8de68dd858a12b7c215485c7b374c7506a"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "bytes": 1192,
+      "sha256": "aea088c7d7bc6f1aa3fed53f318828efd67e5cd29e8a09512bce68682daa9b94"
+    },
+    {
+      "path": "LICENSE.md",
+      "bytes": 564,
+      "sha256": "806ff18b945c786ecc73c6957f12b233b38e3e498766df33a3854e95b864eea3"
+    },
+    {
+      "path": "LICENSES/CC-BY-4.0.txt",
+      "bytes": 17023,
+      "sha256": "d557539df68e771cc1eedcc91d13f70fca930e508d11eedcafa4b15db49e3744"
+    },
+    {
+      "path": "LICENSES/MIT.txt",
+      "bytes": 1111,
+      "sha256": "b71d716e235902df6546f4fe7024fe1d868a30b953f50ec4c4d5dc0edd7ad713"
+    },
+    {
+      "path": "LICENSE_STATUS.md",
+      "bytes": 2508,
+      "sha256": "9bdf93856406e1f64db1f32eb80a7904df48761287e269014bf0ed78a5d8856f"
+    },
+    {
+      "path": "PRIVACY.md",
+      "bytes": 1124,
+      "sha256": "747c74c6436ed79ffa60739c4b92d0b1f2d3ae43eef59350ad03759429e745bf"
+    },
+    {
+      "path": "README.md",
+      "bytes": 6749,
+      "sha256": "70c04b171a4e1678de48f8eb98648a61b29cf895d0746d16167e11571c3131a6"
+    },
+    {
+      "path": "REPAIR_SUMMARY.json",
+      "bytes": 1550,
+      "sha256": "70a1bf8a7319673e264e08895be656ad02799a1b09acaff8fcd47aa91fb13525"
+    },
+    {
+      "path": "REPO_FILE_INDEX.txt",
+      "bytes": 37054,
+      "sha256": "b9be2520d30d4acbdf1282d2bef1c88764186644bbecc287657eb79a159a2706"
+    },
+    {
+      "path": "SECURITY.md",
+      "bytes": 831,
+      "sha256": "0bc7f2bf60479f53f714a3a60fe607987bce1b245c2109ee6cd3a2fafd08b078"
+    },
+    {
+      "path": "STATUS.md",
+      "bytes": 1772,
+      "sha256": "15574549729c4be1da7e1166850f3853367f73e07ccfeb3413e0e5efbec00995"
+    },
+    {
+      "path": "docs/ADDRESS_SPACES.md",
+      "bytes": 2058,
+      "sha256": "94a43e188a8509591ff86c20c6a1a723897bde952209c4a6fee9fb59c0a31d6a"
+    },
+    {
+      "path": "docs/DECISION_TREE.md",
+      "bytes": 3249,
+      "sha256": "fbded05a59956f824f5661710a9d57ceefab95f1da1fde2b7ac84f28f3538aa1"
+    },
+    {
+      "path": "docs/EVIDENCE_MAP.md",
+      "bytes": 5358,
+      "sha256": "22d91b30b6bd6a46555fa774661fb708036807dd1a32bc77821277a3330cddd4"
+    },
+    {
+      "path": "docs/FIRMWARE_REFERENCE.md",
+      "bytes": 2717,
+      "sha256": "7288318f54ab69448cb35c7c9ecb13220f0b2b95ab0a69c8ff63fffadb446f12"
+    },
+    {
+      "path": "docs/HISTORICAL_REPORT_INDEX.md",
+      "bytes": 1190,
+      "sha256": "b4ee071b278e418ad859ffe876f6f1d6463162ac85ddcd5fc29ee9362bd14d50"
+    },
+    {
+      "path": "docs/POSTMORTEM.md",
+      "bytes": 3877,
+      "sha256": "4e8259299d50cd328fcc56a707b25eb3972e30739126cc95212e6627de20c428"
+    },
+    {
+      "path": "docs/PUBLISHING_CHECKLIST.md",
+      "bytes": 1129,
+      "sha256": "e9bbb586924117ec574597e8f32aea5db4c9d38c39b47af8b9bcef62c40a0626"
+    },
+    {
+      "path": "docs/README.md",
+      "bytes": 1634,
+      "sha256": "9c0759788e015cf712d5ebb4a67423fdfc694f1ed70ac66699545d700f1dc3df"
+    },
+    {
+      "path": "docs/RECOVERY_SD.md",
+      "bytes": 2040,
+      "sha256": "62d0b34dc36a2386f74840d5b8563f3105cf20e6a068bf7426a3602f02fab4c7"
+    },
+    {
+      "path": "docs/REFERENCE_HASHES.md",
+      "bytes": 819,
+      "sha256": "1c060ed9853193397f9018699699d9a985cfaaf9e688244a30aff4713a4f1edf"
+    },
+    {
+      "path": "docs/REPRODUCIBILITY.md",
+      "bytes": 1727,
+      "sha256": "e3bceb30be524d4a68d83bc44650c8d215b70e4e964fac1202133c4a01f5bc30"
+    },
+    {
+      "path": "docs/SAFETY_AND_SCOPE.md",
+      "bytes": 3802,
+      "sha256": "f954a25c8db8eef236077b6eaaf68e4bc1dd5e285fdbf87b0bbc581495b7a735"
+    },
+    {
+      "path": "docs/SOURCES_AND_CREDITS.md",
+      "bytes": 4300,
+      "sha256": "31bc6d8cab7331f25e2c8aac4c73614d4e0cef0bfc8dcd80fde6e7f72690cefb"
+    },
+    {
+      "path": "docs/SUCCESSFUL_RECOVERY_PATH.md",
+      "bytes": 6775,
+      "sha256": "971da7eb53b89b7d2f82159959f0dbb12243eb3655aeeccb1bbbe9e4656f0991"
+    },
+    {
+      "path": "docs/TECHNICAL_REPORT.md",
+      "bytes": 12614,
+      "sha256": "549dcbc3a7fbd6b1173826e0462019c80bf55213fee5bccd83c7dad2bc883da0"
+    },
+    {
+      "path": "docs/TOOLING.md",
+      "bytes": 1968,
+      "sha256": "26c189a9487733cc1c76d7fc1ff89fa1a4d7280066ec639d03535050733d82fa"
+    },
+    {
+      "path": "docs/VALIDATION.md",
+      "bytes": 2370,
+      "sha256": "996aa2ef1321969e9aa264e36b6b6afb47d243542ed9b36f2b179dcab8547e5a"
+    },
+    {
+      "path": "evidence/INDEX.json",
+      "bytes": 11821,
+      "sha256": "ee138c92121d8bc901236dfc056b1ccf68d1b1cf3e8dc7b4eecec8897bdb76e7"
+    },
+    {
+      "path": "evidence/README.md",
+      "bytes": 1507,
+      "sha256": "fd7e013d3c545167c7812fb0c20d976dc364c3082ee49eb0c50d2b214578fe3f"
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/boot.from_nand.verified.json",
+      "bytes": 1678,
+      "sha256": "c7e0571e457d3b0b904e97837a843a927fd5977b08bce4029c60e51204ad7ecf"
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/external_bootrom_usb_length_test.json",
+      "bytes": 1324,
+      "sha256": "bd1163712876fa2c0e654f67a643b79340cacc083e86be28dc101eeb2cb071d6"
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/fixed_boundary03_verification.json",
+      "bytes": 4475,
+      "sha256": "82ec81df92cefa9c0f6614b826dc0bb466bd62b17bd7261a9ded2e29126761e7"
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/flashboot_full_remap_verified.json",
+      "bytes": 873,
+      "sha256": "03398e42c1c6fd017588ebcbac61a5ffeeb92d971d92f109c32818056bd28747"
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/flashboot_system_rewrite_attempt3.json",
+      "bytes": 1314,
+      "sha256": "63b15deed552327523dd4e64f472fd1dd403add6f367e3b7b34cd1115fe34ce4"
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/live_idb_ecc24_comparison.json",
+      "bytes": 1488,
+      "sha256": "0292a329079c98af3458c463540079e19c37a6d5734b81c9188f2bcbacff90eb"
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/native_dump_complete_verification.json",
+      "bytes": 990,
+      "sha256": "93a2252160f657781ffe4e7bb5b62bfbb638c2a2728628909bcacb159a33ea06"
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/native_system_block_audit_2048blocks.json",
+      "bytes": 604,
+      "sha256": "23c5d051170b05aed10f06d4214cd75de359ef0fe222dd91127afffe015eb3a6"
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/vold_nand_evidence.json",
+      "bytes": 2117,
+      "sha256": "adff9cad6bb1e1291890e029c209d54988ecd1e845d6ba2194efc4007a944b58"
+    },
+    {
+      "path": "evidence/phase1/selected/work/bbt_copy12_restore_attempt01/result.json",
+      "bytes": 1034,
+      "sha256": "23b7892badd56f8e5a31a1c96addfc79983adedc63689947c843d69576e51760"
+    },
+    {
+      "path": "evidence/phase1/selected/work/bbt_copy12_writer_v2/offline_test.json",
+      "bytes": 965,
+      "sha256": "7b591a03f12ded00f83ef68f43f9edbdc73afdcf7695a1c1397ab6dc294c5fc3"
+    },
+    {
+      "path": "evidence/phase1/selected/work/bbt_count_ram_only_hardware_attempt01/result.json",
+      "bytes": 2118,
+      "sha256": "42987a733b175a37329bc67e02278cd21d8e9901691e5e6ab065aeb5749c5634"
+    },
+    {
+      "path": "evidence/phase1/selected/work/bbt_physical_ecc40_attempt01/result.json",
+      "bytes": 1737,
+      "sha256": "a7fdc48142b9a3f9f214b416aa57b04b266cc9a6598fab7761ba3bf29b9885f0"
+    },
+    {
+      "path": "evidence/phase1/selected/work/copy6_cold_readonly_attempt01/result.json",
+      "bytes": 2035,
+      "sha256": "feb4640a2e1af99c7f7e29e8f5f329339a5055ab99b3896fff507b09d9148624"
+    },
+    {
+      "path": "evidence/phase1/selected/work/early_boot_ecc24_attempt01/interpretation.json",
+      "bytes": 5586,
+      "sha256": "60818b5c2401fc9fa649377e1e6d2fc6ccf8d5feb8208b683398bb7c311af3a3"
+    },
+    {
+      "path": "evidence/phase1/selected/work/first_system_write188_hardware_attempt01/result.json",
+      "bytes": 2238,
+      "sha256": "f9924c39b888927b5ba0290f065d0019bf8ba12d31ad991a55fcae36d1fb96b3"
+    },
+    {
+      "path": "evidence/phase1/selected/work/ftl_boundaries_after_idb_attempt01/result.json",
+      "bytes": 869,
+      "sha256": "11a44ba49a21bcdf67d210c94be6f7920ed68fa346b2ee2e9fd5f7599ed517c8"
+    },
+    {
+      "path": "evidence/phase1/selected/work/ftl_bridge_read_hardware_attempt01/result.json",
+      "bytes": 1113,
+      "sha256": "b737869ffbba32c323d0617c70385528b04b2a4d7037d9f360ba8e71a59e8b24"
+    },
+    {
+      "path": "evidence/phase1/selected/work/idb_copy6_restore_hardware_attempt03/result.json",
+      "bytes": 1114,
+      "sha256": "c14b3dd8aa14e05c1f0438a47a99511332bcdd36051de00ab24a93e1a7e3786e"
+    },
+    {
+      "path": "evidence/phase1/selected/work/nand_init_after_idb_readonly_attempt01/result.json",
+      "bytes": 971,
+      "sha256": "8f2a71865363f369ac8d89a062d1ff7bbf98ac1339f029b942c5b9d28bd571fe"
+    },
+    {
+      "path": "evidence/phase1/selected/work/normal_warm_reset_hardware_attempt01/result.json",
+      "bytes": 722,
+      "sha256": "a85b314ca970bc5a40336e143f99ebc3bb414466626ad5f0313a0cdf287e43d9"
+    },
+    {
+      "path": "evidence/phase1/selected/work/pmic_devon_hardware_attempt01/result.json",
+      "bytes": 1329,
+      "sha256": "a30b1c00b9574161cba241c661934f5bad9f24753dab55bd80c67b10a8f607ac"
+    },
+    {
+      "path": "evidence/phase1/selected/work/pmic_devon_usb_return_attempt01/result.json",
+      "bytes": 817,
+      "sha256": "e9e649368422466c34db2cc3e36bf865efe5d9d57897b3804fb2ba4c7c5cf62b"
+    },
+    {
+      "path": "evidence/phase1/selected/work/pmic_readonly_hardware_attempt01/result.json",
+      "bytes": 1457,
+      "sha256": "5b845933ceddf5b675612bcafc177e64cc1def97a5c8d4397f9dc269d69fbe32"
+    },
+    {
+      "path": "evidence/phase1/selected/work/post_idb_powerheld_boot_attempt01/result.json",
+      "bytes": 1029,
+      "sha256": "8e4ef528b628e6d92d2fdaeb3712a6426163355e9e9f29e3036c977029c3a392"
+    },
+    {
+      "path": "evidence/phase1/selected/work/power_hold_snapshot_hardware_attempt01/result.json",
+      "bytes": 2778,
+      "sha256": "b7e1dba6cc87585033c23b7bb4ccf2e556c9a91c6607f992d6b5702281bf86b8"
+    },
+    {
+      "path": "evidence/phase1/selected/work/remap_bbt_count_ram_only_attempt01/result.json",
+      "bytes": 2123,
+      "sha256": "08ff6841d86945416993cd4c8aa7ee287c95febfa95dc2ef3c556f608b6fb94b"
+    },
+    {
+      "path": "evidence/phase1/selected/work/second_system_write189_hardware_attempt01/result.json",
+      "bytes": 2595,
+      "sha256": "5321343b63fa8c97eeaf876bf8459f210e08a4c97a44c84dfd3aa7d8c76b9ad7"
+    },
+    {
+      "path": "evidence/phase1/selected/work/startup_actual_usb_entry_hardware_attempt01/result.json",
+      "bytes": 1558,
+      "sha256": "d57befd70cff4e095ffa1451d639cb07f2ecbc0c1280066970f2ea250d471e4d"
+    },
+    {
+      "path": "evidence/phase1/selected/work/startup_ftl_capacity_hardware_attempt01/result.json",
+      "bytes": 2205,
+      "sha256": "fb34fef9812b792cdd4c44c39bdab5ed9b123a2b905ca42f3c3357ed971f1bb0"
+    },
+    {
+      "path": "evidence/phase1/selected/work/system_batches16_hardware_attempt01/result.json",
+      "bytes": 4647,
+      "sha256": "c5e4f641067aafc38e3f66dcdb1c8ebeb7a81057107366475a1a85e94c8bddf9"
+    },
+    {
+      "path": "evidence/phase1/selected/work/system_finish236_259_attempt01/result.json",
+      "bytes": 1994,
+      "sha256": "5a199cd8b096f431a30c5125e0d041e6375ec6fca67288bab7e2314d7be6245d"
+    },
+    {
+      "path": "evidence/phase1/selected/work/system_next32_220_235_attempt01/result.json",
+      "bytes": 1341,
+      "sha256": "d14fada25b11de601a54d5e6b9f40673b634d6a09a92ae55b59ab753bb6b8a7c"
+    },
+    {
+      "path": "evidence/phase1/selected/work/system_next32_attempt01/result.json",
+      "bytes": 1435,
+      "sha256": "d8801e755f5c8d216b5f3cc8f2172a3f95d5cfcf10ad30a5bd29772e95ae1299"
+    },
+    {
+      "path": "evidence/phase1/selected/work/system_recovery_b1_next16_attempt03/result.json",
+      "bytes": 1219,
+      "sha256": "4ff7eb022dd61082a91a568edf8b344ed72481432596fc0a8d7286ceb7172335"
+    },
+    {
+      "path": "evidence/phase1/selected/work/system_writer_dry_hardware_attempt01/result.json",
+      "bytes": 1097,
+      "sha256": "81d740f65c7c95178aa6c00ab6bec42fd5f6cb2cadfe8d5849799d65e804498a"
+    },
+    {
+      "path": "evidence/phase1/selected/work/usb_ram_bridge_capacity_fixed_hardware_attempt01/result.json",
+      "bytes": 813,
+      "sha256": "c7b4db34c9e5b030600613a7dc876370582508fe75740051d08c4b2700cd029f"
+    },
+    {
+      "path": "evidence/phase2/REPAIR_EVIDENCE_SUMMARY.json",
+      "bytes": 1785,
+      "sha256": "154a34cde8e84dc9ff0ea5ea8e3d33417512dfa4673cc1b6e43121d6cfaa3b43"
+    },
+    {
+      "path": "evidence/phase2/functional_cold_boot_confirmation.json",
+      "bytes": 749,
+      "sha256": "096f895a43aca236bfef07d8eb9a839ab4ec6fb10dd5412b85fd494f4ad8b395"
+    },
+    {
+      "path": "evidence/phase2/primary/work/adb_boot_diagnostic/ramdisk_changes.diff",
+      "bytes": 1942,
+      "sha256": "e87f7f72e459c1aeeda2e62bdb0d6cd64b95c55a5703bee20559fe0875d21f23"
+    },
+    {
+      "path": "evidence/phase2/primary/work/bbt_restore_after_copy0_attempt04/result.json",
+      "bytes": 12246,
+      "sha256": "7fac456956e39ec687db8c4e25021348a2bbcbe242fd4ac59cfe890e30365516"
+    },
+    {
+      "path": "evidence/phase2/primary/work/boot_diagnostic_writer/handoff_proof.json",
+      "bytes": 2026,
+      "sha256": "cee368a27d7d5b9fe7fda01133db6999b1bf428c7cec804409d2aca7050b9069"
+    },
+    {
+      "path": "evidence/phase2/primary/work/boot_diagnostic_writer/offline_proof.json",
+      "bytes": 3032,
+      "sha256": "c6675e8feed2d055244bf23b3f15db9e6745743bfe261c0de17c257d8b463904"
+    },
+    {
+      "path": "evidence/phase2/primary/work/boot_final_verified/result.json",
+      "bytes": 1519,
+      "sha256": "47195f51a584a817837f483126094c41bcdac8cbc4dd97358f3eed71e4ddaff4"
+    },
+    {
+      "path": "evidence/phase2/primary/work/boot_header_block22_attempt01/result.json",
+      "bytes": 82992,
+      "sha256": "d70e5b01cee6a7622655a09d6a7237e4e949ea1514eba8fd967068b8690e5ac6"
+    },
+    {
+      "path": "evidence/phase2/primary/work/boot_header_validation_audit/report.json",
+      "bytes": 3797,
+      "sha256": "5c80436d9237eca7a7bebf542c506a926565c0815c7fc7c04c55411e58d3b12b"
+    },
+    {
+      "path": "evidence/phase2/primary/work/boot_header_validation_audit/sysprot_trace.json",
+      "bytes": 9948,
+      "sha256": "8a9e77a32d62cbf491b371050f9b1179f719e8d4a2f2d4704768f0131ea58dbd"
+    },
+    {
+      "path": "evidence/phase2/primary/work/boot_relocated_header_block74_attempt01/result.json",
+      "bytes": 85941,
+      "sha256": "eec9b8e0eabf8a0533a963b10541bb16d128b26e071cc4446d0e44706e011a65"
+    },
+    {
+      "path": "evidence/phase2/primary/work/boot_visibility_repair_result.json",
+      "bytes": 1885,
+      "sha256": "aa466a088ff0345b3bcbac530bbba0fb3d96590cb8b55c6e6c594048d0ec3cb0"
+    },
+    {
+      "path": "evidence/phase2/primary/work/cache_last_attempt/e2fsck.exe.log",
+      "bytes": 288,
+      "sha256": "90b03dd9e48e87459f9af3c95b463664a7574ab897cf87fd04dc5cf560dd4a1a"
+    },
+    {
+      "path": "evidence/phase2/primary/work/cache_last_attempt/live_verify_fsck.log",
+      "bytes": 288,
+      "sha256": "90b03dd9e48e87459f9af3c95b463664a7574ab897cf87fd04dc5cf560dd4a1a"
+    },
+    {
+      "path": "evidence/phase2/primary/work/cache_last_attempt/live_verify_result.json",
+      "bytes": 1575,
+      "sha256": "dc7c72b7d164104021c48b8fcd7d11141f7e78862455146edea2323e2e88a01d"
+    },
+    {
+      "path": "evidence/phase2/primary/work/cache_last_attempt/manifest.json",
+      "bytes": 3572,
+      "sha256": "c78370b290e5a9965508ba8fd3cc6bd982a0d7e1f2512f5c7bc8e5ec74d698d7"
+    },
+    {
+      "path": "evidence/phase2/primary/work/cache_last_attempt/selective_write_fsck.log",
+      "bytes": 288,
+      "sha256": "90b03dd9e48e87459f9af3c95b463664a7574ab897cf87fd04dc5cf560dd4a1a"
+    },
+    {
+      "path": "evidence/phase2/primary/work/cache_last_block24_attempt01/result.json",
+      "bytes": 86237,
+      "sha256": "868c79f5f7442f93a57cd8f69fb6e297b10deec49e7131f35aa21518a3287025"
+    },
+    {
+      "path": "evidence/phase2/primary/work/cache_last_block26_attempt01/result.json",
+      "bytes": 86240,
+      "sha256": "74c592b8ba1aac9e24e3a77e422905d81c0426ca48f8d35e9fa25aee71f24d9d"
+    },
+    {
+      "path": "evidence/phase2/primary/work/cache_last_writer/handoff_proof.json",
+      "bytes": 2030,
+      "sha256": "9e2fba2a19ba69fcd3694751f8083f13c72cae4def6a73ccc5bcb4db799ac0e4"
+    },
+    {
+      "path": "evidence/phase2/primary/work/cache_last_writer/manifest.json",
+      "bytes": 13794,
+      "sha256": "5d8dd592fa1a078f0dadbb8a406daa73792ba16fc93f6d36e5a844e4fc298d2d"
+    },
+    {
+      "path": "evidence/phase2/primary/work/cache_last_writer/offline_proof.json",
+      "bytes": 3037,
+      "sha256": "7385cf939eef324b923e21e274422c72883969fd1adc556a9c53201871509e12"
+    },
+    {
+      "path": "evidence/phase2/primary/work/copy0_writer_v1/build.json",
+      "bytes": 6924,
+      "sha256": "c3037f679a458b7738e29e3254f3fa4752cc3f6107bc28f2c5f9c9b45897c18c"
+    },
+    {
+      "path": "evidence/phase2/primary/work/copy0_writer_v1/offline_test.json",
+      "bytes": 23124,
+      "sha256": "cb6e9b5053fe5b47f9e406d790c6e1066102087d781869c58e3b4d2e92f2d593"
+    },
+    {
+      "path": "evidence/phase2/primary/work/copy5_writer_v1/build.json",
+      "bytes": 6572,
+      "sha256": "9b7df34bf238c6897e020da0b87a753fc0c9a2da37be8ab837cf864988406482"
+    },
+    {
+      "path": "evidence/phase2/primary/work/copy5_writer_v1/offline_test.json",
+      "bytes": 23322,
+      "sha256": "6aad1611faf419e0ba6a0514986e727f252e0ce6fbe890570faa60af49623c56"
+    },
+    {
+      "path": "evidence/phase2/primary/work/early_adb_failure_audit/report.md",
+      "bytes": 3626,
+      "sha256": "afb7360dcdb7066cb91773e6ae8e8b40f3b59678e4ae9885d22681c8eeadd3c9"
+    },
+    {
+      "path": "evidence/phase2/primary/work/early_adb_failure_audit/timer_arm_proof.json",
+      "bytes": 5481,
+      "sha256": "c49cac84cf9832cab1a9d289dd2efd814bf1d602375af6dd0149491b0681f0b6"
+    },
+    {
+      "path": "evidence/phase2/primary/work/hardened_bridge_v1/offline_test.json",
+      "bytes": 1928,
+      "sha256": "000053d0c4a92e089ac967660d923b2448d1109adc4ff888969d9f966b284b1a"
+    },
+    {
+      "path": "evidence/phase2/primary/work/idb_analysis.json",
+      "bytes": 4078,
+      "sha256": "918be8f6bb9544645fa837420774e63248a9ef32034b4f1a98fffeaec1d996c2"
+    },
+    {
+      "path": "evidence/phase2/primary/work/journal_analysis/cache_report.json",
+      "bytes": 904,
+      "sha256": "ea6b9e622fa7af8533b9f17f9221c9e28ed6f911b150c3a124a3f6617544c299"
+    },
+    {
+      "path": "evidence/phase2/primary/work/journal_analysis/data_report.json",
+      "bytes": 17073,
+      "sha256": "4e09d8ad6f4ea404ce432261d4feee72795210fbf335db724425e329fefb7fd0"
+    },
+    {
+      "path": "evidence/phase2/primary/work/linux_system_four_repair_attempt01/result.json",
+      "bytes": 231,
+      "sha256": "1b8e542345e04ba7012000eb7317fbe99bf761ce1bf276c3f31117e44648e859"
+    },
+    {
+      "path": "evidence/phase2/primary/work/live_adb_after_data_repair/functional_validation.json",
+      "bytes": 437,
+      "sha256": "e9533e28d73ce68ed908893937aea175c69dbefad30e356fc16b0b61c8f51765"
+    },
+    {
+      "path": "evidence/phase2/primary/work/live_linux_repair_review.md",
+      "bytes": 3013,
+      "sha256": "d297a10b39ac9493522d33a7bfffb2aee120be3057769e80c34296f2f41d9be9"
+    },
+    {
+      "path": "evidence/phase2/primary/work/live_system_audit/cold_boot_file_checks.json",
+      "bytes": 1387,
+      "sha256": "77019b07f3d2a7b4ceb6cdddfa4070b75e6af952d8663584aef79465d8b0c644"
+    },
+    {
+      "path": "evidence/phase2/primary/work/live_system_audit/live_compare_report.json",
+      "bytes": 13604,
+      "sha256": "19f73d62c0708cfcaa056f56e4486ea29b9f9c51995f8e4a81cc5da17f35c339"
+    },
+    {
+      "path": "evidence/phase2/primary/work/live_system_audit/repair_candidates.json",
+      "bytes": 3035,
+      "sha256": "8013d5ce984cb28395e45d4ae4389c09e5f4ca5ff3cfc72a473860397589b37f"
+    },
+    {
+      "path": "evidence/phase2/primary/work/live_system_audit/report.json",
+      "bytes": 7051,
+      "sha256": "34e008ffd2e2c9855c14590cea8d4dd3c799cdea26641aae5807c87d64bf7c4c"
+    },
+    {
+      "path": "evidence/phase2/primary/work/original_boot_after_idb0_attempt01/result.json",
+      "bytes": 6315,
+      "sha256": "333bd8ee5b36b020c1f41422a7450bb03f6d9d4f2a9a8352f384b3c57480ed8f"
+    },
+    {
+      "path": "evidence/phase2/primary/work/userdata_native_repair_attempt01/result.json",
+      "bytes": 197,
+      "sha256": "196b6b207692d50a6b01483765238ca2400bedebefa1378ac6784dc1e5569885"
+    },
+    {
+      "path": "evidence/phase2/primary/work/userdata_native_repair_attempt02/result.json",
+      "bytes": 204,
+      "sha256": "3c660a379402e240fbd755f3700777afe25d92750aba64a62c693032e2c22e72"
+    },
+    {
+      "path": "evidence/phase2/primary/work/userdata_repair_trial/report.json",
+      "bytes": 772,
+      "sha256": "9823e8bf1455903a007374c194619b2249f4c8196d0b6f9dae6d6eef8ba7d048"
+    },
+    {
+      "path": "evidence/phase2/primary/work/zero_capacity_replay.json",
+      "bytes": 1445,
+      "sha256": "e6fc5e0e190ebb26d148aa81e98fb51977ef314d3911d252d0aef55faabb7f29"
+    },
+    {
+      "path": "evidence/phase2/primary/work/zero_capacity_replay_v2.json",
+      "bytes": 2035,
+      "sha256": "df02f5631160a7d86f869bd2febfdef034311f769631efd5fe7c4ff45d394f08"
+    },
+    {
+      "path": "evidence/phase2/primary/work/zero_capacity_replay_v3.json",
+      "bytes": 2142,
+      "sha256": "6d294dadb7b65938c075c0054d94bd82a74ca9e0b0a941cf1b3ef3e8bd29406b"
+    },
+    {
+      "path": "evidence/phase2/usb_stock_final_evidence.json",
+      "bytes": 5089,
+      "sha256": "362f01ca0c7a5f6d74923ad6f0f89bbea1921611fd27a423e6b9526805bad081"
+    },
+    {
+      "path": "provenance/BUILD_INFO.md",
+      "bytes": 1419,
+      "sha256": "aae6d37509648bd742981d64423e2bf72c4f8840c9b60949c2ecdca7abbbb56d"
+    },
+    {
+      "path": "provenance/INPUTS.json",
+      "bytes": 1498,
+      "sha256": "26e414082140d33fd1040256ed706cee6756b55e34f6c277b0c2076ea4149280"
+    },
+    {
+      "path": "provenance/PUBLICATION_UPDATE_2026-09-13.md",
+      "bytes": 1919,
+      "sha256": "6f4f6f507dd695787cf40f4f883a97433cc25c5344d0d2bdfece08268a28aa8a"
+    },
+    {
+      "path": "provenance/RELEASE_AUDIT.md",
+      "bytes": 4142,
+      "sha256": "9add5401bba01d8256cfc6981b7d40724664f83750934edd44c1656f990a33d6"
+    },
+    {
+      "path": "provenance/RESTORED_EVIDENCE.json",
+      "bytes": 15218,
+      "sha256": "b58c6b571c6ba1b88adee31f5b542cd456f224efc0a5015f9c766e23393d79cf"
+    },
+    {
+      "path": "provenance/SNAPSHOT_PRESERVATION.json",
+      "bytes": 90150,
+      "sha256": "4bf8ed1771aa58a5440c455165ed12eae63f33864c5d7073079fdc0be20f556d"
+    },
+    {
+      "path": "provenance/VALIDATION_LOG.txt",
+      "bytes": 4800,
+      "sha256": "62356437f234c265ec4152a37e38cab9ed5b2c39b9e79ea510305ccdaf9da8a5"
+    },
+    {
+      "path": "references/RECOVERY_SD_READONLY_REPORT.md",
+      "bytes": 2198,
+      "sha256": "d506a26a0f76ae4e6a71c3b3da2f701954a6b1214ba006d9cb5c330291ab53c3"
+    },
+    {
+      "path": "references/SOURCES.json",
+      "bytes": 3612,
+      "sha256": "15f65161bb487051f9aa443506b3881ef28d89ee0fff910bb8f25f933768c360"
+    },
+    {
+      "path": "scripts/check_repository.py",
+      "bytes": 8178,
+      "sha256": "420736bfc23e4edd7d80527507a213f06450fae40ef2cc2dff2da8fc39304a4c"
+    },
+    {
+      "path": "scripts/download_cygwin_packages.py",
+      "bytes": 4384,
+      "sha256": "fc595f1d8e46f8d22716b18e99ec0f1d5df0eb4e7b85978e8524af700738481c"
+    },
+    {
+      "path": "scripts/refresh_metadata.py",
+      "bytes": 3123,
+      "sha256": "26d6badfdebbc532cb66b77d0c502b4749a63e31d82fedd1cb0447ccfe02f8de"
+    },
+    {
+      "path": "scripts/repo_support.py",
+      "bytes": 2889,
+      "sha256": "89d4500478a50444267f101e156e90da16ca03172a200d686e4b712abacb6de7"
+    },
+    {
+      "path": "scripts/verify_manifest.py",
+      "bytes": 3244,
+      "sha256": "46cd9b2e826c7856440f2805acea0b20922de60a8ec8724060eca40615ffa5ee"
+    },
+    {
+      "path": "tests/README.md",
+      "bytes": 571,
+      "sha256": "c2397517f4ca1700aa804635e0f1fb282ea7c2c9c1a3dc2ea6b62a5de4066552"
+    },
+    {
+      "path": "tests/test_checker_cli.py",
+      "bytes": 1476,
+      "sha256": "40306310d323bec901a0da32f22c64ef0d370718bd3a6e3a149c09a34dbfedbb"
+    },
+    {
+      "path": "tests/test_package_downloads.py",
+      "bytes": 3511,
+      "sha256": "17819418fa13ce3cce0dc5c68a54d1491bbfc76d37685a16158cacbfa8d93268"
+    },
+    {
+      "path": "tests/test_publication_boundaries.py",
+      "bytes": 1856,
+      "sha256": "2848f0c269df25553d26ddc29ea6009bd86a51f0096684150a5a7e6340fd9174"
+    },
+    {
+      "path": "tests/test_repository_integrity.py",
+      "bytes": 3507,
+      "sha256": "9f4d348563cbf5a25a2aa8c67fbcbd68c511389d0000c1ebf999ea908bf46f80"
+    },
+    {
+      "path": "tests/test_rf1_boot_digest.py",
+      "bytes": 3019,
+      "sha256": "9d4616dd096b949e24565a5e4e5ef10200c61c4883014ab6b13ad3d075ba2292"
+    },
+    {
+      "path": "third_party/DEPENDENCIES.md",
+      "bytes": 2290,
+      "sha256": "eea1ddabdb9c5ad9518378e39d71aa4cc10dcc50ef29ecf8d695630a5ab699c0"
+    },
+    {
+      "path": "third_party/README.md",
+      "bytes": 208,
+      "sha256": "44ba5c20d89fd736eac6a7e908c24ebfa59ec5e54cdb2647103e13631b6c8b4d"
+    },
+    {
+      "path": "third_party/phase2/README.md",
+      "bytes": 826,
+      "sha256": "e840a18b14e8ed939546153388ed4e1aa530adfa4638fa06a7d2dee7d4506f9c"
+    },
+    {
+      "path": "third_party/phase2/acquisition/work/adb_driver_research/manifest.json",
+      "bytes": 12343,
+      "sha256": "1091a664e2b6ec533a8354caf8b8b70167bdf5fd9c3198efdbf33d68d1216458"
+    },
+    {
+      "path": "third_party/phase2/acquisition/work/adb_host/platform-tools-package/platform-tools/source.properties",
+      "bytes": 38,
+      "sha256": "2dccd788c0234d8cf7f7457377e57f57527a86a629c6ed54feb8af0f549dac38"
+    },
+    {
+      "path": "third_party/phase2/acquisition/work/cache_last_attempt/mirror.txt",
+      "bytes": 34,
+      "sha256": "d8ae1b0da185a0c017ad58fcbd83f5fabc96fa401cf69c8fa265ea3d07bfe227"
+    },
+    {
+      "path": "third_party/phase2/acquisition/work/cache_last_attempt/portable_manifest.json",
+      "bytes": 4234,
+      "sha256": "be3dff62e51e0ee2f91c66280c35eb58ac5712f8588010584b3778c8a5e76e6c"
+    },
+    {
+      "path": "third_party/phase2/local_package_inventory.json",
+      "bytes": 6550,
+      "sha256": "1b8d7307aa24117acfbbe6c06184d222c2e0df4f5e99edc0e39815e0fb9eb77f"
+    },
+    {
+      "path": "third_party/phase2/notices/android-platform-tools/NOTICE.txt",
+      "bytes": 1154131,
+      "sha256": "38ec8c6f5b7799c223ffeab1f9e81c2d5fc67b5e56d6424f649630ca1ee1a811"
+    },
+    {
+      "path": "third_party/phase2/notices/cygwin/COPYING",
+      "bytes": 35147,
+      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+    },
+    {
+      "path": "third_party/phase2/notices/cygwin/CYGWIN_LICENSE",
+      "bytes": 1458,
+      "sha256": "794433752103cf4bbb4a84a1bdb8fbc150abb1762704bb35fecc9f7f820be984"
+    },
+    {
+      "path": "third_party/phase2/notices/cygwin/cygserver.README",
+      "bytes": 8136,
+      "sha256": "a311d924c6a11e6107b498f2a6e8b04a54cf24b4b8533cfb8fcd64bd899179ed"
+    },
+    {
+      "path": "third_party/phase2/notices/e2fsprogs/NOTICE",
+      "bytes": 44585,
+      "sha256": "5da5ef153e559c1d990d4c3eedbedd4442db892d37eae1f35fff069de8ec9020"
+    },
+    {
+      "path": "third_party/phase2/notices/e2fsprogs/README",
+      "bytes": 719,
+      "sha256": "6ae996ded870a43ecc348c1e9f9b1e72100e8824b3c9f24bda89440dec97fda9"
+    },
+    {
+      "path": "third_party/phase2/notices/google-usb-driver/amd64-NOTICE.txt",
+      "bytes": 236,
+      "sha256": "a19b767b9ddda7306c78232e4a223d0ba966471b74dce3c0c995307cab5bf7b7"
+    },
+    {
+      "path": "third_party/phase2/notices/google-usb-driver/i386-NOTICE.txt",
+      "bytes": 236,
+      "sha256": "a19b767b9ddda7306c78232e4a223d0ba966471b74dce3c0c995307cab5bf7b7"
+    },
+    {
+      "path": "toolkit/INDEX.json",
+      "bytes": 61459,
+      "sha256": "84413062dd17da8df97bbeac25312ae2c7cc87c789554179524878fa6448db17"
+    },
+    {
+      "path": "toolkit/README.md",
+      "bytes": 1348,
+      "sha256": "2fbbd73df7f99fd3db897c6828a15e8f1ac5d50509519459c38d9a4ed9b5f204"
+    },
+    {
+      "path": "toolkit/offline/README.md",
+      "bytes": 1052,
+      "sha256": "ebd67e991ac863245980d6a95fa5a6d87439513799e42c8cc535870b43be1857"
+    },
+    {
+      "path": "toolkit/offline/rf1_boot_digest.py",
+      "bytes": 3018,
+      "sha256": "454654ced5d8db65b616d05af4246ce01eb997d7271972ae8452427380b08073"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/analyze_native_chunk0.py.txt",
+      "bytes": 2984,
+      "sha256": "6eb9f35faed46a44040128a3302c2d46471a611f648602ecf7c41159effc5327"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/analyze_rs_8448_layout.py.txt",
+      "bytes": 4470,
+      "sha256": "3104e8cb8e0e10c83808068583448d4b604e4ab9360e157fb8931e47c1162c0e"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/audit_critical_ftl_overlays.py.txt",
+      "bytes": 2471,
+      "sha256": "262b66edf8b4865c67f2edb4324c82bc2ab432473e468d81646d5558a0432372"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/audit_flashboot_bbt_gate.py.txt",
+      "bytes": 2991,
+      "sha256": "9fb14ab89c14b4ea4a372d5a34f3067a4c0328b9a49392642da01c22355a402d"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/audit_flashboot_idb_geometry.py.txt",
+      "bytes": 3157,
+      "sha256": "c191bab0f481fd7d4ca03adb20f9f0e596026eea61eeabefdaf3c8100ecef043"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/audit_flashboot_padding.py.txt",
+      "bytes": 2109,
+      "sha256": "bb6fef0369ccafc7bd84bf3be84d9403907e7668c24251f14fd06d960a8f5b03"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/audit_idb_ecc24_error_budget.py.txt",
+      "bytes": 1991,
+      "sha256": "c008d135cba16220c2f0d18346d166bb0112cdc03e435d664b88a7a1edc11806"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/audit_idb_tail_and_device_codes.py.txt",
+      "bytes": 2192,
+      "sha256": "f52a7f22c3d792d5d7407ee89c7353a4cc732618d3144e179c6e0f8853383d21"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/audit_interrupted_chunk13.py.txt",
+      "bytes": 1605,
+      "sha256": "c13c8ff9efd736ee2b55436ed98bd42dec6a4730c1ee204e2af4f16e843d22bb"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/audit_live_idb_flash_parameters.py.txt",
+      "bytes": 1874,
+      "sha256": "39913066ae12446b2e082636885439a8660ae061b3d02941ffc7d3665bedda51"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/audit_loader_logical_capability.py.txt",
+      "bytes": 3598,
+      "sha256": "4d05b34b9a4a04713556d3038076e7421752d3aabcf77b6f0fcc98c77400f0ae"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/audit_native_bbt_and_saved_state.py.txt",
+      "bytes": 2175,
+      "sha256": "bdcaa03c4ca6b1698e1e76a69d22c3e564101525c1b25e9a747f510f6e7761e9"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/audit_native_l2p_candidates.py.txt",
+      "bytes": 2998,
+      "sha256": "12d90b1049a952cf89d46b878847a66b7af06617883b3ac9b6927cbc79770504"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/audit_native_system_blocks.py.txt",
+      "bytes": 2502,
+      "sha256": "312060d001914b484bf97916065e008cbbad9b1666802bc004c0ce144d68edca"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/audit_native_system_superblock.py.txt",
+      "bytes": 2532,
+      "sha256": "b74ec43cd8f094147c83410e00bd4ecf38c6a4ea8f54c80699467cfec5b161b9"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/audit_ram_loader_container.py.txt",
+      "bytes": 4741,
+      "sha256": "2d17346cd887d431d5ee8519c025f614bad01ae5069543da4f797ec5e8cd48d4"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/audit_readonly_command_stores.py.txt",
+      "bytes": 2842,
+      "sha256": "10ae58097971bce973bd855ae2cf84569d6a87cbd1f3ade6341f29dafbe978cb"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/audit_reconnected_page.py.txt",
+      "bytes": 1333,
+      "sha256": "df3134b47c34cc8b8d88f69327fd99d805c4d4818074b52f7941f46e7b6172a5"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/audit_vold_nand_evidence.py.txt",
+      "bytes": 3942,
+      "sha256": "3ae237cc4123e65abc66eaa1db84f0fdf99b53e28bff84841d58bfc70bba733b"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/backup_native_completed.ps1.txt",
+      "bytes": 1505,
+      "sha256": "574c621c7e588bcb106f7796e918593444721319dd598a367042a93b4833f2b9"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/bbt_read_trace.S.txt",
+      "bytes": 2321,
+      "sha256": "2c56fa49d92fd36ff2cfe1c2f13847b57ded990090009ae3c80e5aeda228e127"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_bbt_copy12_writer.py.txt",
+      "bytes": 5722,
+      "sha256": "a1d948fbabcee8a5b20456afdf6c10cdce38d09c723797d9a21e363c64f017e7"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_bbt_ecc40_readonly.py.txt",
+      "bytes": 3493,
+      "sha256": "b445e5c27bc0fe30aeca61ef27037a7842d5075ff527c367722a549061a97b71"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_bbt_read_trace.py.txt",
+      "bytes": 6898,
+      "sha256": "5650933f91a3c37b98a020b43cae41fd14745ff36f7330293cd043a9f3e1ff1d"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_capacity_fixed_full.py.txt",
+      "bytes": 6624,
+      "sha256": "c0d344b9bf8e0334f3a51c6d609d10afa2f1e0aa391a52225aa4224028d9a1d6"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_direct_physical_reader.py.txt",
+      "bytes": 2903,
+      "sha256": "80923d947e06947708672bc8d14f3ae8ac5096a408b254d4eb4bba64bba071da"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_ftl_bridge_read.py.txt",
+      "bytes": 3345,
+      "sha256": "ec8b6645fc35e72f690a7d488daef8a12130984bab21598f7492fa222616a4b8"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_ftl_capture.py.txt",
+      "bytes": 1994,
+      "sha256": "38345a2684c2c14f059aaa3e65fadd358793c0db911250ac7c23d4fb30678fe9"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_ftl_fullmap_system_read.py.txt",
+      "bytes": 3085,
+      "sha256": "f09f47b94af4e12ba70f821f411123216cb190a921fd093dc276ddc8f0b68b26"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_idb_copy6_guard.py.txt",
+      "bytes": 7327,
+      "sha256": "841165dfe38e322ed28beb6dbcf550c26fec0f2ce12b9f4dd6252e0eb078b60a"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_idb_ecc24_reader.py.txt",
+      "bytes": 2707,
+      "sha256": "6b2ffc6e5c94faff08188e3dc1bc9ae1a332041c8d75be673e3312b9f1c60889"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_normal_warm_reset.py.txt",
+      "bytes": 3694,
+      "sha256": "cb12f88eeac0696afb8dfa135cfd3b3fb770426d37e92867178209f000c2657f"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_plain_usb_control.py.txt",
+      "bytes": 2178,
+      "sha256": "20a32fb03840717dea8453437435ecbcd9cdcdfbbdf829d13eb511b66f9b4a1b"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_pmic_readonly.py.txt",
+      "bytes": 7664,
+      "sha256": "d51ecaa82dd402a1ef3444bc91bc73de61ff23a7941f24a0f0f895ef90f2fcae"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_power_hold_snapshot.py.txt",
+      "bytes": 4544,
+      "sha256": "dc937fdcceef26bb5c9fb47ff3b4436b09ab4dfd210ea56c102a0716ee2b2fdf"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_ram_bootstrap.py.txt",
+      "bytes": 2916,
+      "sha256": "1751537f7c1f6dc2e39b2b1e43fe857a9b2f01b376f2c1f6eae1b61adb8a718f"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_ram_lzma_decode_test.ps1.txt",
+      "bytes": 1136,
+      "sha256": "09ea8f083e78a33e613810d801434fa1d9b75a0b45d7993cfa9a45ffff8195ff"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_readonly_ram_package.py.txt",
+      "bytes": 6195,
+      "sha256": "8a521537223a9de1dde4451735ed6d40862256682c5c2ae19382ffeddd17e44f"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_startup_slices.py.txt",
+      "bytes": 27277,
+      "sha256": "722cb88f79acd8df6d63119f801fa7ed8afca02f7e8c419b0f793373a7af3365"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_system_batch_manifest.py.txt",
+      "bytes": 5806,
+      "sha256": "473dadd7083018b934d77f129f4daee5dfa201da4d548aa71b3eaaa5d30c84df"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_system_ram_window.py.txt",
+      "bytes": 2724,
+      "sha256": "084d8efb07c73247535a24ca49d22998cca9e9b06582ccd8f7f92175f5ec2a26"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_system_read_portion.py.txt",
+      "bytes": 2076,
+      "sha256": "f48e8e64a534458d6ff4ff01b48656d04e71b11bb1b34d3c4d57b80c33f34186"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_system_writer189.py.txt",
+      "bytes": 2135,
+      "sha256": "afdaadd9de7743615d42671d5500fb28364375de576c6971fe41dcbcfac3c709"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_system_writer_core.py.txt",
+      "bytes": 2525,
+      "sha256": "79f81ac3e6994db97e4a056b137f9520e5aa42e22208a79f76302936d65d1efd"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_system_writer_dry_payload.py.txt",
+      "bytes": 3678,
+      "sha256": "829516ebb5c917223e296811cf9950c6c840e14d75d55c128d7c821ccec5acc9"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_system_writer_gated.py.txt",
+      "bytes": 3914,
+      "sha256": "2c03c47fd089d7e386d5c0bada7ffb30ebe41b2d3adc5e1e39871d6cc4a2ac3c"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_test_flashboot_machine_guards.py.txt",
+      "bytes": 4579,
+      "sha256": "c7eae40d10324854b80e790dba4e022acfe6fc4d8099781102dd72734849d27e"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_test_flashboot_readonly_errors.py.txt",
+      "bytes": 4984,
+      "sha256": "de92ec0276a07a6a26e76dbcaf1f0eb906dbf1b0d9439fd05830d781e81b5472"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_test_readonly_usb_allowlist.py.txt",
+      "bytes": 2847,
+      "sha256": "b861d25b8c4dff1b74212e663530608048413036cc6853bb2582f7a1eb1a7029"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_usb_ram_bridge.py.txt",
+      "bytes": 8634,
+      "sha256": "86b3e1462cbf082ea1e560fab19a4678f33fe6b0b41193fbd393113cfd70483e"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/build_usb_stage_suite.py.txt",
+      "bytes": 4116,
+      "sha256": "4ce7ec96299875c45e74fd2c74d079ddc43d5a57278a741c6b97df567a615e6b"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/check_devon_usb_return.py.txt",
+      "bytes": 2148,
+      "sha256": "43a593b8efe8ae99b24841179e1926fc1bafe5f319fc81e910fa45f4c3afc191"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/check_flashboot_cache_call_edges.py.txt",
+      "bytes": 1816,
+      "sha256": "8845ea3f28636864df8710ca9c3f70dd2377683499941d5cd6a942cd21f35ed3"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/check_ftl_boundaries_after_idb.py.txt",
+      "bytes": 7268,
+      "sha256": "fd47f984c69f8046cfa2cfaf292821063e324dffdc6aca81ba34532fcced34fb"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/check_memset_contract.py.txt",
+      "bytes": 2218,
+      "sha256": "7e2da8dff82943639afdb73446830a09070229355175fb4829ea28d2983ce234"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/check_post_reset_marker.py.txt",
+      "bytes": 1735,
+      "sha256": "04ff69c0bac47086e352991df37c34e0e589fa33d6447fa7af009f60dd692189"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/compare_idb_loader_copies.py.txt",
+      "bytes": 2091,
+      "sha256": "492d773848edd238778e9427768400b325f00079cf13f4f2ac3b4df9514d354a"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/compare_live_idb_ecc24.py.txt",
+      "bytes": 1554,
+      "sha256": "263de38f71105c9fb4a0d66bcd4caa392ba4d0a8a1e0a0a363107d401ede2728"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/compare_native_old_tables.py.txt",
+      "bytes": 1658,
+      "sha256": "3bc82bbca032f3d80ee2a391dfb13dd0f8ac6f36784eeaeed9eeff6182a65771"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/console_completion.py.txt",
+      "bytes": 755,
+      "sha256": "7a900231c857872fbf2570da2baa90d44c99b240385f01d44699c21ede2f883c"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/decode_reference_kallsyms.py.txt",
+      "bytes": 2902,
+      "sha256": "d75e26c554b8e0e7bc52429aaa85f20f85098d164c2a96c0a77fbe39bede41a5"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/direct_winpty_console.py.txt",
+      "bytes": 2410,
+      "sha256": "9ff2d4c09b04703aac5f562e5e5ffad7d7d60f84c553d2bb7c399456f6a95bb9"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/disassemble_reference_kernel.py.txt",
+      "bytes": 1576,
+      "sha256": "374238d12c679adf0e8bc2f9f8227748fd22763e0f681e771e0a770b6ca380f1"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/disassemble_reference_nand.py.txt",
+      "bytes": 2265,
+      "sha256": "8100eb76fed71bf0001770c692a4c966ed1b1e58f97f18671883c3e01728de40"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/emulate_flashboot_bbt.py.txt",
+      "bytes": 3369,
+      "sha256": "858a1587990b20c990cd5174ac074fde03f2caa023ac6fd4ce8dcc2639e758d7"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/emulate_flashboot_early_metadata.py.txt",
+      "bytes": 3674,
+      "sha256": "6c968d8e74b5b71d58fcd9f06c7ad907106d69d4f0607cc1d7267f4b2684b6d1"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/emulate_flashboot_logical_reads.py.txt",
+      "bytes": 3217,
+      "sha256": "5c3d0e2d7e609587f20578e82eccb49109e46ae9d2718dc26491e010a9019d5c"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/emulate_flashboot_offline.py.txt",
+      "bytes": 7197,
+      "sha256": "a366c7a8a317ab980844eca01e658da74d2c926edf6a998e55508d686d81a551"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/emulate_flashboot_overlay.py.txt",
+      "bytes": 8790,
+      "sha256": "2bb5b27fea4a058f8085917aefaffb74ec2705c78552bf08dd1dcc3cbb5a4a01"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/emulate_flashboot_relocation.py.txt",
+      "bytes": 2956,
+      "sha256": "08bb6a5381676f7dd894641192216b59a225a8cb569fa9a14f1e4da608c21688"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/emulate_flashboot_remap.py.txt",
+      "bytes": 3569,
+      "sha256": "d87f36756887de374c61ca967d2fa9bc38e828a8c3c36fbf5c28ee46b0268582"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/emulate_flashboot_system_rewrite.py.txt",
+      "bytes": 4947,
+      "sha256": "fcf1fb7ae8da284237ac28d4c9d7d940baa8a9519cbde2feb765d27577d653ee"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/export_verified_boot_from_nand.py.txt",
+      "bytes": 2669,
+      "sha256": "fda56a11dfd41a79748d132b48abff54e140e467bd27cf093b083f58f539c34f"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/export_verified_nand_flashboot.py.txt",
+      "bytes": 1542,
+      "sha256": "fbb00fb62d77ed849135b75ed0c5a8ad68a6237335add29948b2251833ecfe4b"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/extract_flashboot_for_static_audit.py.txt",
+      "bytes": 2270,
+      "sha256": "495e022af79b2bd66e4520646aaaa5897934621474d53f02f291a72f255374c9"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/extract_nand_idb_loader_candidates.py.txt",
+      "bytes": 2532,
+      "sha256": "c4f58206382f227e263c52e5e5ffd048a250f543f31ffa4b5140dd4700b3d070"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/find_arm_literal_xrefs.py.txt",
+      "bytes": 1635,
+      "sha256": "882f3f067f1150ed6b16a48b3b093f77de119660aec9d03b770bba58a303b274"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/find_loader_function_refs.py.txt",
+      "bytes": 1028,
+      "sha256": "6c9e57f1899f567c10f2d39be65b0566fc361453a733956109eca464ee4f14fe"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/find_recovery_oracle.py.txt",
+      "bytes": 829,
+      "sha256": "130698b7810447f3f2d51bf415db1745c311d4d61390df613b3a5bd9b164d40a"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/ftl_bridge_read.S.txt",
+      "bytes": 1637,
+      "sha256": "965e6f3c2a90182920743c8b34deb975d99a12d60f152cabad9723284ce57fc5"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/ftl_bridge_read.ld.txt",
+      "bytes": 627,
+      "sha256": "6112c6c620c10550620cab879db5e7aeb75d1fd71f7f917de74f39ba3538857d"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/idb_copy6_guard.S.txt",
+      "bytes": 1557,
+      "sha256": "5b6fe634fa512f94821956bb0322c83722befa63e72c857a7dd475a9430e83d9"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/idb_copy6_guard.c.txt",
+      "bytes": 8118,
+      "sha256": "215a5134737b9f352e5eb9c67f3bcc64f136ffb4124a9323b4e26b9da8d04443"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/idb_copy6_guard.ld.txt",
+      "bytes": 832,
+      "sha256": "2f5fac72f813a08a4315e63980ccda365b152f9cbf4ca79a8d95d50e717170e4"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/idb_ecc24_targeted_read.py.txt",
+      "bytes": 6219,
+      "sha256": "5b47d44fe275f7f34e02018cc0d5a50a216368401014d638442aa8e03c55a7bb"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/identify_system_error_inode.py.txt",
+      "bytes": 1446,
+      "sha256": "77ae531482a5f939f42c92de8308c651aae534da76dc39aa80d3bee77e4c7af5"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/index_native_completed.py.txt",
+      "bytes": 3395,
+      "sha256": "1e44b30e508163f47ca115be44cceba16dbe1d180b46e1bbafc3f6a908cb3b40"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/inspect_external_bootrom.py.txt",
+      "bytes": 1200,
+      "sha256": "78b1c13cb64b0ddda15424a0ecf218d5a10f31ccbe33611ad0b5ec688c53065a"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/inspect_flashboot_static.py.txt",
+      "bytes": 1229,
+      "sha256": "610be01b24a46ecead6c2a783dbbc5390744c9e810ae9db45c55186768a2a3f3"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/inspect_native_map_targets.py.txt",
+      "bytes": 1563,
+      "sha256": "32d27633a6b29c8c66074bcff1d3f94810cbdcd143dd24bb741147d4b400ad26"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/inspect_native_saved_ftl.py.txt",
+      "bytes": 1325,
+      "sha256": "2485b03ecb45a7d9f875f95621de0b844af69408af08b79a59c7dddfb8656e8c"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/inspect_native_system_files.py.txt",
+      "bytes": 1882,
+      "sha256": "674d8f99c77a9ee411298631b95baf9976137f6f04640658009e6bcc97ee1e47"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/inspect_reference_kernel_strings.py.txt",
+      "bytes": 832,
+      "sha256": "271e16edcf4ef1333ea77e3289eec7b6e6064aa23d671e76a22cdf0c6b79ea5c"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/inspect_reference_nand_elf.py.txt",
+      "bytes": 2735,
+      "sha256": "13b2aafca09488aa7b650818aeb41c03897329b45842ebda204d505b5f964121"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/inspect_reference_nand_modules.py.txt",
+      "bytes": 1312,
+      "sha256": "52d4f0d721012bd4678d65f3b46391917350f2fead712c10b6235c6f6f7cdec0"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/inspect_rs_aux_variants.py.txt",
+      "bytes": 3419,
+      "sha256": "ff810b60ab722048038d5f9cf422053cdeed0bb3bd3d59a0e16f33caa24511d3"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/inspect_rs_oracle_alignment.py.txt",
+      "bytes": 2014,
+      "sha256": "9433c52305d72f8d0ad6f9f36e8e2530abf0259a72ca58d184346c2c66100b84"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/inspect_usbplug_static.py.txt",
+      "bytes": 1040,
+      "sha256": "0b554d60b6f328b68ebed8fee22f48e439cae05bc8b7890aeda4db3363ecd43c"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/install_system_ram_window.S.txt",
+      "bytes": 895,
+      "sha256": "0562dc3a65671d5ee162234d74845d61c31c70221474be97818a975c2fc6a5b3"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/interpret_early_boot_reads.py.txt",
+      "bytes": 1790,
+      "sha256": "78ef10a7f51a478d381068b4ac65a8fa854c74d8e107036ec85e9e70c285416a"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/inventory_native_cache.py.txt",
+      "bytes": 2563,
+      "sha256": "da0fc196b3dc1d6c3efe4e01fdaaadb87f2b4f25293cd6f03fec09500d462044"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/inventory_native_ftl_candidates.py.txt",
+      "bytes": 2412,
+      "sha256": "304989a9edf7ab7e47121289da925a193893d68618a2452ef1622e1d9137311e"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/locate_current_read_records.py.txt",
+      "bytes": 2316,
+      "sha256": "33a3b532380629bca239449088e12b2661f2ec4957a9e547baa5c298fabe0d06"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/measure_flashboot_ram_payload.py.txt",
+      "bytes": 1395,
+      "sha256": "ce033f8a9ee34bd59ec8182616e5389020196f39221d7fd24e8c209819e5ee20"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/native_system_view.py.txt",
+      "bytes": 3287,
+      "sha256": "9fe357eb786c9ea858baae3786074d3d62fe700e3e9e980315f507915c9482ce"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/normal_warm_reset.S.txt",
+      "bytes": 1226,
+      "sha256": "11196017e95987a372a968b7501e81de5f82ca63732a265601283370f107ad92"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/pmic_devon.S.txt",
+      "bytes": 339,
+      "sha256": "768ff8a83ae20f2c45ec88d8f319b9fd3d28b68d0066541c7c825f3a41f1cdec"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/pmic_readonly.S.txt",
+      "bytes": 5281,
+      "sha256": "3979d4b5c199fb33a0e88fa4ee096067e8b4823583d700f0b5cc54001d980f09"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/power_hold_snapshot.S.txt",
+      "bytes": 1910,
+      "sha256": "f4612f6c042cbe31c6f6a4c8781bcab660e1beb0728d9e1be58d5a80efe10919"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/power_hold_snapshot.ld.txt",
+      "bytes": 502,
+      "sha256": "e20d6c40a8f157546477a5ce48dff35b9ba6d74f1db7c2ed7fb4f1c49e997978"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/prepare_idb_restore_material.py.txt",
+      "bytes": 3607,
+      "sha256": "0c923a5abce4ebb69a20655db0ba7de9068def09d6b3a3ae2774d7dc37ecc94b"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/probe_startup_after_ws_timeout.py.txt",
+      "bytes": 4868,
+      "sha256": "0541850bba8dc67ece7ae65286b24ab02f051a5cdf43eb9656107d9b8847ac5b"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/prove_rs_boot_mapping.py.txt",
+      "bytes": 7005,
+      "sha256": "9be4c276d10763a93e0a7edf342474eea73e6019ee3cbf0881f49195acd9255f"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/ram_artifact.py.txt",
+      "bytes": 2032,
+      "sha256": "c32c86d186d7ab43955952c1727b35828b5a44318ae9c4c57b27b77331fce6d5"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/ram_bootstrap.S.txt",
+      "bytes": 2104,
+      "sha256": "92d8187ca1210e6c91f0cbbc67654677a00a19963db46089e1eb3bc0c2194046"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/ram_bootstrap.ld.txt",
+      "bytes": 863,
+      "sha256": "5c11d1f6e55167d353510d77239e4667f5afd3572a85535fffc19f9008302f97"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/ram_console_session.py.txt",
+      "bytes": 4006,
+      "sha256": "a7cabb721856d567f289e03d85b343965c9e76a5a3b43029d4ce9598cb603c6e"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/ram_lzma_decode_test.c.txt",
+      "bytes": 2262,
+      "sha256": "9cc135998c3bd9da094c18bedf922ca68f5d3d005b5886539810e4beaa62fae3"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/ram_lzma_decode_test.ld.txt",
+      "bytes": 538,
+      "sha256": "6e803f422e8ebecfba6fe8cd3d1ff8c5d84c21291cc5f30fcb2c263ee2a7f2b8"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/ram_stub_include/errno.h.txt",
+      "bytes": 498,
+      "sha256": "9bd507614d0ff71e55fa0e58d7b034ee7066d1bc722f10f031ff9a59b80ce0fa"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/ram_stub_include/string.h.txt",
+      "bytes": 497,
+      "sha256": "afae5480947e07196e24ca2045e7c12051b85f28a660c28fedfde851c5e4bfe9"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/read_bbt_physical_ecc40.py.txt",
+      "bytes": 4288,
+      "sha256": "0121a356f63880dbd5706274a3276be9876a755df80c6b1cdec209648a2c694c"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/read_boot_after_idb.py.txt",
+      "bytes": 5773,
+      "sha256": "f0cf1e5edfd9b2292d66b806c8cb991a6ad8ab599acd3e4e8304537e900ec425"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/read_copy6_after_cold_boot.py.txt",
+      "bytes": 3241,
+      "sha256": "146d0d283b6e35a86f1e2e9dcae2dd19eb6cfaadc5cbd57b99cf3b3a451d483b"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/read_device_identity.py.txt",
+      "bytes": 12748,
+      "sha256": "b3ca591550e6eb3dc2a245d4feb9d7dac93c2c7e47713b6a943b2b278a054f93"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/read_early_boot_compare.py.txt",
+      "bytes": 6491,
+      "sha256": "28f4702a0fa321e110f726d2c9229b9df71b128edd597ff2f295e299d9fd2a4c"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/read_early_headers_short.py.txt",
+      "bytes": 1788,
+      "sha256": "160f3abbf1e2808e1614039a51819384a708deb215d6ef38bdd31f4e650ae7d2"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/read_idb_copy6_postwrite_audit.py.txt",
+      "bytes": 3930,
+      "sha256": "cc9366857ee8e6a028751410bc866cefcbd8b7a203ecee4049c9517b3bb595a7"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/read_idb_guard_marker_after_preflight.py.txt",
+      "bytes": 1324,
+      "sha256": "df0903c7bac6e8194ce055f7e5ae3ed4f7fc30060ea1cb9acead9f9766aa61e7"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/read_idb_postwrite_variability.py.txt",
+      "bytes": 2139,
+      "sha256": "07a47478075afd912211d419a7af520d2148e67fd5b7161873bfc4f78529d080"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/report_current_idb_ecc24.py.txt",
+      "bytes": 4014,
+      "sha256": "3cc8a791cac956d16ced980f4d2c23df30990efdb37d603c173c33735cfc5dce"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/resume_device_probe.py.txt",
+      "bytes": 837,
+      "sha256": "56dfaa51e5b0444fe4bf8f2ccd01653b64de3a238e5fdc1dbc3d1ad7ecda6ca4"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_bbt_copy12_restore.py.txt",
+      "bytes": 5439,
+      "sha256": "76b79d409b63d07cca7d5886743359a6c3b15d4b9ac260bf3d42780e95c0bef0"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_first_system_write188.py.txt",
+      "bytes": 9790,
+      "sha256": "b6627fd5ba62e9c36a6d37368ded6050ba8426ddb1fa10f56342a1cc4f050c5c"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_fixed_boundary_probe.py.txt",
+      "bytes": 2731,
+      "sha256": "9c20d90233179776d51ae223276b764ac382ed6bf2592ee3d5264fb738e5d69b"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_ftl_bridge_read.py.txt",
+      "bytes": 8426,
+      "sha256": "1bfb43d702c3c16616073f9ba69bb77401f1f96582c31a4080ca47663439533d"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_ftl_capture.py.txt",
+      "bytes": 4183,
+      "sha256": "ce77a81778cee3809be7d53c005a3a8ef19fa344f81e2b4001cbe5297214adfb"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_full_current_bridge.py.txt",
+      "bytes": 5568,
+      "sha256": "ba656345aa390b7430eb748ab6fad724f901bea3a9d4b9f2f717e1a4d031ecf5"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_idb_copy6_restore.py.txt",
+      "bytes": 7391,
+      "sha256": "ddf9f1ce990d891742641ec0f61a32de45a407cfb276b02e338375eea7944159"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_normal_warm_reset.py.txt",
+      "bytes": 3037,
+      "sha256": "ae243124972b4e748a7c2fc84602a74e4ff169034e2a51c8a65d443b582e071f"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_pmic_readonly.py.txt",
+      "bytes": 4558,
+      "sha256": "22b71bd20713f96cafd02cbbcbfd4798201c554165336609f07821dbdbce3435"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_post_idb_powerheld_boot.py.txt",
+      "bytes": 4846,
+      "sha256": "7bde9c05ab50ec4c72cbccb2989badf68f72f4cf67f928b34d4b380f58c2408e"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_postdry_physical_control.py.txt",
+      "bytes": 4046,
+      "sha256": "b236faf3c32cacb882897e8be508fbb74cfd73b9b67cff407b3d669420d91e9d"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_power_hold_snapshot.py.txt",
+      "bytes": 4514,
+      "sha256": "25c1c052ade30b38098a8225fa25e1c63594a772c4df05f0e3c1c0604e1149a0"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_readonly_ram_dryrun.py.txt",
+      "bytes": 4087,
+      "sha256": "715e64f9524df1610f61cae0de2327ef095cb6bee1b213aad93c849a40aa1ef8"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_second_system_write189.py.txt",
+      "bytes": 11206,
+      "sha256": "727fc4fd1c4866321b6658f2f6c5c04c33792973203a19c004b1e08c4d03b5b1"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_startup_slices.py.txt",
+      "bytes": 33193,
+      "sha256": "983cacc9087a3bbbabe0792fc013743e14026f3a6a72596645fe59701e609a94"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_system_batches16.py.txt",
+      "bytes": 23858,
+      "sha256": "1e395f310fba0ba2df0a5159405eba69cd098b0a16cf6a69f490b0e269d6f673"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_system_ram_window.py.txt",
+      "bytes": 4186,
+      "sha256": "5ca0e57127878d3e97a09a41909995f7425aeb3c8de625fb90b68e9c294f62a7"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_system_read_portion187.py.txt",
+      "bytes": 4152,
+      "sha256": "70ec9d31644651a37938081cae57014ac3edf08f8ade4afe7c4168df8f68e181"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_system_writer_dry.py.txt",
+      "bytes": 5593,
+      "sha256": "6dee028109d6b95aab44a1e6434c1f9e842c1d19b6f8ebc32881673f3679fd5e"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_usb_ram_bridge.py.txt",
+      "bytes": 6524,
+      "sha256": "54cf9f453416b8f136c1805e9691b57463286d4b4b35f88216dea7386be1880b"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_usb_ram_bridge_checkpoint.py.txt",
+      "bytes": 8891,
+      "sha256": "99b674e71f202003e15e6c1829ee6f4aed4440d3a4b6de791585736b44d6f656"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_usb_ram_bridge_checkpoint_modefix.py.txt",
+      "bytes": 9085,
+      "sha256": "b8e55874c1ae2dd274b0e23e834ab5ed1fd5d41f88e08a35a0a0c212e5c40db2"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_usb_ram_bridge_irq_handoff.py.txt",
+      "bytes": 8806,
+      "sha256": "46a637f51448f26a7b59da0b7a80b7060c002e12291ab2c23b81fb03452fc9d0"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/run_usb_stage_suite.py.txt",
+      "bytes": 6251,
+      "sha256": "6c4a549dc932ce35a56ae5535cffb48cccedbb7f62f5bc1129c33a64d03fa317"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/search_boot_page_tails.py.txt",
+      "bytes": 1670,
+      "sha256": "c61591fd7070ef53bb773043b4aafa874b49d978024c22497a3d908d6c4c1693"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/search_idb_tail_replicas.py.txt",
+      "bytes": 1532,
+      "sha256": "83a6c9ff0ee6808c1baa4fbc097fabbc71bab9dc2ea0ff85a5adc64c83902885"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/simulate_system_payload_repair.py.txt",
+      "bytes": 4192,
+      "sha256": "c72fb38549f6c13392c6af9488951c209007634706e8cc5e835a14014d8aa33f"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/startup_irq_slice_extra.S.txt",
+      "bytes": 5839,
+      "sha256": "8a0ea88916996382405921cd7c83c2618a3e24074cffd74eb6bbd9a7e5b8349f"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/startup_l2_fixture.py.txt",
+      "bytes": 2807,
+      "sha256": "ee8ee34bed2a6a214ace0391f34972e138dbfbe8ca0c0bd1dbf461be0aae05cd"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/startup_l2_slice_extra.S.txt",
+      "bytes": 2294,
+      "sha256": "d1f1303c8f35e7a4e1dcb368a5d4c36cef3fa82fac6fb0eb19b32617a29fc64f"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/startup_mmc_fixture.py.txt",
+      "bytes": 1347,
+      "sha256": "07f5d6637b174b8eac1ea450c326a77ab271c486478a97d53b09fc3d8912034c"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/startup_mmu_slice_extra.S.txt",
+      "bytes": 2554,
+      "sha256": "5baf366771fe6117d53710f3b32cead5a4e7bf5a50b77e7fd4eca54f761a4bea"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/startup_nand_control_fixture.py.txt",
+      "bytes": 4130,
+      "sha256": "c2dc10e78e8dc8c6ed9f88362e7db8c8f8522dacd773c3db086666ef0b4e5774"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/startup_nand_init_fixture.py.txt",
+      "bytes": 6989,
+      "sha256": "70687ac3ee93d5b5c0fc37b23b6c6213377e07b1cfd30b053a171248c75e0c76"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/startup_power_slice.S.txt",
+      "bytes": 1876,
+      "sha256": "a5011b06b255505946ebdaaee7769f9aed998ccec1186d804e83ac26b7700e25"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/startup_power_slice.ld.txt",
+      "bytes": 781,
+      "sha256": "b8baa8983f3d5c1fe7376ad3d3e3a52751b163af1598b748770b29c15c344e15"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/startup_reloc_slice.S.txt",
+      "bytes": 3240,
+      "sha256": "882a230b5a1028085ef84d88ac2043587b03e8faa285fd4ca36499c75affdaa1"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/startup_reloc_slice.ld.txt",
+      "bytes": 1070,
+      "sha256": "2f3afa906890cf361aa972bce05f1941685d62118c20d1c48a1096028097b74f"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/startup_slice.S.txt",
+      "bytes": 1200,
+      "sha256": "294757feebf6ef3cc2b54dcfd193d208b1218e3b0c3b4d1af9e202d23340a95f"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/startup_slice.ld.txt",
+      "bytes": 775,
+      "sha256": "76e2bf9f2c3a1a48d7c16d00e564a24077ee0645ce6b9b9b1f4df8e68fec917f"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/startup_slice_test_harness.py.txt",
+      "bytes": 2785,
+      "sha256": "bbbe1647f64be8d92f8de405952a05864f3df53ebbe235800e2c9e3e4a2b497e"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/system_ram_window.c.txt",
+      "bytes": 2707,
+      "sha256": "382c663277604ca0b4b664a336cd386c7503493f65d12faa54f4c1218c756ba7"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/system_ram_window.ld.txt",
+      "bytes": 667,
+      "sha256": "52a79d0ef028c333ed9e2ec8179db7e691af5ccf64d425fe41d1183ae26d471a"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/system_read_portion.S.txt",
+      "bytes": 1179,
+      "sha256": "4313e585cf5e8f2b4705a48ac4ac7f0b0ba2972b157fcdbc6673095b9599197f"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/system_writer_core.c.txt",
+      "bytes": 3647,
+      "sha256": "993dab9c8c4661859fe9e0ad32f05fcd334e0b6985a3f2bda9a2da1b7db2195e"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/system_writer_core.ld.txt",
+      "bytes": 582,
+      "sha256": "6c3c504e7bd17d5ed820f2b9c24401dd00772f45b1508c5a23b3e4c0345114ff"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/system_writer_dry_handoff.S.txt",
+      "bytes": 1706,
+      "sha256": "25553dd4b99214b57dc0eefec9904c6563a219789787434146ed234708adbec6"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/system_writer_gate.c.txt",
+      "bytes": 5091,
+      "sha256": "632dc73e8b7c743c3ef1c586001f84e0d1dd0a94d229fcd3fcbf6f1acf5f1d95"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/system_writer_gate.h.txt",
+      "bytes": 544,
+      "sha256": "ac07138a197aa335467ffc73b297c808a39eb5e505da6b1f92542a5f94021166"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/system_writer_gated.ld.txt",
+      "bytes": 732,
+      "sha256": "ab79be8f49884ebb568aed737e1636c9636f68b68eb99b24e5409717adabe4a3"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/system_writer_original.S.txt",
+      "bytes": 985,
+      "sha256": "7027c52109bde5dc1a1fb7bea4a286572c4c5de7dca27b883b5bffb822d491dc"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_arm_lzma_decode.py.txt",
+      "bytes": 4184,
+      "sha256": "6c91b98f20920f49dda9e4b0f765249497dc683bd2498ed2829e68ecda3cb70c"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_bbt_copy12_writer.py.txt",
+      "bytes": 5484,
+      "sha256": "68658b916139bc33b395a71a4a7f7730e1de1481512055cf9a9675af2c188c2c"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_bootstrap_to_main.py.txt",
+      "bytes": 11593,
+      "sha256": "49d0dd641d0d77bd23ee86291decbcc7d3acce1a60ce32fec6d92b008da94695"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_codeword_stride.py.txt",
+      "bytes": 2142,
+      "sha256": "7930637343e3d1fbdfc9d9bd2ecea317ea607e2c21b8926e931d0656d505d795"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_conpty_input_contract.py.txt",
+      "bytes": 1180,
+      "sha256": "eb839d4ad6b22fe7fe33cc2e07c76fafa1aa396f9bacdd682e5f397e9b28116f"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_external_bootrom_usb_length.py.txt",
+      "bytes": 2638,
+      "sha256": "e2bb5f0babdb6678e84fdc149a31b69a9f66218d9ba286220b30db5a00a23f29"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_flashboot_tail_access.py.txt",
+      "bytes": 4079,
+      "sha256": "3090b4a8ff04425995a245a497e5894c04677f9ad0793c80671aaf6c09016b3f"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_flashboot_usb_only_gate.py.txt",
+      "bytes": 4168,
+      "sha256": "54227aab1776b3c754f31511c12cb9b45a4a1e98317a72346c19817aac1d184a"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_ftl_capture.py.txt",
+      "bytes": 2783,
+      "sha256": "85e90d7ad1da25bcd8a8b77038981f4cba588c8d6c5741caa7f1a1c3f0d2dc58"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_full_current_bridge.py.txt",
+      "bytes": 1958,
+      "sha256": "7392aae454a03821158255667db3881c055bb8ead9c157cb617f8795b821eca8"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_idb_copy6_guard.py.txt",
+      "bytes": 9024,
+      "sha256": "39887c794f7e01a1e6a512a30dca246a7cd3f3e322aabd0fc40f4208ff551a8f"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_pty_tail_delivery.py.txt",
+      "bytes": 2408,
+      "sha256": "f0fa36746abb60219507f1218d4df02698f4a3df67a5cadd208ad4ec2d2dab63"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_ram_bootstrap.py.txt",
+      "bytes": 5392,
+      "sha256": "e776c3731bdc3be203b80366288544f94de71ef43b4a6403a9ecb197a4c4ff88"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_ram_bootstrap_cpu_gate.py.txt",
+      "bytes": 2977,
+      "sha256": "502dcc06ea34b3bf762a8b9fd5eedcfc835469bd078a1e216d72e65acb3447e8"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_readonly_ram_delivery.py.txt",
+      "bytes": 3309,
+      "sha256": "dbd0c22943fcd6585de4b3e4340c60214e906e312d0718419619c88bdd9be67e"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_readonly_service_errors.py.txt",
+      "bytes": 3188,
+      "sha256": "d5c72b90900ca23566b058ed07bcc9485ecd134069d909889e20f97721442125"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_startup_power_slices.py.txt",
+      "bytes": 4789,
+      "sha256": "1b92cb4b390678f1ff437a84847d24531291f50ea6aadb30b53d8a68507c6ec3"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_startup_reloc_slices.py.txt",
+      "bytes": 49914,
+      "sha256": "95d48bdc3971b3b7125f853bb78d9126bbf46da041c67a676b16764664d3d4ea"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_startup_slices.py.txt",
+      "bytes": 4015,
+      "sha256": "f2cdab44871abdb880a1b557f1ffb08892f772610f7c443e7e8cf2fab3cfb3d8"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_system_dry_original_ftl.py.txt",
+      "bytes": 4256,
+      "sha256": "38f443fcf491c95fe6e2580cbc377d2d6b2658543c3f8b5eff746668087df058"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_system_gated_persistence.py.txt",
+      "bytes": 6261,
+      "sha256": "bd2c4ddbbb6037d969a4ea74ba53ea61d168a1996bae9be805b40bb98ce4d583"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_system_portion_persistence.py.txt",
+      "bytes": 5054,
+      "sha256": "0dd6334f65fc319c11695738f41c5ed0d5a2261e7a16d5cf6c088b351cac67e5"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_system_ram_window.py.txt",
+      "bytes": 4952,
+      "sha256": "13671176b146993ada1e2375af81a7607a2131ea949dae1e7c15709981860216"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_system_read_portion.py.txt",
+      "bytes": 2647,
+      "sha256": "0e46aa75d1f8242296afe9120f18b8001064f95717ed2b128ca8879b38a8c076"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_system_tail_alignment.py.txt",
+      "bytes": 3110,
+      "sha256": "75a1ec5a917ea9c26d67b5827290e89050e813b43610c5aa73aea105be363137"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_system_writer_core.py.txt",
+      "bytes": 5178,
+      "sha256": "52a3c7205b6b9385311cc1d436aac1b694d923f5e219884ba072bada0bc474e2"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_system_writer_dry_handoff.py.txt",
+      "bytes": 3214,
+      "sha256": "fcd8e34a20908e55c5d086c2eaa6c70b67a6285a125889554848cb70565a025a"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_system_writer_gates.py.txt",
+      "bytes": 7827,
+      "sha256": "1167cf2a9f2d88be5eba2e10bb57b15a08f7bbb1dee85ad96fe44789bb6f370f"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_usb_cache_boundary.py.txt",
+      "bytes": 2541,
+      "sha256": "c6b8ca6d915803d5b14cd80a840368f031750211be169f7252556cb2ab8b4c7f"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_usb_ram_bridge.py.txt",
+      "bytes": 7104,
+      "sha256": "45e0aef92a13453ea133128ec4e82de90bc2478bc2901ef4df2640b2e2f22397"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_usb_ram_bridge_checkpoint.py.txt",
+      "bytes": 8451,
+      "sha256": "e06140ff6492c39938247af71206de1e6d8536df11c41d119989239df2306da6"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_usb_ram_bridge_checkpoint_modefix.py.txt",
+      "bytes": 8559,
+      "sha256": "e1fc5e40fd1eabae15e37fe0276cff5518cf5d2aa0e4c1d99320fbf6c218b3d1"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_usb_ram_bridge_irq_handoff.py.txt",
+      "bytes": 8064,
+      "sha256": "98355d69527f5379c983ed5c79505d84150bbfb03ecabcdab8aa45ac9fa654b1"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_usb_stage_suite.py.txt",
+      "bytes": 4532,
+      "sha256": "4c30dffea62c7c671d46fd2e7c5ae28d11c36d41742e855d338634ceac6b6e6b"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/test_usbplug_ram_dispatch.py.txt",
+      "bytes": 2051,
+      "sha256": "8953b7a9627688571049006fc3d14a2d338d2ca0db824e3b1edb1aaf8c4f9064"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/trace_ram_bootstrap_startup.py.txt",
+      "bytes": 3621,
+      "sha256": "a7481415cc714a416aaf0c58cf70d527a948c8c3e15a2cbfac5c536f6d965bb8"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/usb_cache_boundary.S.txt",
+      "bytes": 1579,
+      "sha256": "241fbabe8b39b405ad51a8f528497851e9cc7b2f113b8db6b86a3dd94624fbdd"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/usb_cache_boundary.ld.txt",
+      "bytes": 638,
+      "sha256": "1d2569780e8e79e8b555f4421bc25c78ca45d5090c98602f77e9fe2f27e3fcef"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/usb_ram_bridge.S.txt",
+      "bytes": 4594,
+      "sha256": "354a268c227fd3249314211aa73769d6a0eff53c6a8213747b13d938660eaadb"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/usb_ram_bridge.c.txt",
+      "bytes": 2884,
+      "sha256": "cdb0f0d9319bd9c97d2a3c4a5f62c870b95d0cc4058623f67d86fd8723b324a8"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/usb_ram_bridge.ld.txt",
+      "bytes": 910,
+      "sha256": "dd71f47ffce6f361d24b1e2fc6797af09313fbda3a7fc84f75770c486a306d4b"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/usb_ram_bridge_checkpoint.ld.txt",
+      "bytes": 1038,
+      "sha256": "78fa615fe1ddc608960ca8a6a776afa6dcdeb67a964ee9f4b8b4de5712ddd040"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/usb_stage_restart.S.txt",
+      "bytes": 2830,
+      "sha256": "552d3fc0d1880e892d1afe362977ab8cd3ee1882cd4c05af5220b13814cdd5e4"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/usb_stage_restart.ld.txt",
+      "bytes": 729,
+      "sha256": "0658b9d4bd7ca606a623aa17537ead08d3c2fc4085700eef42896fef22361cfc"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/validate_native_bin_directory.py.txt",
+      "bytes": 1878,
+      "sha256": "f0c4d81df909388c4d35dd61013f4e7849c3d1f82b435fc9367e3ef662fac39a"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/validate_rs_partial_layout.py.txt",
+      "bytes": 4203,
+      "sha256": "8af3ef73f600becd6e6f1e500b48a802fbb2f0725df37bb1e459ec33b201c5b2"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/validate_saved_flashinfo_runtime.py.txt",
+      "bytes": 2962,
+      "sha256": "b5c739c940dab4a10d8e00486e4facd875d5b91e901beef023a86e383c48a49c"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/verify_after_dryrun01.py.txt",
+      "bytes": 2096,
+      "sha256": "05385568981bd578a1efc92e4610604c2be31005d40bd4ba730ff6c2f686e461"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/verify_complete_native_dump.py.txt",
+      "bytes": 1907,
+      "sha256": "a8f61b649211c88bd9aad3de1e36b707d0e06c9e81a75f84c0968d2940ae356f"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/verify_flashboot_bbt_replay.py.txt",
+      "bytes": 1556,
+      "sha256": "d13ac3dbf7112af7fb8f5294c9e740faf847387a0bd6d3361fbd0b589fa8d4ec"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/verify_flashboot_full_remap.py.txt",
+      "bytes": 1777,
+      "sha256": "ada64dbfc6bdfc5d48cabd300c864346b342e1031a39eaf6872f7732152a032d"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/verify_native_ecc_page.py.txt",
+      "bytes": 3574,
+      "sha256": "ceed3f0567d39a7431a2482b6fe07ef77173cbee3cfd961846bd164abf0f52d1"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/verify_readonly_container.py.txt",
+      "bytes": 3813,
+      "sha256": "9a3773983c3b2dc89c809483e6f9a5e17223454de2e120a7db3063378182b1c5"
+    },
+    {
+      "path": "toolkit/phase1_20260903/work/verify_system_rewrite_report.py.txt",
+      "bytes": 1495,
+      "sha256": "b9efff21af7efff43ec5f2aa8a2540301cae8b5645ac45f8c2d9c4cd24a99dbe"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/accept_actual_boot_map_baseline.py.txt",
+      "bytes": 2255,
+      "sha256": "8628d4aab491cf2d4a524bee9de839e1e6564e6bd8ea1db134eed5329cf71092"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/adb_boot_diagnostic/build.py.txt",
+      "bytes": 9496,
+      "sha256": "c949b515ee56bb2067e6bf736ff41b985bd444f4eb97297e3b64a7a657f8f861"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/analyze_cold.py.txt",
+      "bytes": 1735,
+      "sha256": "becb06823f37e50240e544ff62b9c91cf193d03104ec0510feb34524e378cb33"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/analyze_idb.py.txt",
+      "bytes": 1706,
+      "sha256": "200932046ef5cc1fdfc9df518ccdfd46788d3748f4f3d1dd2fa512c7e78c9508"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/bbt_check_sources/idb_copy6_guard.S.txt",
+      "bytes": 1935,
+      "sha256": "0ceb5c1a833e1882617fc9fa49576b0882ad038a0c4428e15f63effb68978886"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/bbt_check_sources/idb_copy6_guard.c.txt",
+      "bytes": 8125,
+      "sha256": "5fa530b81ddd2edd1ffca65a9ec2ebf025946dbcf8b28ef79e871d718467a562"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/bbt_check_sources/idb_copy6_guard.ld.txt",
+      "bytes": 840,
+      "sha256": "fac64629cfb277bc9f9a149c131b2f17c41bad210113a8c2782c4565c3ea608b"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/bbt_with_idb0_check_sources/idb_copy6_guard.S.txt",
+      "bytes": 1945,
+      "sha256": "f20b728cef03ced1675449e4cbc31ef3c40b11a8b201ba07d14811a341226a8d"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/bbt_with_idb0_check_sources/idb_copy6_guard.c.txt",
+      "bytes": 8176,
+      "sha256": "f4a53dde09cecaab8792582c999dee07401e02a9a20f70d8c9b7db4e641ed47f"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/bbt_with_idb0_check_sources/idb_copy6_guard.ld.txt",
+      "bytes": 850,
+      "sha256": "a3127c88f74abc1bdd9503f37a64e91659ba58b1d598361a56e8c2ebdce26052"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/block10/boot_manifest.h.txt",
+      "bytes": 382,
+      "sha256": "45133b2ebd6272289bc98f3804d6eaa0868ae861d4a02a069fac72b575ff0fbe"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/block6/boot_manifest.h.txt",
+      "bytes": 381,
+      "sha256": "b7d2d95fec604bcd60b1ca1c7974cb71e75813c9c87e5977a9aee4e4c1ee6dbd"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/block9/boot_manifest.h.txt",
+      "bytes": 381,
+      "sha256": "6bc02d7c22e64686489151b27c1bc471f2f8f68199c9d53291be149ffa8461df"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/boot_core.c.txt",
+      "bytes": 1940,
+      "sha256": "1ff57efc26e8085215bd7b2c6c4cc53abf76181bc07d7e7ccbe3f0350e3a5057"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/boot_gate.c.txt",
+      "bytes": 5260,
+      "sha256": "de587f4dd5bfd8a216db0263b76ee0066bd902ed9d7714212d8b0acc54b2b9e0"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/boot_gate.h.txt",
+      "bytes": 616,
+      "sha256": "2d8987b5e815a4a6422a3b0ddfdfb3631f901048b6048a72c66b073133760437"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/boot_protection.h.txt",
+      "bytes": 1412,
+      "sha256": "5aa0cd83bca8f3c29548031f96643cd9b33a41e8b7b974cbc7a41a57abc5e231"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/build.py.txt",
+      "bytes": 7296,
+      "sha256": "a2ae3db860a8c4ab391fb44cbe024174bb1124b06409fab776df4f93ebbe59b1"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/build_capture.py.txt",
+      "bytes": 2628,
+      "sha256": "7f1603033c8936c4a866c8e3ea3e2cf93bd669ea8315114df3231b88ba582a0b"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/derive_gate.py.txt",
+      "bytes": 2463,
+      "sha256": "abeb5b689e162c25ebbbac33e4fb8ad766d04a0390d209ae7cfe37e65fbb51dd"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/finalize.py.txt",
+      "bytes": 2701,
+      "sha256": "f3132c52bb6c77c740d6c2ff732ba62a34f4ce46e7d46f214516d7410b6c87ad"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/ftl_bridge_read.ld.txt",
+      "bytes": 644,
+      "sha256": "1da49a23604a60c9a3a140904721ee2aaa94ae97f7aa92133c51d69543596fe0"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/handoff.S.txt",
+      "bytes": 1797,
+      "sha256": "4a10b538112727767c26b26ccd9d1730c950961190f349c5238140c241f9b815"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/system_writer_gated.ld.txt",
+      "bytes": 749,
+      "sha256": "2b5d089041cf1611f656048ca4c4328c69697d15e046caf5106e9b2d18e41fb4"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/system_writer_original.S.txt",
+      "bytes": 982,
+      "sha256": "a908dca546e120cc58eb36c945f50061153b7d3c226a8d4267ed35e905fa7d20"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/test_handoff.py.txt",
+      "bytes": 3424,
+      "sha256": "19101d1306e095784fbd8c8d8d72013ac91b1313a6686d05c4919860ae55433c"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/test_offline.py.txt",
+      "bytes": 10201,
+      "sha256": "b87bb71a03ef27b843ec2e1086a7cbd8e5bd34a8139e6b6235ba6afce8d26f4b"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_repair/build.py.txt",
+      "bytes": 10502,
+      "sha256": "1445f2b7f55172d62d09098ae40a34113fdcdadf6ed48335b64bf1b63461bcd7"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_repair/core.ld.txt",
+      "bytes": 728,
+      "sha256": "5c6e467e74b5ea3bbc7bf02aaa7814e3c54e332ba0aa31a14d678cfd56a0220b"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_repair/finalize.py.txt",
+      "bytes": 3936,
+      "sha256": "fd35a939edff5fe36ee9f0c58e441f329df7283d4ad81f48b4c203084b0bd458"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_repair/handoff.S.txt",
+      "bytes": 1025,
+      "sha256": "ada630f8cd0d9e92f16777e556717a144fbc840c161d3c914ee1ebfb667944fc"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_repair/handoff.ld.txt",
+      "bytes": 632,
+      "sha256": "769fcef029b26ff2022deb58a6d5d22d38b9a92cd37b24cad08e6d847a9536b4"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_repair/original.S.txt",
+      "bytes": 964,
+      "sha256": "ce40c53bf1724abedbc030af9cda40e6e1dffdce7b1ddaf9ffd4bded34a20035"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_repair/synthetic/block22/block_manifest.h.txt",
+      "bytes": 2409,
+      "sha256": "e2503952b03cc31f9a834a40dcf7b11ba3a1c3e2d42e4d217eb5cab72d424b89"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_repair/test_handoff.py.txt",
+      "bytes": 2817,
+      "sha256": "dba8a7d3c3abbecd2310f97fa233bbb813a95aaa2740b6fab83293a256fbe412"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_repair/test_offline.py.txt",
+      "bytes": 8708,
+      "sha256": "be619f34cf9ebd1c7330f21774b0b0c00750944f70a5b0a661a8465446104a1f"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_repair/writer.c.txt",
+      "bytes": 5275,
+      "sha256": "3fda49804e78458a72710e1ab51ffe21c0c7151876f17dfebde7b2e07c0d43be"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_secondary/build.py.txt",
+      "bytes": 10414,
+      "sha256": "c2aa69087f9c733e73c70a253a0b150918bc73ffffdf3fb701d499663e0bcb83"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_secondary/core.ld.txt",
+      "bytes": 711,
+      "sha256": "5f738d0448a8a48ec414b1fe639ebac8a8a700d3a7b403e17de375cb38942865"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_secondary/finalize.py.txt",
+      "bytes": 4017,
+      "sha256": "10e6bbda3b5b657787019ff2d68de7f33d577f80ce644f026f735d716c9d5bf4"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_secondary/handoff.S.txt",
+      "bytes": 1008,
+      "sha256": "ef5043450bfd8b328a1d2ef59525736e28c1d4db5d05961be938332225b39591"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_secondary/handoff.ld.txt",
+      "bytes": 615,
+      "sha256": "f5d284759bb143fb1d7599018190367812ef96db39515282f231fd84c32bb4c2"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_secondary/original.S.txt",
+      "bytes": 947,
+      "sha256": "0c87c99ef1240b079148b8755ebacca8c90fcff444ad39bb9bd535ba5f3f8d1f"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_secondary/reader/build.py.txt",
+      "bytes": 8133,
+      "sha256": "39efac7606d68990bbb2976424d9a6d126c6e421904db2f03c7a1ab3df250fae"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_secondary/reader/read_half.S.txt",
+      "bytes": 1728,
+      "sha256": "47d961598d324cbb6291a02cce91841b0096aa5eb6d945af524b6b1fdd246025"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_secondary/synthetic/block1028/block_manifest.h.txt",
+      "bytes": 1301,
+      "sha256": "fd184b439e9a18886616cba9aa3c9234bb6beb29048768800d7169505f0e1d86"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_secondary/test_handoff.py.txt",
+      "bytes": 2818,
+      "sha256": "b52c99e2ddeb951ae0af811c2cb7e7898b306fe62664ec8411cac1ebf4ac22f1"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_secondary/test_offline.py.txt",
+      "bytes": 8713,
+      "sha256": "f9fc7d0c46a34de8d16df5a2f126ed585cc68c9226cdb40524c74d1f5795c562"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_secondary/writer.c.txt",
+      "bytes": 5263,
+      "sha256": "022293f025e4a2e902874e8a2ad5167c69a7a4986885a76c86671a70204c1f97"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_validation_audit/audit.py.txt",
+      "bytes": 5619,
+      "sha256": "c16f2fc8559c83fd8e43c428a0b6ab209b3a1fec68f66b32ec9b7c2fb9df207a"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_validation_audit/module_sysprot_audit.py.txt",
+      "bytes": 2206,
+      "sha256": "e367604b40684f9a609d6a102aaa027deb1613d26194da62a6c87ca270cab50a"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_header_validation_audit/trace_sysprot.py.txt",
+      "bytes": 2621,
+      "sha256": "cebb6f77e45970328bfe0b0bda49241e7aabd0f09cf72fe18167bb6024141799"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_map_compare/build.py.txt",
+      "bytes": 6537,
+      "sha256": "e5c4a3795fa843e1eb888f9d7953d04ad50bc9178bbf5aa494ae57ca612aea6f"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_physical_backup_tools/build.py.txt",
+      "bytes": 8141,
+      "sha256": "be99877bab84e4065c5d82c1ffe0a3fbcd42b57ae3346a29c252e6e173ab8c8c"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_physical_backup_tools/read_half.S.txt",
+      "bytes": 1746,
+      "sha256": "42dfce01a8c857247af1ae231e6e5cfe3973b8192ba444af80450da4dbd2d092"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_relocated_active/build.py.txt",
+      "bytes": 10394,
+      "sha256": "9b568f6de5a80f4d005dddfd870348c2b0c38549d0624c4aa953ce12a9040184"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_relocated_active/core.ld.txt",
+      "bytes": 731,
+      "sha256": "5f4ac219d722f6a0c3201b7ec3bf7fe419cf037f60e882c39382e039da0f6d6d"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_relocated_active/finalize.py.txt",
+      "bytes": 4001,
+      "sha256": "013920db15683650677ca075959f34a4741a04f3760f2c8d2e70b1b5d85484cc"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_relocated_active/handoff.S.txt",
+      "bytes": 1028,
+      "sha256": "91430cc19d0b7cbb95c9bf7eb8863ce69103eb21bcc6891e7be57561b7d1c3ff"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_relocated_active/handoff.ld.txt",
+      "bytes": 635,
+      "sha256": "2caf7d7877a398fa5c30c52f468dc3f30b2b75b072e4d9cdea97a24073843279"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_relocated_active/original.S.txt",
+      "bytes": 967,
+      "sha256": "ecac196fe43e4ffd4766c793909283c2c068e37284fc5a2dff732783e2fc35c6"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_relocated_active/reader/build.py.txt",
+      "bytes": 8167,
+      "sha256": "8add3fa7ce7dce3b7dbef60396fe77858f84925d35ca16378742a15ba80da1eb"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_relocated_active/reader/read_half.S.txt",
+      "bytes": 1796,
+      "sha256": "008cd4d6a207518e7d8204697ad1a073c14a613ae51466f378264e4d5e61cf95"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_relocated_active/synthetic/block74/block_manifest.h.txt",
+      "bytes": 1312,
+      "sha256": "0f200bb6e4754136f697f7f833aec4c74199b48ab26e54a37a93bfb8126daa78"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_relocated_active/test_handoff.py.txt",
+      "bytes": 2820,
+      "sha256": "5d8b021e231890fa834677b0a2d1737da9e8427dad2473d0592d645290750b9d"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_relocated_active/test_offline.py.txt",
+      "bytes": 8711,
+      "sha256": "2184c4285fdeaa90ec1469d48f1f58e4146f11d1dfbee3b2cea655fffde8317d"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_relocated_active/writer.c.txt",
+      "bytes": 5278,
+      "sha256": "3f75939a48a255e0ffd601100997e03b7f64151c91fc6feaf8982bb2f5b3d855"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_visibility_repair/build.py.txt",
+      "bytes": 8986,
+      "sha256": "06e771d82d1d2811298b032765167b01fb4ffefafcf38a0622b220c044641ef3"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_visibility_repair/core.ld.txt",
+      "bytes": 732,
+      "sha256": "1b6a4056495aad9a96ff40bb18c69914359f94ed02cca444d728f17b5518bf44"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_visibility_repair/finalize.py.txt",
+      "bytes": 3584,
+      "sha256": "4203bc812fcdeac136ceb19b7d2d6ca5dc21df8c54908ad16abc7ff688fbab7c"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_visibility_repair/handoff.S.txt",
+      "bytes": 1029,
+      "sha256": "4f1e3cb8150b2c3ed2fdab9542232e3b2a4c72ea0e75af86384fd55534e26462"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_visibility_repair/handoff.ld.txt",
+      "bytes": 636,
+      "sha256": "f3403193564f1cf6012915fd5fd912780fb335b523fcc48d498ce5cf90453d68"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_visibility_repair/original.S.txt",
+      "bytes": 968,
+      "sha256": "0abccb665872f4b3fabca7607ba0fcf0a49657ca4cda8bbc0d4b9f4fac5665a6"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_visibility_repair/synthetic/block22/block_manifest.h.txt",
+      "bytes": 618,
+      "sha256": "e558df7ac38ff616021f727d3af23de6da08959e967ebe8655037766393b2bf0"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_visibility_repair/synthetic/block25/block_manifest.h.txt",
+      "bytes": 618,
+      "sha256": "08508e69942489e165ed6ebfabfd4b68777aa61b03e95ce7c7c06ab8f86cf17b"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_visibility_repair/synthetic/block26/block_manifest.h.txt",
+      "bytes": 620,
+      "sha256": "8a8a1fe9b8d24e1bea498658114758299813c2a61488eb7c836cd9b876403e82"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_visibility_repair/test_handoff.py.txt",
+      "bytes": 2601,
+      "sha256": "a237782e13d4956092c2ee142659876762316733261490f39237ad5a687dea0e"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_visibility_repair/test_offline.py.txt",
+      "bytes": 8712,
+      "sha256": "850ed2a6e97a5ee6c916db0914620cf74c16fb64fdd76c4457de71539c86b93e"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_visibility_repair/writer.c.txt",
+      "bytes": 5158,
+      "sha256": "e2b1f01efb02d33172ea7270f3d1e89bcf045d3c21284152880bc309abb038ff"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/boot_visibility_verify/build.py.txt",
+      "bytes": 3101,
+      "sha256": "6256bc9368ce430cf7f593956ed163085c14809a3a2096f419f4e4bd8699f322"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/bootstrap_boot_header.py.txt",
+      "bytes": 5781,
+      "sha256": "e6b74f132bb1076fd3085714c31dc7ae6ca167c0cb70e8960f52bca639dcfc8c"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/bootstrap_boot_visibility.py.txt",
+      "bytes": 5702,
+      "sha256": "2421bfb74212064aa7e35f9f8d5cbbd61b3fd03b9a9376c415aa92d0429f0139"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/bootstrap_cache_last.py.txt",
+      "bytes": 5779,
+      "sha256": "d82c44a6c761bb410a5cb7322d99d9c04eae7847faa83d88f405ac4845668eeb"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/build_bbt_with_idb0_check.py.txt",
+      "bytes": 6105,
+      "sha256": "0c8e1aec4b8a0099581d437ff51352c08c2b2d3beb86ffc36267e86ecedc5664"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/build_bbt_with_idb_check.py.txt",
+      "bytes": 5994,
+      "sha256": "33da5f0c2a12c23e8620592372d5892447243f3468a5aa73fff36c9d082f21c2"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/build_copy0_writer.py.txt",
+      "bytes": 7806,
+      "sha256": "4586915d204bbbf610ba017ab2b8458b27104877cd78a452c676b9f1072f0e94"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/build_copy5_writer.py.txt",
+      "bytes": 7422,
+      "sha256": "2502a1844d9256480e14fa80e7933edf47cc573ae0f1f8fac4def067163008fb"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/build_hardened_bridge.py.txt",
+      "bytes": 2777,
+      "sha256": "607925f8d64e2e522c4416f1968b0784e79d5a4697727af4dacf732f9f510d50"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/build_recovery_package.py.txt",
+      "bytes": 8207,
+      "sha256": "ad3dc5c994d039c095e5c267f6874c456eac328f36e3689e6d75f127a6d374df"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/build_status_reader.py.txt",
+      "bytes": 3997,
+      "sha256": "000f99691fc6a58ed94560645c9ffb8931697652684c125242e91e525f867f4c"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/cache_last_attempt/finalize.py.txt",
+      "bytes": 4372,
+      "sha256": "1ce8e0c68b8424ae4e5e1813bd123affb37e688b3f5ef921a63c1bbfc44481b3"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/cache_last_attempt/get_portable.py.txt",
+      "bytes": 2570,
+      "sha256": "43f889a8678f6e3f14d7bdec1735938ba164f80089c70bcdca06a2e2c3ac7d5e"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/cache_last_attempt/make_cache.py.txt",
+      "bytes": 1716,
+      "sha256": "f99ae1f33374c676a3aa620beb250d1f48dfb6e6854387bbd9c1a0ed638f9c3d"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/cache_last_attempt/verify_live.py.txt",
+      "bytes": 3731,
+      "sha256": "7b4a88c56d13cc64635f5fc7796184c5b7e8579ccc3b459a342777920875f76d"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/cache_last_writer/block24/boot_manifest.h.txt",
+      "bytes": 378,
+      "sha256": "77cda7b34fc8e7df192d9747b118f03a489e9a4399a5fbef0b66235db4fb9180"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/cache_last_writer/block25/boot_manifest.h.txt",
+      "bytes": 378,
+      "sha256": "c05dfc8929abb25f9e7bef4ee0728bab3fe0af4e1ab34714ac68a77fe8ae8aa5"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/cache_last_writer/block26/boot_manifest.h.txt",
+      "bytes": 378,
+      "sha256": "89529606d9d61c5326739896364003dabf9fba8aaccc61830f24c7daf797ae2a"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/cache_last_writer/boot_core.c.txt",
+      "bytes": 1935,
+      "sha256": "76ac574222a0e0de5b5cdccc5d03169d45a91aad28eaff91f56e5c280def98c1"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/cache_last_writer/boot_gate.c.txt",
+      "bytes": 5269,
+      "sha256": "1fe01362792533407ed69bd5e68ef23920378bbf9c2eff86a4a2aac5ac527832"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/cache_last_writer/boot_gate.h.txt",
+      "bytes": 611,
+      "sha256": "a48afa71c8fe0fe8521339e8a5ed520d6579b6a8d95c25ed5497f4091732592d"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/cache_last_writer/boot_protection.h.txt",
+      "bytes": 1396,
+      "sha256": "98642fbe14bd6b6ce11d19a03576d5c1ba89eaa1879336a809c574f8d8e50467"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/cache_last_writer/build.py.txt",
+      "bytes": 7700,
+      "sha256": "31f70116965570165769e7c04f9c4e360758387c6d5aecdcde88da6fdeff32f4"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/cache_last_writer/build_read.py.txt",
+      "bytes": 9238,
+      "sha256": "98020fd65489807fe7e61e31e67b60e3c3f50e08bbf4be09033a5badbf7b71b5"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/cache_last_writer/finalize.py.txt",
+      "bytes": 4053,
+      "sha256": "a2d4cb85387ccbeaed57ed50255edfd32c66544d990dfdcd8efa6fc7ad6af563"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/cache_last_writer/ftl_bridge_read.ld.txt",
+      "bytes": 639,
+      "sha256": "c67ae08910f56152e79008ee222851eab2651b9b4910ba0ed32b0a8d54e003f9"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/cache_last_writer/handoff.S.txt",
+      "bytes": 1792,
+      "sha256": "19709b0ae4a8bd43f7f3e6b230783357df4472808367108cd27143064c1e2bb2"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/cache_last_writer/run.py.txt",
+      "bytes": 13038,
+      "sha256": "f3075246a3ded6519df74d8d4dc569e9401a73788894de20bce3a7cd0aac0d52"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/cache_last_writer/system_writer_gated.ld.txt",
+      "bytes": 744,
+      "sha256": "c71c87ad78634c307d4281f5bfdbe0e8f6c04688b2f927142034c805b465ecb5"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/cache_last_writer/system_writer_original.S.txt",
+      "bytes": 977,
+      "sha256": "d8cbf79a04e84169493562a592a6448e45cb23eaf45780d9d5a1d2b8866e73bf"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/cache_last_writer/test_handoff.py.txt",
+      "bytes": 3419,
+      "sha256": "333c68993923a799ddc254bc371d32d7fc9aa2ead632df7b4e439cd8674a4f39"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/cache_last_writer/test_offline.py.txt",
+      "bytes": 10190,
+      "sha256": "66483932f4856847f1840325714d6b4704b8abde7ef0002070a07ba48aa2c20b"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/capture_cache_last_map.py.txt",
+      "bytes": 3500,
+      "sha256": "6aa3c9e4a45f3f25a279cc91cae7708406e7942c2cd8f6729cc611f73d1bdf14"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/capture_live_adb.py.txt",
+      "bytes": 2181,
+      "sha256": "23064f44db19190aa351697222ff14c33e75695c95b801bdf6452628a9fc719b"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/copy0_sources/idb_copy6_guard.S.txt",
+      "bytes": 1830,
+      "sha256": "84f2234d98b8d6ab77af4dcb04c8b712e1b2d5a58756982e40b1eccf20b4c78f"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/copy0_sources/idb_copy6_guard.c.txt",
+      "bytes": 7993,
+      "sha256": "6e4a24a1db4281564041762809fcd8753569242cab4b7e14da3efc4cd32d28c4"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/copy0_sources/idb_copy6_guard.ld.txt",
+      "bytes": 836,
+      "sha256": "c5a59c9c7ee6b77cb324c76bfabecbe6d1107f7f542de489903c3af1e953773e"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/copy5_sources/idb_copy6_guard.S.txt",
+      "bytes": 1514,
+      "sha256": "87006a1bca31fc19ca297e1cd743296c76b1dfdab834705f8f0a7681a96d6857"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/copy5_sources/idb_copy6_guard.c.txt",
+      "bytes": 7967,
+      "sha256": "765235fd46b596c2147ef7f337c0c294c129246730204bc9e222316d8cb1f392"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/copy5_sources/idb_copy6_guard.ld.txt",
+      "bytes": 836,
+      "sha256": "cf54d56592dc23dee4b2e3a805b163f52362fe29978efd680868853004b71955"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/early_adb_failure_audit/test_timer.py.txt",
+      "bytes": 2807,
+      "sha256": "eb9bcd1987e89295c53c442b60d98b383d322b767286d617f08d744ebc3193c1"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/finalize_boot_header_repair.py.txt",
+      "bytes": 4496,
+      "sha256": "0b55be5edf30c61b66ca7045911a28829305fc8fc98cc923bc83d738a0aae2d8"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/geometry_bbt_ftl_trial/build_and_verify.py.txt",
+      "bytes": 13042,
+      "sha256": "96a6612c86f31d259b5f158f5769d92cf18740105e282ef3167f5d9fb9735907"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/geometry_bbt_ftl_trial/trace.S.txt",
+      "bytes": 3544,
+      "sha256": "40a13f82e8872c8ece59f61827cd839fc2f027d878bddc3df43b15e3ae778f5c"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/geometry_bbt_ftl_trial/trace.ld.txt",
+      "bytes": 631,
+      "sha256": "17706693958dc3b56e2e3e572996ea2d44070450c9e5b5bd0340cbde602bef97"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/inspect_bbt_code.py.txt",
+      "bytes": 672,
+      "sha256": "4fb648a20b91b647349502e9630808106cf6519ceb571cc478d46aa514473350"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/inspect_live_extfs.py.txt",
+      "bytes": 3767,
+      "sha256": "5c7e5d94433f5ad7c8b8cd8effa335f013741eb124c33297a0a8e0a6487348a3"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/install_boot_header_window.py.txt",
+      "bytes": 3978,
+      "sha256": "b1ee5334b66e083a990fed2d940b0852715271f4eb6b5e494e4e91884f9840d5"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/install_boot_visibility_window.py.txt",
+      "bytes": 3531,
+      "sha256": "04e529971189a2e49afda47856d7153135503b5fabf8990df542fd89beb6b5ad"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/install_cache_last_window.py.txt",
+      "bytes": 3974,
+      "sha256": "1c2829986471c2c169d39f491d61e66f047814034eda5a08b88b18054b4ed01b"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/install_white_screen_ram_window.py.txt",
+      "bytes": 3532,
+      "sha256": "b94da34ca6a28d9f6cfd02b99dc9dc9abd3c8e394a1fc4bacf14244a2f8aed1a"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/journal_analysis/analyze.py.txt",
+      "bytes": 9795,
+      "sha256": "e08d89eeb9cb073b1bb3f30936d5e08145d444d52be01c1976841f41eef62a08"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/live_adb_after_cache/unmount_for_repair.sh.txt",
+      "bytes": 917,
+      "sha256": "8b2b71abad29f20a9822a79a08c74cc78ef2ac77ca82c5e1b410c1fbd9b85136"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/live_adb_cold_after_system/unmount_userdata.sh.txt",
+      "bytes": 734,
+      "sha256": "028e6c69f189facd1cac4d7943c94d192d578227d07b4ccda03038065d7dfc4c"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/live_system_audit/compare_live.py.txt",
+      "bytes": 3905,
+      "sha256": "09d551d68125eb8d527054cb33e8d215de98efa353f58bcf94252b1dad1ded21"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/nand_geometry_trial/build_and_verify.py.txt",
+      "bytes": 8034,
+      "sha256": "8abff55101c806e2c7490098bfa7cf5c60285c94f93b120290b454310c8c3133"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/nand_init_read_trace/build_and_verify.py.txt",
+      "bytes": 12542,
+      "sha256": "a371fc43710b04ffa00fbab3549008c70a6ddde8d53e224a4dcfa8c515a87eea"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/nand_init_read_trace/trace.S.txt",
+      "bytes": 2977,
+      "sha256": "e9a4899aa0feb27a6ab334d5d1d2c68100a2a13bd0b99c45c620d4922cc67f1b"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/nand_init_read_trace/trace.ld.txt",
+      "bytes": 641,
+      "sha256": "b0593f4559871aa2570ebe5c8239f4ac5067d27fcabfadac725d5a71dc36886a"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/original_boot_diag/build_and_verify.py.txt",
+      "bytes": 11293,
+      "sha256": "4d7b288ed72c68c7e14f54ce04641d56e70e15f8735ef3101d0c769eac6197bb"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/original_boot_diag/run_existing_capacity_test.py.txt",
+      "bytes": 2984,
+      "sha256": "7e8c6c9fc7039a40a772f711e6172ac0c52a2563a52bbd6244dc14a41be6714e"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/prepare_bbt_run.py.txt",
+      "bytes": 3816,
+      "sha256": "d06fff677dae15e282ffe2a917440d3ae309d85349661167dbfb97b637a81ef9"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/prepare_bbt_with_idb0_check.py.txt",
+      "bytes": 3714,
+      "sha256": "4b1c8cdac6e9afa7981093f7cb1ee38c16a706a871d09c23e7b0621ce608dede"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/prepare_bbt_with_idb_check.py.txt",
+      "bytes": 2890,
+      "sha256": "f87ef06f3e61bfca059c097a8bc78d62deb43672f01e926f8708b35962e95a3e"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/prepare_boot_header_coldcheck.py.txt",
+      "bytes": 2941,
+      "sha256": "10210887649e4f668a0b5ac032302ea937d0fc87593bdce2263ffab0c8ee6cd0"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/prepare_boot_header_host.py.txt",
+      "bytes": 2750,
+      "sha256": "57ba1a85006d14a44bcc3c5f0ed5200e154a8f23499bbc7c4e7c9f610f015010"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/prepare_cold_check.py.txt",
+      "bytes": 1638,
+      "sha256": "e668fa9d46d9bb56903776987e06911528030054f9ac13c3aa71860b53475630"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/prepare_copy0_writer.py.txt",
+      "bytes": 3691,
+      "sha256": "18d81aa90895d5159fe3f53fdd4b2ae8d074ba2d391fe070f199276109aeb767"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/prepare_copy5_resume.py.txt",
+      "bytes": 2243,
+      "sha256": "efeb0e4318bc1fa9e8bfa1d516b69543dff86ac61b585b09a2b4b2ca91d2a089"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/prepare_copy5_writer.py.txt",
+      "bytes": 2526,
+      "sha256": "d047465c796859a87072a25e6b15a987aa7ffda2a68830e972355dce0977c2fd"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/prepare_header_secondary_backup_host.py.txt",
+      "bytes": 1324,
+      "sha256": "0b28317500b118caa3323f9f0fcf8f8ade5c8f01922929f979688133e88cd60d"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/prepare_header_secondary_host.py.txt",
+      "bytes": 3033,
+      "sha256": "1b189465a2f2fea1df190bde27ee7151d070eed13f15e1518a875881bd079808"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/prepare_idb_reader.py.txt",
+      "bytes": 1531,
+      "sha256": "db797c08ead79d8920c39850257534abd2bf1781b822a4d5efff21938e98fab0"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/prepare_relocated_backup_host.py.txt",
+      "bytes": 1218,
+      "sha256": "ba8fc21149b0a192fdd2e4b7b38302f6c1e28af9e911978c26c0909da4c7fadf"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/prepare_relocated_writer_host.py.txt",
+      "bytes": 1730,
+      "sha256": "b91de71e003239aa49e01d4c32cb5bb66b3a0ec88bdea72993b6b7036481e243"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/probe_userdata_rw.py.txt",
+      "bytes": 2443,
+      "sha256": "049640198945b97fbe4885fc679b7aa0e2d7bae1086352530b25c4aa62723692"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/read_bbt_cold.py.txt",
+      "bytes": 4283,
+      "sha256": "faa5bc7b1a00bc61c4da41f19e75f86d8ee133a3bd3906efae5d11f76b001bab"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/read_copy0_order_check.py.txt",
+      "bytes": 2346,
+      "sha256": "e87d5648eb4af84867e034901f83a2460024f0637f85588522b60f95ce546679"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/read_idb_cold.py.txt",
+      "bytes": 3316,
+      "sha256": "b9029dbf13146d70f0af84e0197ced12531657df30cc75abe4c4a7f8e626c429"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/read_idb_status.py.txt",
+      "bytes": 3420,
+      "sha256": "fc754b458b1be8b5314c0d451b2a74130737342a091a5081530718fd2c1d64d1"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/read_known_idb.py.txt",
+      "bytes": 2203,
+      "sha256": "700d5f713576144760f9a890b3c3514b4af68e6dee1604133ab640e94832e016"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/read_linux_system.py.txt",
+      "bytes": 2407,
+      "sha256": "246efe25aed94f6fb7cde4ad80f06e01bd0a2d026f54e74cf23f317e6eb4ef56"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/read_status.S.txt",
+      "bytes": 678,
+      "sha256": "a495681867e1b29d12d7c1000f632b73a3ecb5f1fd9c7cede1fdcaaca0cba49c"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/read_status.ld.txt",
+      "bytes": 424,
+      "sha256": "201038e59c9b1cd078f171286a516d65bfc6be13dbe7457b8848fbfcf8979d29"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/reauth_after_actual_boot_map.py.txt",
+      "bytes": 2356,
+      "sha256": "c91b6fdd516301b31d6dad766b0ea91c812058ffc00310970d0499d914a3d311"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/repair_linux_system_four.py.txt",
+      "bytes": 5072,
+      "sha256": "46446cd354e18d9e687d16b21024071c9dbd8867eeadc856daad5bf1b1b10e57"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/repair_userdata_native.py.txt",
+      "bytes": 3562,
+      "sha256": "4c351e81abf4a2233f9dbfce3b1f3a00dc4e6378d9ce5b69240d4069642e8b1f"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/replay_zero_capacity.py.txt",
+      "bytes": 3800,
+      "sha256": "e12d17b485ad46a8e277183dd7e8ca36aa488eb3649891c7a64f957cc2ca591f"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/restore_bbt_after_copy0.py.txt",
+      "bytes": 7959,
+      "sha256": "29fd4b6aefc1f88ec36865d3a4b0862baf40e4c43b70acab55a8d5cddf43aba4"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/restore_bbt_after_copy0_resume.py.txt",
+      "bytes": 8592,
+      "sha256": "9b2d122de908ea7a61127b71b199ad79dd70a425b465b44776401e564686ca6e"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/restore_bbt_after_copy0_resume_v2.py.txt",
+      "bytes": 8992,
+      "sha256": "b1cf2dcf642f82cd4b60d9d43c2ca0a9ebcdf28cc972bf44967db7ddf9dd7f16"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/restore_bbt_after_copy0_resume_v3.py.txt",
+      "bytes": 9605,
+      "sha256": "e9fd48dfc0467727e02ecf3d34b3d719cc26bd985b45f4ae517956cfc5027b53"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/restore_bbt_after_copy5.py.txt",
+      "bytes": 7498,
+      "sha256": "d2fd1b25d68d22c3c52a7ae4e841bd372e8d6e51812331f8d6abc42bbda3103b"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/restore_copy0.py.txt",
+      "bytes": 6892,
+      "sha256": "7aeec8d9fcb0c9aca3e2bb404329e20430b284eea6efef30dba3dbdad6a5bb17"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/restore_copy5.py.txt",
+      "bytes": 5041,
+      "sha256": "9cec3615b3df7a35dee4ef1f41232e0786e52de1c1fa251eba27459e58347700"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/restore_copy5_resume.py.txt",
+      "bytes": 6007,
+      "sha256": "ed88a1a81db9c045a4fbfa30ea16d3b4d179832fda07fdde6b563a45cd81069b"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/resume_ftl_geometry_trace.py.txt",
+      "bytes": 6031,
+      "sha256": "a2d472f9cfa2ac9af57fa859c1d4b9c8be761398ca4f16ca2919381d5278a44b"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/resume_nand_geometry_trial.py.txt",
+      "bytes": 5383,
+      "sha256": "26a0a391bf99d06a182c59455a8164dde7d8d9b87acf9e892366696c82c636c1"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/resume_nand_init_trace.py.txt",
+      "bytes": 5312,
+      "sha256": "89ec14d6d11a32efdbde5716669e2692c66b2029616db5e4a0af58a63b1b6477"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/run_boot_diagnostic_write.py.txt",
+      "bytes": 10953,
+      "sha256": "c2a000832c3887836e06a00aed6ced664e493a33e4ab95d5bf29b0b44fbc2b8a"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/run_boot_fresh_capture.py.txt",
+      "bytes": 4500,
+      "sha256": "f64f2086db912fb5ac0db8bf8338a99efe62eb23cc54a2082751d50c22fc1541"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/run_boot_header_cold_backup.py.txt",
+      "bytes": 6723,
+      "sha256": "45292b613bcd54449a275809e7c1ed8523fe7d3c68ddb6e1199136df7c1bcfc2"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/run_boot_header_repair.py.txt",
+      "bytes": 12970,
+      "sha256": "ca0f4213e62736e0912ac3ff705c43ec66671ba154f1d1c1d76664de51d53a87"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/run_boot_physical_backup.py.txt",
+      "bytes": 6430,
+      "sha256": "68cd4b69734b2d689c685b8b3d067254fa833d510351ecb6cce9df1634247475"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/run_boot_visibility_compare.py.txt",
+      "bytes": 6038,
+      "sha256": "be606e8e471525a870b912d0e5c98b5384ed81d8ae6dcb84bb9e9d3b6e551d1a"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/run_boot_visibility_repair.py.txt",
+      "bytes": 12066,
+      "sha256": "b1f09433d1d055397748a8b42ab54f7fde9967503a3b728ba4d8265f17a0d5ce"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/run_header_map_recheck.py.txt",
+      "bytes": 8044,
+      "sha256": "0a4a0c6edeb96bed543d73e6adc53bac8a8a2a3b28c2177d6691086f1a1bc761"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/run_header_secondary_backup.py.txt",
+      "bytes": 6804,
+      "sha256": "7b95c2589de4cb728b430757ad1a72cee4eea4baf785b5b34321681d73c79d70"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/run_header_secondary_repair.py.txt",
+      "bytes": 13043,
+      "sha256": "60646872c141581e53184ac7b14fa2126e410bac9de4f4d1785b99aa46dce3be"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/run_original_boot_after_idb0.py.txt",
+      "bytes": 5704,
+      "sha256": "c9507b9386cef9fdc38c812cadba7116fd06956a8591a32c58eec6c9a3d8cbb1"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/run_original_boot_diag.py.txt",
+      "bytes": 5692,
+      "sha256": "ec95287800e3c382795b7e9868dd1f12ff9a2ad7bd4dbbd29f38b8d81760269f"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/run_relocated_boot_backup.py.txt",
+      "bytes": 6826,
+      "sha256": "cc162db7640e54c2eed30150ce57fca2aa99c7078f000fa16bde79d8dace9466"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/run_relocated_header_repair.py.txt",
+      "bytes": 13106,
+      "sha256": "0ed4011830299f6e06cb05d09cb069798e9f4bb27e9a8b04304ef99221de9a0c"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/run_white_screen_reads.py.txt",
+      "bytes": 5965,
+      "sha256": "648212269ee8321bdf0c594e18466c447117c3fb329c71a0b4bb0b53923e9079"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/stock_boot_restore/capture_native_backup.py.txt",
+      "bytes": 7075,
+      "sha256": "0cb00a634b2a7262f82b244ddda867919489cd2d1f6f013ad1dc5d3580d121aa"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/stock_boot_restore/final_read.py.txt",
+      "bytes": 6738,
+      "sha256": "3846dd6901fde205fa927426231ebe618230aac4ec1ecba8bd5bf28a768bebea"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/stock_boot_restore/read_stage/01_bootstrap.py.txt",
+      "bytes": 6088,
+      "sha256": "b8afd6e00b435c1980c2980641c3e1963a16f73449b7b2fae455558d3b6f0e2c"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/stock_boot_restore/read_stage/02_install_window.py.txt",
+      "bytes": 4223,
+      "sha256": "a75fc928db6d63dac858336ac106acd09920759ae5aa25ca3ffa1348add00b99"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/stock_boot_restore/read_stage/03_capture_maps.py.txt",
+      "bytes": 7230,
+      "sha256": "77d52f1a7bcd098db07df752212c7182f3072d43e939c408f431e27c6d5169e6"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/stock_boot_restore/read_stage/prepare_sources.py.txt",
+      "bytes": 8275,
+      "sha256": "31366a39a45f7f6faad061bd03fabe237c458295f525c476b98efb4c58049fc7"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/stock_boot_restore/run_stock_write.py.txt",
+      "bytes": 18960,
+      "sha256": "445a21a1a411d3fd371fffbad07e009384b9793c8e571bb9232ebff64e36eb26"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/stock_boot_restore/verify_completion.py.txt",
+      "bytes": 5561,
+      "sha256": "f36eb1c13196b4fcea4522c74e4730fb273b9da95604a044ef8834b09e25f65d"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/stock_boot_restore/writer/build.py.txt",
+      "bytes": 15847,
+      "sha256": "e8afd91e84e92354b04e77c968d6682afc3800b393883fa080dcc0e4fbab6b3e"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/stock_boot_restore/writer/common.py.txt",
+      "bytes": 3269,
+      "sha256": "6ef73efc5d4372b36d0004c660c2d4788db0a5dc68b65da0b1f53cb5dbc4ba42"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/stock_boot_restore/writer/core.ld.txt",
+      "bytes": 767,
+      "sha256": "8ddacef04d476b2afdfb59dc1764916e128a821f0a9ddff36a882450f008d53b"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/stock_boot_restore/writer/finalize.py.txt",
+      "bytes": 5508,
+      "sha256": "7a9ea33880145db78a401e51a720f0e4ef6dc95da68539454deddc956767680a"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/stock_boot_restore/writer/handoff.S.txt",
+      "bytes": 1064,
+      "sha256": "aa923c59756c43ccc989fb486ca7c6d2c525b7ad1ed816ac9121553faf1a9c1f"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/stock_boot_restore/writer/handoff.ld.txt",
+      "bytes": 671,
+      "sha256": "a976e16e55c298354bb87e699386a088f1d4a37f8f0810dbeafb8a806bfa9be4"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/stock_boot_restore/writer/original.S.txt",
+      "bytes": 1003,
+      "sha256": "64b55736f5cf5fea7fbf44a3341b2625116e9c2e1578367a2aee166c37513b25"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/stock_boot_restore/writer/test_handoff.py.txt",
+      "bytes": 2859,
+      "sha256": "446bd7e510a5f5f1a1c25fc64283e69c09219556266191976aae43d500d93d9a"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/stock_boot_restore/writer/test_offline.py.txt",
+      "bytes": 8836,
+      "sha256": "2629b9ecb18460668c0679c7e1ec385906c9638fb6bee61eafffefe67ba50296"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/stock_boot_restore/writer/writer.c.txt",
+      "bytes": 5193,
+      "sha256": "f2bb29d0e73fb3baa6feb7be62e38ed2994ef062baed4e8664dfb935cecf9b23"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/test_adaptive_read.py.txt",
+      "bytes": 2474,
+      "sha256": "3c9cf5262550919254d9ec3d14dc30cd09568b3b5eb8718a0cf0702ba83f51d1"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/test_bbt_with_idb0_check.py.txt",
+      "bytes": 8355,
+      "sha256": "219ecd97df2a99e0768b51811c777d5a121b2002c588c47692b5eb7d048462e4"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/test_bbt_with_idb_check.py.txt",
+      "bytes": 5405,
+      "sha256": "69050a2113d0dc6c9a64a6f4c56dd7d69ba04ea14a9acf262d01908c6f6cfcca"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/test_copy0_writer.py.txt",
+      "bytes": 12916,
+      "sha256": "7a813d5a210c1318dae6035db3114143f58e726d36508ee89dd266ff570e3af1"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/test_copy5_writer.py.txt",
+      "bytes": 8795,
+      "sha256": "591ca999948e13b54fbbb746bdfef7a69ab192253d01d9ffea0b7e12be6ec284"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/test_hardened_bridge.py.txt",
+      "bytes": 8309,
+      "sha256": "39c9143370b741b77294f5ad736e4f0d64c225e9098351faf6bdb4d892f8828b"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/usb_host_probe_2026-09-09/host_after_disconnect.sh.txt",
+      "bytes": 3672,
+      "sha256": "d0c3284db6cc69f2871d3ed83d7eb54e23c43b642cb3a9ff8abd8c88e67df9d8"
+    },
+    {
+      "path": "toolkit/phase2_20260908/work/white_screen_ftl_read/build.py.txt",
+      "bytes": 9198,
+      "sha256": "a2b2dca7b0fb3ab9003246613ce19f4d94d0c32237d691fd7d19ec971fdc8d60"
+    }
+  ]
+}

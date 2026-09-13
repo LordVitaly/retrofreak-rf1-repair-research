@@ -1,0 +1,87 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/verify_native_ecc_page.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Compare one complete RS page against an explicit official-image page.
+
+No oracle filling, alignment search, ECC emulation, or USB access.
+An exact result proves only this page, not FTL or the complete NAND.
+"""
+import argparse
+import hashlib
+import json
+from pathlib import Path
+
+BOOT = Path(r'<HOST_PATH>')
+
+
+def extract(raw):
+    if len(raw) != 8448:
+        raise ValueError(f'Expected exactly 8448 bytes, got {len(raw)}')
+    return b''.join(raw[i:i+512] for i in range(0, 8448, 528))
+
+
+def compare(raw, expected):
+    if len(expected) != 8192:
+        raise ValueError('Reference must contain exactly 8192 bytes')
+    main = extract(raw)
+    offsets = [i for i, (a, b) in enumerate(zip(main, expected)) if a != b]
+    return {
+        'raw_sha256': hashlib.sha256(raw).hexdigest(),
+        'main_sha256': hashlib.sha256(main).hexdigest(),
+        'reference_sha256': hashlib.sha256(expected).hexdigest(),
+        'compared_bytes': len(main),
+        'mismatching_bytes': len(offsets),
+        'mismatching_bits': sum((main[i]^expected[i]).bit_count() for i in offsets),
+        'first_mismatch_offsets': offsets[:32],
+        'exact_page_match': not offsets,
+        'scope': 'One specified page only; no claim about ECC status or FTL',
+    }
+
+
+def selftest():
+    data = bytes((i*37+i//256) & 255 for i in range(8192))
+    raw = b''.join(data[i:i+512]+b'\xa5'*16 for i in range(0,8192,512))
+    assert extract(raw) == data
+    assert compare(raw, data)['exact_page_match']
+    for index in (0, 511, 512, 1023, 1024, 8191):
+        damaged = bytearray(raw)
+        damaged[index//512*528+index%512] ^= 1
+        result = compare(damaged, data)
+        assert result['mismatching_bytes'] == result['mismatching_bits'] == 1
+        assert result['first_mismatch_offsets'] == [index]
+        assert not result['exact_page_match']
+    auxiliary = bytearray(raw)
+    auxiliary[512] ^= 1
+    assert compare(auxiliary, data)['exact_page_match']
+    for invalid in (raw[:-1], raw+b'\0', b''):
+        try:
+            extract(invalid)
+        except ValueError:
+            continue
+        raise AssertionError('Invalid length accepted')
+    print('Selftest PASS: boundaries, corruption, auxiliary exclusion, invalid lengths')
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('raw', nargs='?', type=Path)
+    parser.add_argument('--image', type=Path, default=BOOT)
+    parser.add_argument('--page', type=int, default=2)
+    parser.add_argument('--selftest', action='store_true')
+    args = parser.parse_args()
+    if args.selftest:
+        selftest()
+    if args.raw:
+        if args.page < 0:
+            parser.error('page must be nonnegative')
+        with args.image.open('rb') as source:
+            source.seek(args.page*8192)
+            expected = source.read(8192)
+        result = compare(args.raw.read_bytes(), expected)
+        result.update(raw_file=str(args.raw.resolve()), reference_file=str(args.image.resolve()), reference_page=args.page)
+        print(json.dumps(result, indent=2))
+        raise SystemExit(0 if result['exact_page_match'] else 1)
+    elif not args.selftest:
+        parser.error('Supply a raw file or --selftest')

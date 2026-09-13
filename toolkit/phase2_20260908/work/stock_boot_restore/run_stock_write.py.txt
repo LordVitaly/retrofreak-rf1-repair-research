@@ -1,0 +1,354 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/stock_boot_restore/run_stock_write.py
+Role: completed_stock_return_or_temporary_USB_probe_historical_source
+No binaries or specimen auxiliary headers are included. Do not resume this old hardware session.
+
+"""One pinned stock-boot physical block; explicit manifest pin, never retries.
+
+--offline validates local artifacts only and does not import the USB transport.
+"""
+from pathlib import Path
+import argparse
+import hashlib
+import json
+import os
+import re
+import struct
+import sys
+import zlib
+
+if sys.flags.optimize:
+    raise RuntimeError('Assertions must remain enabled')
+sys.dont_write_bytecode = True
+BASE = Path(__file__).resolve().parent
+WORK = BASE.parent
+OLD = Path('<EXTERNAL_STAGE_03>')
+BLOCK_BYTES = 2097152
+
+
+def sha(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def getjson(path):
+    return json.loads(Path(path).read_text())
+
+
+def pin(path, digest):
+    data = Path(path).read_bytes()
+    assert sha(data) == digest, ('SHA mismatch', str(path))
+    return data
+
+
+def validate_stage(raw, kind, mode=None):
+    assert len(raw) == 110352 and raw[110080:] == bytes(272)
+    assert zlib.crc32(raw[:110080]) == 0xad0dadee
+    assert raw[0xb408:0xb40c] == bytes.fromhex('0101a0e3')
+    assert raw[0xaf60:0xaf64] == bytes.fromhex('0003a0e1')
+    if mode is not None:
+        assert raw[0x76f8:0x76fc] == struct.pack('<I', 0xe3a00000 | mode)
+    denials = (0x1934, 0x3b0c, 0x5b60, 0x7038, 0x7dcc, 0xbd5c)
+    if kind not in ('dry', 'write'):
+        denials += (0xba10, 0xbc1c)
+    for offset in denials:
+        assert raw[offset:offset+8] == bytes.fromhex('0000e0e31eff2fe1')
+    if kind != 'write':
+        for offset in (0xbbc8, 0xbc90):
+            assert raw[offset:offset+4] == bytes.fromhex('feffffea')
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--block', required=True, type=int)
+    parser.add_argument('--manifest-sha256', required=True)
+    parser.add_argument('--offline', action='store_true')
+    args = parser.parse_args(argv)
+    assert re.fullmatch('[0-9a-fA-F]{64}', args.manifest_sha256)
+    manifest_pin = args.manifest_sha256.lower()
+    build = BASE / 'writer'
+    manifest = json.loads(pin(build / 'manifest.json', manifest_pin))
+    assert manifest['all_pass'] and manifest['build_pass'] and manifest['hardware_ready']
+    assert not manifest['synthetic_only']
+    assert manifest['core_tests_pass'] and manifest['error_tests_pass']
+    plan_bytes = pin(BASE / 'plan.json', manifest['plan_sha256'])
+    plan = json.loads(plan_bytes)
+    assert plan['schema_version'] == 1 and plan['fresh_maps_pass']
+    assert plan['native_backups_complete'] and plan['tail_preserved']
+    assert plan['block_bytes'] == BLOCK_BYTES and plan['partition_first_logical_block'] == 6
+    order = plan['execution_order']
+    assert order and len(order) == len(set(order))
+    assert manifest['execution_order'] == order
+    assert set(manifest['allowed_physical_blocks']) == set(order)
+    physical = args.block
+    assert physical in order
+    targets = {item['physical_block']: item for item in plan['targets']}
+    assert len(targets) == len(plan['targets']) and set(targets) == set(order)
+    target = targets[physical]
+    logical = target['logical']
+    assert logical in (6, 9, 10) and target['partition_block'] == logical - 6
+    for group in ('source_sha256', 'proof_sha256'):
+        assert manifest[group]
+        for name, digest in manifest[group].items():
+            data = pin(build / name, digest)
+            if group == 'proof_sha256':
+                proof = json.loads(data)
+                assert proof['all_pass'] and not proof['device_access']
+    for filename, digest in manifest.get('fresh_cold_backup_pins', {}).items():
+        pin(filename, digest)
+    assert manifest['input_file_pins']
+    for filename, digest in manifest['input_file_pins'].items():
+        pin(filename, digest)
+
+    current = pin(plan['current_boot']['path'], plan['current_boot']['sha256'])
+    stock = pin(plan['target_boot']['path'], plan['target_boot']['sha256'])
+    assert len(current) == len(stock) == 16777216
+    assert sha(current[:8781824]) == '3e9556dc6195a7d6616685f9d58a439c23fe55dbe760ba9254f4d233ba79df0f'
+    assert sha(stock[:8781824]) == '416c84c67be71e89d63530c1902112ebbe54845aca3e377a79506ce5c90b090d'
+    assert plan['stock_prefix_bytes'] == 8781824 and current[8781824:] == stock[8781824:]
+    start = (logical - 6) * BLOCK_BYTES
+    source = pin(target['source_path'], target['source_sha256'])
+    assert len(source) == BLOCK_BYTES and source == stock[start:start+BLOCK_BYTES]
+    old_main = current[start:start+BLOCK_BYTES]
+    assert sha(old_main) == target['expected_old_main_sha256'] and source != old_main
+    block = manifest['blocks'][str(physical)]
+    assert block['logical'] == logical
+    assert Path(block['source_path']).resolve() == Path(target['source_path']).resolve()
+    assert sha(source) == block['source_sha256'] and zlib.crc32(source) == int(block['source_crc32'], 16)
+    assert sha(old_main) == block['old_main_sha256'] and zlib.crc32(old_main) == int(block['old_main_crc32'], 16)
+    backup_result = json.loads(pin(plan['native_capture_result_path'], plan['native_capture_result_sha256']))
+    assert backup_result['all_pass']
+    summary = json.loads(pin(target['backup_summary_path'], target['backup_summary_sha256']))
+    assert summary['all_pass'] and summary['physical_block'] == physical and summary['logical'] == logical
+    assert summary['native_page_rc'] == [0] * 256 and summary['diagnostic_main_exact']
+    native = pin(target['backup_raw_path'], block['native_backup_sha256'])
+    assert len(native) == 4096 * 528 and sha(native) == summary['raw_sha256'] == target['backup_raw_sha256']
+    assert all(native[i+514:i+528] == b'\xa5' * 14 for i in range(0, len(native), 528))
+    main = b''.join(native[i:i+512] for i in range(0, len(native), 528))
+    aux = b''.join(native[i+512:i+514] for i in range(0, len(native), 528))
+    assert main == old_main and sha(main) == summary['main_sha256']
+    assert sha(aux) == summary['aux16_sha256'] == block['native_aux_u16_sha256'] == target['backup_aux16_sha256']
+    assert zlib.crc32(aux) == int(block['native_aux_crc32'], 16)
+
+    maps = {}
+    payloads = {}
+    for mode in (0, 1):
+        entry = plan['maps'][str(mode)]
+        proof = json.loads(pin(entry['result_path'], entry['result_sha256']))
+        snapshot = pin(entry['capture_path'], entry['capture_sha256'])
+        assert proof['complete'] and len(snapshot) == 688128
+        mapping = list(struct.unpack_from('<1896H', snapshot, 0xf00))
+        assert mapping == entry['logical_to_physical'] and all(0 <= p < 2048 for p in mapping)
+        maps[mode] = mapping
+        for item in plan['targets']:
+            owners = [index for index, owner in enumerate(mapping) if owner == item['physical_block']]
+            assert not owners or owners == [item['logical']], ('Conflicting physical owner', mode, item, owners)
+        assert (mapping[logical] == physical) == (mode in target['modes'])
+        capture = getjson(WORK / 'boot_map_compare' / f'capture_mode{mode}.json')
+        assert capture['all_pass'] and capture['mode'] == mode
+        payloads[f'capture_mode{mode}'] = pin(capture['path'], capture['sha256'])
+        if mode == 0:
+            readers = getjson(WORK / 'boot_visibility_verify/manifest.json')
+            assert readers['all_pass']
+            reader = readers['profiles'][str(logical)]
+        else:
+            reader = getjson(WORK / 'white_screen_ftl_read' / f'boot_block{logical}.json')
+            assert reader['all_pass']
+        assert reader['lba'] == logical * 4096 and reader['sectors'] == 4096
+        assert reader['fullmap_mode'] == mode
+        payloads[f'reopen_mode{mode}'] = pin(reader['path'], reader['sha256'])
+        validate_stage(payloads[f'capture_mode{mode}'], 'capture', mode)
+        validate_stage(payloads[f'reopen_mode{mode}'], 'reopen', mode)
+
+    for kind in ('dry', 'write'):
+        meta = manifest['variants'][f'{physical}_{kind}']
+        assert meta['physical_block'] == physical and meta['sector'] == physical * 4096
+        assert meta['source_sha256'] == sha(source)
+        assert meta['allowed_changes_proved'] and meta['nonphysical_denials_exact']
+        assert meta['confirm_stops_preserved'] == (kind == 'dry')
+        assert meta['confirm_original_restored'] == (kind == 'write')
+        payloads[kind] = pin(meta['payload'], meta['sha256'])
+        validate_stage(payloads[kind], kind, 1)
+        dry = kind == 'dry'
+        sector = physical * 4096
+        expected_status = [0x31574250,1,physical,2 if dry else 4,0xd002 if dry else 0,1,0 if dry else 256,256,0 if dry else 256,sector if dry else sector+4080,0xffffffff if dry else 0,zlib.crc32(old_main),zlib.crc32(source),0xffffffff if dry else 0,40,0]
+        expected_guard = [0,0xd002 if dry else 0,2 if dry else 4,0 if dry else sector+4096,1,0 if dry else 256,0xffffffff if dry else 0,sector if dry else sector+4080]
+        assert meta['expected_status_u32'] == expected_status
+        assert meta['expected_guard_u32'] == expected_guard
+
+    if args.offline:
+        print(json.dumps(dict(offline_pass=True, device_access=False, physical=physical, logical=logical,
+                              manifest_sha256=manifest_pin, plan_sha256=sha(plan_bytes), source_sha256=sha(source))))
+        return
+
+    written = set()
+    ledger = []
+    index = order.index(physical)
+    for earlier in order[:index]:
+        directory = BASE / 'writes' / f'block{earlier}'
+        result_path = directory / 'result.json'
+        prior = getjson(result_path)
+        attempt = getjson(directory / 'WRITE_ATTEMPTED_DO_NOT_REPEAT.json')
+        assert prior['all_pass'] and prior['write_launches'] == 1
+        assert prior['physical_block'] == earlier and prior['manifest_sha256'] == manifest_pin
+        assert prior['plan_sha256'] == sha(plan_bytes) and prior['maps_unchanged'] and prior['both_modes_readback_exact']
+        assert prior['immediate_main_and_native_aux_exact'] and attempt['physical_block'] == earlier
+        assert attempt['manifest_sha256'] == manifest_pin
+        written.add(earlier)
+        ledger.append(dict(physical_block=earlier,result_sha256=sha(result_path.read_bytes())))
+    for later in order[index:]:
+        assert not (BASE / 'writes' / f'block{later}').exists(), ('Existing attempt; no retry', later)
+    statefile = Path(plan['read_state_path'])
+    assert statefile.resolve() == (BASE / 'read_stage/ram_read_state.json').resolve()
+    state = getjson(statefile)
+    assert state['valid']
+    assert Path(state['ram_path']).resolve().is_relative_to(BASE.resolve())
+    previous = pin(state['ram_path'], state['ram_sha256'])
+    assert len(previous) == 110352 and zlib.crc32(previous[:110080]) == 0xad0dadee
+    assert struct.unpack_from('<2I',previous,110080) == (0x44475453,0x600982e4)
+    assert previous[110348:] == bytes(4)
+    expected_reads = {}
+    for mode in (0, 1):
+        owner = maps[mode][logical]
+        assert owner > 0
+        expected_reads[mode] = source if owner in written | {physical} else old_main
+    out = BASE / 'writes' / f'block{physical}'
+    out.parent.mkdir(exist_ok=True)
+    out.mkdir(exist_ok=False)
+    result = dict(all_pass=False, physical_block=physical, logical_block=logical, manifest_sha256=manifest_pin,
+                  plan_sha256=sha(plan_bytes), source_sha256=sha(source), write_launches=0, executions=[],
+                  prior_completed=ledger, map_checks={}, readbacks={})
+    marker = b'RF1CKP02' + struct.pack('<IIII',110080,0xad0dadee,1,0x60000004) + bytes(504)
+    window = b'RF1WIN01' + struct.pack('<IIII',0x800000,4096,0x63000000,16) + bytes(504)
+    sys.path.insert(0, str(OLD / 'work'))
+    from ram_console_session import RamConsole
+    console = None
+
+    def save(path, value):
+        with path.open('x') as handle:
+            json.dump(value, handle, indent=2)
+            handle.flush()
+            os.fsync(handle.fileno())
+
+    def update(value):
+        temp = statefile.with_suffix('.tmp')
+        with temp.open('w') as handle:
+            json.dump(value, handle, indent=2)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp, statefile)
+
+    def read(path, lba, count):
+        assert not path.exists()
+        assert (lba,count) in ((0x7effff,1),(0x7efffe,1),(0x7f0000,209),(0x7f00d1,2)) or (0x800000 <= lba < 0x801000 and 0 < count <= 16 and lba+count <= 0x801000)
+        console.command(f'RS {hex(lba)} {hex(count)} {path}')
+        data = path.read_bytes()
+        assert len(data) == count * 528
+        return data
+
+    def read_window(directory, sectors, prefix):
+        data = bytearray()
+        assert 0 < sectors <= 4096
+        for offset in range(0, sectors, 16):
+            part = read(directory / f'{prefix}_{offset:04d}.raw', 0x800000+offset, min(16,sectors-offset))
+            assert all(part[j+512:j+528] == bytes(16) for j in range(0,len(part),528))
+            data.extend(b''.join(part[j:j+512] for j in range(0,len(part),528)))
+        return bytes(data)
+
+    def load_window(directory, data, prefix):
+        assert len(data) == BLOCK_BYTES
+        for offset in range(0, len(data), 8192):
+            path = directory / f'{prefix}_{offset//512:04d}.bin'
+            path.write_bytes(data[offset:offset+8192])
+            console.command(f'WS {hex(0x800000+offset//512)} {path}')
+
+    def execute(kind):
+        nonlocal previous
+        directory = out / kind
+        directory.mkdir()
+        raw = payloads[kind]
+        assert read(directory/'previous.raw',0x7f0000,209) == previous
+        if kind in ('dry','write'):
+            load_window(directory, source, 'source')
+            assert read_window(directory,4096,'source_check') == source
+        elif kind.startswith('reopen_mode'):
+            mode = int(kind[-1])
+            load_window(directory,bytes(value ^ 255 for value in expected_reads[mode]),'prefill')
+        for number,offset in enumerate(range(0,110080,8192)):
+            path = directory/f'part{number:02d}.bin'
+            path.write_bytes(raw[offset:min(offset+8192,110080)])
+            console.command(f'WS {hex(0x7f0000+offset//512)} {path}')
+        assert read(directory/'ram_before.raw',0x7f0000,209) == raw
+        if kind == 'write':
+            assert result.get('dry_pass') and result['write_launches'] == 0
+            save(out/'WRITE_ATTEMPTED_DO_NOT_REPEAT.json',dict(physical_block=physical,payload_sha256=sha(raw),source_sha256=sha(source),manifest_sha256=manifest_pin,plan_sha256=sha(plan_bytes)))
+            result['write_launches'] = 1
+        save(directory/'DISPATCHED_NO_RETRY.json',dict(kind=kind,payload_sha256=sha(raw)))
+        update(dict(valid=False,phase=f'stock{physical}_{kind}_dispatched',output=str(out)))
+        console.command('RD')
+        assert read(directory/'marker.raw',0x7effff,1) == marker
+        after = read(directory/'ram_after.raw',0x7f0000,209)
+        status = read(directory/'status.raw',0x7f00d1,2)
+        result['executions'].append(dict(kind=kind,ram_sha256=sha(after),status_hex=status[:64].hex()))
+        assert after[:110080] == raw[:110080] and after[110348:] == bytes(4)
+        assert struct.unpack_from('<2I',after,110080) == (0x44475453,0x600982e4)
+        previous = after
+        return directory,status
+
+    def check_writer(directory,status,kind):
+        meta = manifest['variants'][f'{physical}_{kind}']
+        actual = list(struct.unpack_from('<16I',status,0))
+        guard = list(struct.unpack_from('<8I',read_window(directory,1,'guard'),0))
+        save(directory/'gate_result.json',dict(actual_status=actual,expected_status=meta['expected_status_u32'],actual_guard=guard,expected_guard=meta['expected_guard_u32']))
+        assert actual == meta['expected_status_u32']
+        assert guard == meta['expected_guard_u32']
+
+    try:
+        console = RamConsole(out)
+        console.select()
+        assert read(out/'marker.raw',0x7effff,1) == marker
+        assert read(out/'window.raw',0x7efffe,1) == window
+        directory,status = execute('dry')
+        check_writer(directory,status,'dry')
+        result['dry_pass'] = True
+        print(f'physical{physical}: dry native256-page preflight PASS; zero native writes',flush=True)
+        directory,status = execute('write')
+        check_writer(directory,status,'write')
+        result['immediate_main_and_native_aux_exact'] = True
+        print(f'physical{physical}: one erase,256 programs,256 exact native main+aux readbacks',flush=True)
+        for mode in (0,1):
+            directory,status = execute(f'capture_mode{mode}')
+            assert status[:8] == b'RF1READ1' and struct.unpack_from('<4I',status,8) == (0x6020,1,0,0xa8000)
+            snapshot = read_window(directory,1344,'ftl')
+            (directory/'data.bin').write_bytes(snapshot)
+            mapping = list(struct.unpack_from('<1896H',snapshot,0xf00))
+            changes = [dict(logical=n,before=a,after=b) for n,(a,b) in enumerate(zip(maps[mode],mapping)) if a != b]
+            result['map_checks'][str(mode)] = dict(snapshot_sha256=sha(snapshot),map_changes=changes,target_physical=mapping[logical])
+            assert not changes,('Mapping changed',mode,changes)
+        result['maps_unchanged'] = True
+        for mode in (0,1):
+            directory,status = execute(f'reopen_mode{mode}')
+            assert status[:8] == b'RF1READ2' and struct.unpack_from('<4I',status,8) == (logical*4096,4096,0,4096)
+            data = read_window(directory,4096,'readback')
+            (directory/'data.bin').write_bytes(data)
+            expected = expected_reads[mode]
+            result['readbacks'][str(mode)] = dict(physical_owner=maps[mode][logical],sha256=sha(data),expected_sha256=sha(expected),exact=data==expected,expected_kind='stock' if expected==source else 'current_diagnostic')
+            assert data == expected,('Full logical read mismatch',mode,logical)
+            print(f'physical{physical}: mode{mode} logical{logical} full2MiB exact',flush=True)
+        result['both_modes_readback_exact'] = True
+        result['all_pass'] = True
+        update(dict(valid=True,ram_path=str(directory/'ram_after.raw'),ram_sha256=sha(previous),last_case=f'stock_physical{physical}_verified_mode1',batch=f'stock_write_block{physical}'))
+    except BaseException as exc:
+        result['error'] = repr(exc)
+        update(dict(valid=False,phase=f'stock_physical{physical}_failed',error=repr(exc),output=str(out)))
+        raise
+    finally:
+        if console:
+            console.close()
+            result['commands'] = console.commands
+        save(out/'result.json',result)
+        print(json.dumps({key:value for key,value in result.items() if key not in ('commands','executions')},indent=2),flush=True)
+
+
+if __name__ == '__main__':
+    main()

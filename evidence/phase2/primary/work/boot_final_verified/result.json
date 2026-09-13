@@ -1,0 +1,44 @@
+{
+  "all_pass": true,
+  "mode0_header_physical": 22,
+  "mode1_header_physical": 74,
+  "mode0_physical_boot_blocks": [
+    22,
+    23,
+    24,
+    25,
+    26
+  ],
+  "mode1_physical_boot_blocks": [
+    74,
+    23,
+    24,
+    77,
+    78
+  ],
+  "both_modes_complete_boot_byte_exact": true,
+  "header_writes_erases": 2,
+  "header_writes_pages": 512,
+  "header_new_bytes": 19,
+  "all_header_native_main_aux_readbacks_exact": true,
+  "primary_mode0_block_read_exact": true,
+  "secondary_mode1_block_read_exact": true,
+  "secondary_fresh_maps_unchanged": true,
+  "primary_overall_old_baseline_check_stopped": true,
+  "primary_write_was_not_repeated": true,
+  "active_boot_bytes": 8781824,
+  "active_boot_sha256": "3e9556dc6195a7d6616685f9d58a439c23fe55dbe760ba9254f4d233ba79df0f",
+  "active_boot_vendor_id": "<HISTORICAL_HASH_REDACTED>",
+  "active_boot_vendor_verifier_pass": true,
+  "active_boot_and_tail_bytes": 10485760,
+  "active_boot_and_tail_sha256": "<HISTORICAL_HASH_REDACTED>",
+  "active_boot_chunk_paths": [
+    "<THREAD_ROOT>\\work\\boot_relocated_header_block74_attempt01\\reopen\\data.bin",
+    "<THREAD_ROOT>\\work\\white_screen_reads_relocated_kernel\\boot_block7\\data.bin",
+    "<THREAD_ROOT>\\work\\white_screen_reads_relocated_kernel\\boot_block8\\data.bin",
+    "<THREAD_ROOT>\\work\\boot_relocated_backup_attempt01\\block77.main.bin",
+    "<THREAD_ROOT>\\work\\boot_relocated_backup_attempt01\\block78.main.bin"
+  ],
+  "ordinary_boot_after_final_fix_tested": false,
+  "live_android_log_obtained": false
+}

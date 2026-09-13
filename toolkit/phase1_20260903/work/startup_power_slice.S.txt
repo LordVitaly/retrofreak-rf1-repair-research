@@ -1,0 +1,73 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/startup_power_slice.S
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+.syntax unified
+.arm
+.section .before,"ax",%progbits
+.global slice_before
+slice_before:
+    ldr r4, =0x6101ae00
+    mrc p15, 0, r0, c1, c0, 0
+    str r0, [r4, #8]
+    ldr r1, =0x10080000
+    ldr r0, [r1]
+    str r0, [r4, #20]
+    ldr r1, =0x20004008
+    ldr r0, [r1]
+    str r0, [r4, #24]
+    ldr r1, =0x101027fc
+    ldr r0, [r1]
+    str r0, [r4, #32]
+    ldr r1, =0x56313030
+    cmp r0, r1
+    ldreq r1, =0x200080a0
+    ldrne r1, =0x20008150
+    str r1, [r4, #36]
+    ldr r0, [r1]
+    str r0, [r4, #40]
+    /* Existing USBplug already sets this bit. Never change its mapping. */
+    tst r0, #0x1000
+    beq refused
+    /* Only secondary-CPU power bits may be set initially. */
+    ldr r0, [r4, #24]
+    bic r0, r0, #0xe
+    cmp r0, #0
+    bne refused
+    ldr pc, =0x6000020c
+refused:
+    mov r7, #0
+    b slice_finish
+    .ltorg
+.section .after,"ax",%progbits
+.global slice_after
+slice_after:
+    ldr r7, =RF_CUT_PC
+slice_finish:
+    ldr r4, =0x6101ae00
+    str r7, [r4, #4]
+    mrc p15, 0, r0, c1, c0, 0
+    str r0, [r4, #12]
+    ldr r0, [r4, #8]
+    mcr p15, 0, r0, c1, c0, 0
+    dsb sy
+    isb sy
+    ldr r1, =0x10080000
+    ldr r0, [r1]
+    str r0, [r4, #16]
+    ldr r0, [r4, #20]
+    str r0, [r1]
+    ldr r1, =0x20004008
+    ldr r0, [r1]
+    str r0, [r4, #28]
+    /* Keep original startup's secondary-CPU shutdown; do not wake cores. */
+    ldr r1, [r4, #36]
+    ldr r0, [r1]
+    str r0, [r4, #44]
+    dsb sy
+    ldr r0, =0x32475453 /* STG2 */
+    str r0, [r4]
+    dsb sy
+    ldr pc, =0x60800c00
+    .ltorg

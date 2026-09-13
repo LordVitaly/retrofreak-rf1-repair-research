@@ -1,0 +1,113 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/boot_header_repair/writer.c
+Role: case_specific_payload_source_not_complete_standalone_firmware
+Original repair session must not be resumed from this public copy.
+
+/* One compile-fixed physical boot block. Offline source; no host-selected LBA.
+ * Main: 2MiB at63000000. Native metadata:16u16/page, NOT raw ECC/OOB bits. */
+typedef unsigned int u32;
+typedef unsigned short u16;
+typedef unsigned char u8;
+#include "block_manifest.h"
+#if TARGET_BLOCK != 22u || TARGET_SECTOR != 0x16000u
+#error This header repair is restricted to physical block 22
+#endif
+#define SOURCE ((const u8*)0x63000000u)
+#define CHECK ((u8*)0x63200000u)
+#define AUX ((u8*)0x63202000u)
+#define CHECK_AUX ((u8*)0x63202200u)
+#define ERASE_OUT ((volatile u32*)0x63202400u)
+#define NATIVE_AUX ((u16*)0x63210000u)
+#define STATUS ((volatile u32*)0x6101af10u)
+#define G ((volatile u8*)0x60359a34u)
+struct Guard { volatile u32 token,fault,phase,next,erases,programs,last_rc,last_physical; };
+#define Q ((struct Guard*)0x61700000u)
+#define ERASE_TOKEN 0x45525742u
+#define PROGRAM_TOKEN 0x50525742u
+extern int original_program(u32,u32,u32,u32);
+extern int original_erase(u32,u32,u32,u32);
+typedef int(*read_fn)(u32,u32,u32,u32,u32);
+static int fail(u32 error) { if(!Q->fault) Q->fault=error;Q->token=0;STATUS[4]=Q->fault;return -1; }
+static int geometry(void) {
+ return *(volatile u32*)G==6u && G[8]==1u && G[9]==0u && G[10]==0u &&
+ G[12]==1u && G[13]==1u && G[14]==1u && G[16]==1u && G[17]==1u &&
+ G[18]==40u && G[20]==4u && G[21]==16u && G[22]==16u &&
+ *(volatile u32*)(G+24)==4096u && *(volatile u32*)(G+28)==4096u &&
+ *(volatile u16*)(G+160)>=12u;
+}
+static u32 crc_more(u32 c,const u8*p,u32 n) {
+ for(u32 i=0;i<n;i++) { c^=p[i];for(u32 j=0;j<8u;j++) c=(c>>1)^((0u-(c&1u))&0xedb88320u); }
+ return c;
+}
+static void fill(u8*p,u32 n,u8 value) { for(u32 i=0;i<n;i++) p[i]=value; }
+int gate_forbidden(u32 a,u32 b,u32 c,u32 d) { (void)a;(void)b;(void)c;(void)d;return fail(0x5002u); }
+int gate_copy(u32 a,u32 b,u32 count,u32 d) { (void)a;(void)b;(void)d;return count?fail(0x5001u):-1; }
+int gate_erase(u32 sector,u32 out,u32 c,u32 d) {
+ if(Q->fault || Q->token!=ERASE_TOKEN || Q->phase!=2u || Q->erases || Q->programs ||
+    sector!=TARGET_SECTOR || out!=0x63202400u || c || d || !geometry()) return fail(0x4001u);
+ Q->token=0;Q->erases=1;Q->last_physical=sector;STATUS[5]=1;STATUS[9]=sector;
+#ifdef RF_DRY_RUN
+ *ERASE_OUT=sector;Q->last_rc=0xffffffffu;STATUS[10]=0xffffffffu;return fail(0xd002u);
+#else
+ int rc=original_erase(sector,out,0,0);Q->last_rc=(u32)rc;STATUS[10]=(u32)rc;
+ if(rc) { *ERASE_OUT=sector;return fail(0x4002u); }
+ return 0;
+#endif
+}
+int gate_program(u32 sector,u32 main,u32 aux,u32 flag) {
+ if(Q->fault || Q->token!=PROGRAM_TOKEN || Q->phase!=3u || Q->erases!=1u ||
+    Q->programs>=256u || sector!=TARGET_SECTOR+Q->programs*16u || sector!=Q->next ||
+    main!=0x63000000u+Q->programs*8192u || aux!=0x63202000u || flag || !geometry()) return fail(0x3001u);
+ Q->token=0;Q->last_physical=sector;Q->programs++;STATUS[6]=Q->programs;STATUS[9]=sector;
+#ifdef RF_DRY_RUN
+ Q->last_rc=0xffffffffu;STATUS[10]=0xffffffffu;return fail(0xd001u);
+#else
+ int rc=original_program(sector,main,aux,0);Q->last_rc=(u32)rc;STATUS[10]=(u32)rc;
+ if(rc) return fail(0x3002u);
+ Q->next=sector+16u;return 0;
+#endif
+}
+static int read_page(u32 page) {
+ fill(CHECK,8192u,0xa5);fill(CHECK_AUX,256u,0xa5);
+ u32 physical=TARGET_SECTOR+page*16u;STATUS[9]=physical;
+ int rc=((read_fn)0x600894c0u)(physical,0x63200000u,0x63202200u,16u,0xffffffffu);
+ STATUS[10]=(u32)rc;
+ if(rc) return fail(0x6001u);
+ for(u32 n=0;n<16u;n++) if(*(u16*)(CHECK_AUX+n*16u)!=NATIVE_AUX[page*16u+n]) return fail(0x6002u);
+ return 0;
+}
+__attribute__((used)) int boot_physical_write(void) {
+ for(u32 i=0;i<16u;i++) STATUS[i]=0;
+ for(u32 i=0;i<8u;i++) ((volatile u32*)Q)[i]=0;
+ STATUS[0]=0x31574250u;STATUS[1]=1;STATUS[2]=TARGET_BLOCK;STATUS[3]=1;STATUS[14]=G[18];
+ if(!geometry()) return fail(0x1001u);
+ u32 input_crc=~crc_more(~0u,SOURCE,2097152u);STATUS[12]=input_crc;
+ if(input_crc!=SOURCE_CRC) return fail(0x1002u);
+ for(u32 page=0;page<256u;page++) {
+  u32 index=aux_page_index[page];
+  if(index>=AUX_TEMPLATES) return fail(0x1003u);
+  for(u32 n=0;n<16u;n++) NATIVE_AUX[page*16u+n]=aux_templates[index*16u+n];
+ }
+ if(~crc_more(~0u,(const u8*)NATIVE_AUX,8192u)!=AUX_CRC) return fail(0x1004u);
+ u32 old_crc=~0u;
+ for(u32 page=0;page<256u;page++) {
+  if(read_page(page)) return -1;
+  old_crc=crc_more(old_crc,CHECK,8192u);STATUS[7]=page+1u;
+ }
+ STATUS[11]=~old_crc;
+ if(~old_crc!=OLD_MAIN_CRC) return fail(0x1005u);
+ STATUS[3]=2;Q->phase=2;Q->token=ERASE_TOKEN;*ERASE_OUT=TARGET_SECTOR;
+ if(gate_erase(TARGET_SECTOR,0x63202400u,0,0)) return -1;
+ STATUS[3]=3;Q->phase=3;Q->next=TARGET_SECTOR;
+ for(u32 page=0;page<256u;page++) {
+  fill(AUX,256u,0xff);
+  for(u32 n=0;n<16u;n++) *(u16*)(AUX+n*16u)=NATIVE_AUX[page*16u+n];
+  Q->token=PROGRAM_TOKEN;
+  if(gate_program(TARGET_SECTOR+page*16u,0x63000000u+page*8192u,0x63202000u,0)) return -1;
+  if(read_page(page)) return -1;
+  for(u32 n=0;n<8192u;n++) if(CHECK[n]!=SOURCE[page*8192u+n]) return fail(0x6003u);
+  STATUS[8]=page+1u;
+ }
+ Q->phase=4;STATUS[3]=4;return 0;
+}

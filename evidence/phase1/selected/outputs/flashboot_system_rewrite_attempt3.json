@@ -1,0 +1,31 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "outputs/flashboot_system_rewrite_attempt3.json",
+  "interpretation": "Complete system roundtrip in the model. The long operation ledger is not published.",
+  "data": {
+    "scope": "RAM NAND model only, no physical NAND writes or ECC/controller emulation",
+    "image_size": 155185152,
+    "image_sha256": "b9ca511124e6c3d9ee2a1e31220f6bf5a858f06d88f9003f5fd7f7e25cf5676a",
+    "written_bytes": 155185152,
+    "verified_bytes": 155185152,
+    "phase": "complete",
+    "success": true,
+    "restart_operations": [],
+    "readback_sha256": "b9ca511124e6c3d9ee2a1e31220f6bf5a858f06d88f9003f5fd7f7e25cf5676a",
+    "baseline_owners_of_touched_blocks": {
+      "publication_omission": "Address-indexed device table",
+      "original_entries": 86
+    },
+    "elapsed_seconds": 510.3119999999999,
+    "operations": {
+      "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+      "original_items": 19053
+    },
+    "erased_blocks": {
+      "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+      "original_items": 86
+    },
+    "programmed_page_count": 18967,
+    "zero_length_copy_calls": 73
+  }
+}

@@ -1,0 +1,49 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/inspect_rs_oracle_alignment.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("raw_page", type=Path)
+    parser.add_argument("image", type=Path)
+    parser.add_argument("--image-offset", type=lambda value: int(value, 0), required=True)
+    parser.add_argument("--raw-offset", type=lambda value: int(value, 0), default=0)
+    parser.add_argument("--raw-length", type=lambda value: int(value, 0), default=8448)
+    parser.add_argument("--stride", type=int, default=128)
+    parser.add_argument("--needle", type=int, default=32)
+    args = parser.parse_args()
+
+    with args.raw_page.open("rb") as stream:
+        stream.seek(args.raw_offset)
+        raw = stream.read(args.raw_length)
+    expected = args.image.read_bytes()[args.image_offset : args.image_offset + 8192]
+    print(f"raw_bytes={len(raw)} expected_bytes={len(expected)}")
+    print("expected_offset raw_offsets deltas")
+    for expected_offset in range(0, len(expected), args.stride):
+        needle = expected[expected_offset : expected_offset + args.needle]
+        positions: list[int] = []
+        start = 0
+        while True:
+            pos = raw.find(needle, start)
+            if pos < 0:
+                break
+            positions.append(pos)
+            start = pos + 1
+        if positions:
+            deltas = [pos - expected_offset for pos in positions]
+            print(
+                f"0x{expected_offset:04X} "
+                f"{','.join(f'0x{pos:04X}' for pos in positions)} "
+                f"{','.join(f'{delta:+d}' for delta in deltas)}"
+            )
+
+
+if __name__ == "__main__":
+    main()

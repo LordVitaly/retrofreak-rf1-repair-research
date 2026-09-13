@@ -1,0 +1,43 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "outputs/live_idb_ecc24_comparison.json",
+  "interpretation": "IDB ECC24/boot-order comparison.",
+  "data": {
+    "scope": "Fresh ECC24 physical RS after confirmed MaskROM and exact 8192-byte control; no NAND writes",
+    "rows": [
+      {
+        "block": 1,
+        "first1024_bit_differences_vs_official": 23,
+        "first1536_byte_differences_vs_official": 23,
+        "first1536_exact_old": false,
+        "first1536_bit_changes_since_old": 26,
+        "device_code_entry23": "0x44"
+      },
+      {
+        "block": 3,
+        "first1024_bit_differences_vs_official": 0,
+        "first1536_byte_differences_vs_official": 0,
+        "first1536_exact_old": false,
+        "first1536_bit_changes_since_old": 56,
+        "device_code_entry23": "0x64"
+      },
+      {
+        "block": 5,
+        "first1024_bit_differences_vs_official": 27,
+        "first1536_byte_differences_vs_official": 27,
+        "first1536_exact_old": false,
+        "first1536_bit_changes_since_old": 25,
+        "device_code_entry23": "0x64"
+      },
+      {
+        "block": 6,
+        "first1024_bit_differences_vs_official": 0,
+        "first1536_byte_differences_vs_official": 0,
+        "first1536_exact_old": false,
+        "first1536_bit_changes_since_old": 27,
+        "device_code_entry23": "0x64"
+      }
+    ],
+    "hardware_ecc_status_available": false
+  }
+}

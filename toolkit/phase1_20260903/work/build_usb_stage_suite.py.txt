@@ -1,0 +1,61 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_usb_stage_suite.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Grouped USB localization, original bridge restart rather than USB emulation."""
+import hashlib,json,struct,subprocess,zlib
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1]
+source=(ROOT/'work/usb_ram_bridge_modefix.capacity4g.FULL_RAM_ONLY.raw').read_bytes()
+assert hashlib.sha256(source).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+out=ROOT/'work/usb_stage_suite_v2';out.mkdir(exist_ok=False)
+def branch(pc,target):
+    d=target-pc-8;assert d%4==0 and -(1<<25)<=d<1<<25
+    return struct.pack('<I',0xea000000|((d//4)&0xffffff))
+def compensate(data):
+    data[0x1e0:0x1e4]=bytes(4);base=zlib.crc32(data);basis={}
+    for bit in range(32):
+        trial=bytearray(data);trial[0x1e0+bit//8]^=1<<(bit%8)
+        v=zlib.crc32(trial)^base;mask=1<<bit
+        while v:
+            p=v.bit_length()-1
+            if p not in basis:basis[p]=(v,mask);break
+            v^=basis[p][0];mask^=basis[p][1]
+    v=<REDACTED:ARTIFACT_CRC>^base;solution=0
+    while v:
+        p=v.bit_length()-1;v^=basis[p][0];solution^=basis[p][1]
+    data[0x1e0:0x1e4]=struct.pack('<I',solution)
+    assert zlib.crc32(data)==<REDACTED:ARTIFACT_CRC>
+cases=[]
+for name,cut in (('restart_control',0x600982e4),('usb_init_masked',0x600982e8),('usb_first_irq',0x60080c2c),('usb_reset_return',0x60081498),('usb_enum_return',0x600814ac),('usb_out_return',0x600814c4)):
+    elfpath=out/(name+'.elf')
+    subprocess.run([str(ROOT/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe'),'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-nostdlib',f'-DRF_CUT_PC={cut}','work/usb_stage_restart.S','-Wl,-T,work/usb_stage_restart.ld','-Wl,-e,restart_before','-o',str(elfpath)],cwd=ROOT,check=True)
+    elf=elfpath.read_bytes();shoff=struct.unpack_from('<I',elf,32)[0];sz,n,ni=struct.unpack_from('<HHH',elf,46)
+    sections=[struct.unpack_from('<10I',elf,shoff+i*sz) for i in range(n)];nh=sections[ni];names=elf[nh[4]:nh[4]+nh[5]]
+    data=bytearray(source[:110080]);ranges=[]
+    for sh in sections:
+        if not sh[5] or not sh[2]&4:continue
+        namebytes=names[sh[0]:names.find(b'\0',sh[0])]
+        assert namebytes in (b'.before',b'.restart')
+        off=sh[3]-(0x60000000 if namebytes==b'.before' else 0x61000000)
+        assert (off==0x20 and sh[5]<=0x100) or (off==0x7040 and sh[5]<=0x400)
+        data[off:off+sh[5]]=elf[sh[4]:sh[4]+sh[5]];ranges.append((off,off+sh[5]))
+    assert len(ranges)==2
+    data[4:8]=branch(0x60000004,0x60000020);ranges.append((4,8))
+    off=cut-0x60080000+0xa34;data[off:off+4]=branch(cut,0x61007040);ranges.append((off,off+4))
+    if name=='usb_init_masked':
+        off=0x60081b64-0x60080000+0xa34
+        data[off:off+4]=bytes.fromhex('1eff2fe1');ranges.append((off,off+4))
+    compensate(data);ranges.append((0x1e0,0x1e4))
+    assert all(any(a<=i<b for a,b in ranges) for i,(a,b) in enumerate(zip(source,data)) if a!=b)
+    for off in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):assert data[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+    for off in (0xbbc8,0xbc90):assert data[off:off+4]==bytes.fromhex('feffffea')
+    assert data[0x2c58:0x2d10]==source[0x2c58:0x2d10]
+    raw=bytes(data)+bytes(272);file=out/(name+'.raw')
+    with file.open('xb') as f:f.write(raw)
+    cases.append(dict(name=name,cut=hex(cut),file=str(file.relative_to(ROOT)),sha256=hashlib.sha256(raw).hexdigest(),patch_ranges=ranges))
+report=dict(cases=cases,device_access=False,guards_exact=True,bridge_restart='Exact current USBplug snapshot and live addon, no new loader family',scope='Grouped USB stages; stop on first unavailable restart/readback; no full peripheral emulation')
+report['warm_disconnect']=True
+with (ROOT/'outputs/usb_stage_suite_v2_build.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

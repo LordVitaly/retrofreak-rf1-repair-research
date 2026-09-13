@@ -1,0 +1,46 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/boot_header_validation_audit/trace_sysprot.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Offline original FtlSetSysProtAddr control flow with synthetic native I/O.
+Native data are fixture metadata; this does not prove historical media contents.
+"""
+from pathlib import Path
+import sys,struct,json
+OLD=Path('<EXTERNAL_STAGE_03>/work')
+WORK=Path(__file__).resolve().parent.parent
+sys.path.insert(0,str(OLD/'emulator_deps'))
+from unicorn import Uc,UC_ARCH_ARM,UC_MODE_ARM,UC_HOOK_CODE
+from unicorn.arm_const import *
+b=(OLD/'FlashBoot.packet512.STATIC_ONLY.bin').read_bytes()
+s=(WORK/'boot_visibility_compare_attempt01/capture_mode1/data.bin').read_bytes()
+rt=lambda o:0x60080000+o-0xa34
+u=Uc(UC_ARCH_ARM,UC_MODE_ARM);u.mem_map(0x60000000,0x04000000)
+u.mem_write(rt(0xa34),b[0xa34:]);u.mem_write(0x602b3000,s[:0xa6000]);u.mem_write(0x60359000,s[0xa6000:])
+inverse={struct.unpack_from('<H',s,0xf00+2*i)[0]:i for i in range(1896)}
+events=[]
+def hook(m,a,size,_):
+ off=a-0x60080000+0xa34
+ r=[m.reg_read(x) for x in (UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3)]
+ if off==0x9ef4:
+  sec,main,aux,count=r
+  if aux:
+   out=bytearray(b'\xff'*(count*16))
+   values=[0xf200,10,inverse.get(sec//4096,0),sec//4096,sec//4096,0,0xffff,1]
+   for j,v in enumerate(values[:count]):struct.pack_into('<H',out,j*16,v)
+   m.mem_write(aux,bytes(out))
+  if main:m.mem_write(main,bytes(count*512))
+ elif off in (0xbd5c,0x3b0c):events.append(dict(off=hex(off),r=r))
+ elif off==0x18e7c:pass
+ else:raise AssertionError(hex(off))
+ m.reg_write(UC_ARM_REG_R0,0);m.reg_write(UC_ARM_REG_PC,m.reg_read(UC_ARM_REG_LR))
+for off in (0x9ef4,0xbd5c,0x3b0c,0x18e7c):u.hook_add(UC_HOOK_CODE,hook,begin=rt(off),end=rt(off))
+u.reg_write(UC_ARM_REG_R0,0x18000);u.reg_write(UC_ARM_REG_SP,0x603df000);u.reg_write(UC_ARM_REG_LR,0x639ff000)
+u.emu_start(rt(0x7714),0x639ff000,timeout=10000000,count=10000000)
+assert u.reg_read(UC_ARM_REG_PC)==0x639ff000,hex(u.reg_read(UC_ARM_REG_PC))
+mapping=struct.unpack('<24H',bytes(u.mem_read(0x602b3f00,48)))
+report=dict(device_access=False,synthetic_native_IO=True,input_sysprot_end=0x18000,input_map_first24=list(struct.unpack_from('<24H',s,0xf00)),result_map_first24=list(mapping),copy_events=events,sysprot_physical_limit=struct.unpack('<H',bytes(u.mem_read(0x60099e28,2)))[0])
+(Path(__file__).parent/'sysprot_trace.json').write_text(json.dumps(report,indent=2))
+print(json.dumps(report,indent=2))

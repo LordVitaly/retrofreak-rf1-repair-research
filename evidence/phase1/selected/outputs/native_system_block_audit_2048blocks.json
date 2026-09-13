@@ -1,0 +1,14 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "outputs/native_system_block_audit_2048blocks.json",
+  "interpretation": "F200 system candidates; not proof of one definitive active map.",
+  "data": {
+    "indexed_physical_blocks": 2048,
+    "reference": "<HOST_PATH>",
+    "scope": "F200 aux-word2 candidate blocks only, not active logical reconstruction",
+    "candidates": {
+      "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+      "original_items": 63
+    }
+  }
+}

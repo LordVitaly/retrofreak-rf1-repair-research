@@ -1,0 +1,6 @@
+# Keep release hashes stable across operating systems.
+* text=auto eol=lf
+# Historical/third-party artifacts are byte-preserved, including CRLF.
+toolkit/phase1_20260903/** -text diff
+toolkit/phase2_20260908/** -text diff
+third_party/phase2/notices/** -text diff

@@ -1,0 +1,41 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_ram_bootstrap.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Build offline RAM bootstrap, never package/upload to USB."""
+import hashlib
+import json
+import lzma
+import struct
+import subprocess
+import zlib
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1]
+src=(ROOT/'work/FlashBoot.machine_guards_usb_only.UNPACKAGED_NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(src).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+compressed=lzma.compress(src,format=lzma.FORMAT_ALONE)
+assert 0<len(compressed)<65534
+(ROOT/'work/FlashBoot.guarded.lzma.OFFLINE_ONLY.bin').write_bytes(compressed)
+zig=ROOT/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe'
+cmd=[str(zig),'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-mfloat-abi=soft','-Oz','-ffreestanding','-fno-builtin','-fno-stack-protector','-ffunction-sections','-fdata-sections','-nostdlib','-DRF_DECODER_ENTRY=rf_decode','-Iwork/ram_stub_include','-Iwork/lzma_sdk_2603/C','work/ram_bootstrap.S','work/ram_lzma_decode_test.c','work/lzma_sdk_2603/C/LzmaDec.c','-Wl,-T,work/ram_bootstrap.ld','-Wl,--gc-sections',f'-Wl,--defsym=__expected_crc={zlib.crc32(src)}',f'-Wl,--defsym=__payload_size={len(compressed)}','-o','work/ram_bootstrap.OFFLINE_ONLY.elf']
+cmd=[x for x in cmd if not x.startswith('-Wl,--defsym=')]
+cmd += ['-g',f'-DRF_EXPECTED_CRC={zlib.crc32(src)}',f'-DRF_PAYLOAD_SIZE={len(compressed)}']
+subprocess.run(cmd,cwd=ROOT,check=True)
+elf=(ROOT/'work/ram_bootstrap.OFFLINE_ONLY.elf').read_bytes()
+entry,phoff=struct.unpack_from('<II',elf,24)
+phsize,phnum=struct.unpack_from('<HH',elf,42)
+segments=[]
+for n in range(phnum):
+    typ,off,va,pa,fs,ms,flags,align=struct.unpack_from('<8I',elf,phoff+n*phsize)
+    if typ==1: segments.append(dict(offset=off,address=va,filesz=fs,memsz=ms,flags=flags))
+assert entry==0x61000000
+end=max(s['address']+s['filesz'] for s in segments if s['filesz'])
+blob=bytearray(end-entry)
+for s in segments:
+    if s['filesz']: blob[s['address']-entry:s['address']-entry+s['filesz']]=elf[s['offset']:s['offset']+s['filesz']]
+assert len(blob)%4==0 and len(blob)<65534
+(ROOT/'work/ram_bootstrap.NOT_FOR_UPLOAD.bin').write_bytes(blob)
+report=dict(entry=hex(entry),binary_bytes=len(blob),aligned_2048=(len(blob)+2047)//2048*2048,binary_sha256=hashlib.sha256(blob).hexdigest(),elf_sha256=hashlib.sha256(elf).hexdigest(),source_crc32=hex(zlib.crc32(src)),segments=segments,device_access=False,limitation='No BootROM container; CPU/cache assumptions, USB-only FlashBoot gate and post-image padding remain unresolved.')
+(ROOT/'outputs/ram_bootstrap_build.json').write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps(report,indent=2))

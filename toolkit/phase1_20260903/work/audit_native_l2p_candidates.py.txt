@@ -1,0 +1,64 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/audit_native_l2p_candidates.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Test table-u16/index and F200 aux-word2 agreement, without selecting an active map."""
+import json
+import struct
+from collections import Counter
+from pathlib import Path
+from verify_native_ecc_page import extract
+
+ROOT=Path(__file__).parent
+
+
+def main():
+    rows={}
+    for path in sorted((ROOT/'native_ecc40_index').glob('NAND_*.json')):
+        index=json.loads(path.read_text())
+        for row in index['blocks']:
+            rows[row['physical_block']]=row
+    candidates=[]
+    for physical,row in sorted(rows.items()):
+        if row['page0_meta'][:3] != [0,0,256]:
+            continue
+        chunk,local=divmod(physical,64)
+        with (ROOT/'nand_native_ecc40'/f'NAND_{chunk:02d}.RAW').open('rb') as source:
+            source.seek(local*256*8448)
+            data=extract(source.read(8448))
+        words=struct.unpack('<4096H',data)
+        tests={}
+        for length in (1024,1536,2016):
+            counts=Counter()
+            contradictions=[]
+            for logical,target in enumerate(words[:length]):
+                if target in (0,65535):
+                    counts['zero_or_ffff']+=1
+                elif target>=2048:
+                    counts['out_of_physical_range']+=1
+                elif target not in rows:
+                    counts['target_not_yet_indexed']+=1
+                elif rows[target]['page0_meta'][0]!=0xf200:
+                    counts['target_not_F200_page0']+=1
+                elif rows[target]['page0_meta'][2]==logical:
+                    counts['target_F200_word2_matches_index']+=1
+                else:
+                    counts['target_F200_word2_conflict']+=1
+                    contradictions.append([logical,target,rows[target]['page0_meta'][2]])
+            tests[str(length)]=dict(counts=counts,first_conflicts=contradictions[:12])
+        candidates.append(dict(physical_block=physical,metadata=row['page0_meta'][:8],
+            boot_entries=list(words[6:11]),recovery_entries=list(words[14:19]),tests=tests))
+    report=dict(indexed_physical_blocks=len(rows),scope='Candidate consistency only, not active map selection',candidates=candidates)
+    out=ROOT.parent/'outputs'/f'native_l2p_candidate_audit_{len(rows)}blocks.json'
+    if not out.exists():
+        with out.open('x',encoding='utf-8') as stream:
+            json.dump(report,stream,indent=2)
+    for candidate in candidates:
+        print('pblock',candidate['physical_block'],'meta',candidate['metadata'],
+              'boot',candidate['boot_entries'],'recovery',candidate['recovery_entries'],
+              'first1024',dict(candidate['tests']['1024']['counts']))
+
+
+if __name__=='__main__':
+    main()

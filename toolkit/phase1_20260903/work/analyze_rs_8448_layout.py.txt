@@ -1,0 +1,110 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/analyze_rs_8448_layout.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+from pathlib import Path
+
+
+RS_RECORD = 528
+ECC_STEP_RAW = 1056
+ECC_STEP_DATA = 1024
+STEPS_PER_PAGE = 8
+RAW_PAGE = ECC_STEP_RAW * STEPS_PER_PAGE
+DATA_PAGE = ECC_STEP_DATA * STEPS_PER_PAGE
+
+
+def decode_page(raw_page: bytes) -> tuple[bytes, bytes]:
+    if len(raw_page) != RAW_PAGE:
+        raise ValueError(f"expected {RAW_PAGE} raw bytes, got {len(raw_page)}")
+    data = bytearray()
+    overhead = bytearray()
+    for offset in range(0, RAW_PAGE, ECC_STEP_RAW):
+        step = raw_page[offset : offset + ECC_STEP_RAW]
+        data.extend(step[:ECC_STEP_DATA])
+        overhead.extend(step[ECC_STEP_DATA:])
+    return bytes(data), bytes(overhead)
+
+
+def decode_record_assumption(raw_page: bytes) -> bytes:
+    return b"".join(
+        raw_page[offset : offset + 512]
+        for offset in range(0, RAW_PAGE, RS_RECORD)
+    )
+
+
+def compare(raw_path: Path, image_path: Path, physical_sector: int, image_offset: int, pages: int) -> None:
+    image = image_path.read_bytes()
+    raw_offset = physical_sector * RS_RECORD
+    exact_pages = 0
+    exact_steps = 0
+    compared_pages = 0
+    mismatch_bytes = 0
+    old_mismatch_bytes = 0
+    first_failure: tuple[int, int] | None = None
+    page_hashes: list[tuple[int, str, str]] = []
+
+    with raw_path.open("rb") as stream:
+        stream.seek(raw_offset)
+        for page_index in range(pages):
+            raw_page = stream.read(RAW_PAGE)
+            expected = image[
+                image_offset + page_index * DATA_PAGE :
+                image_offset + (page_index + 1) * DATA_PAGE
+            ]
+            if len(raw_page) != RAW_PAGE or len(expected) != DATA_PAGE:
+                break
+            decoded, _ = decode_page(raw_page)
+            old = decode_record_assumption(raw_page)
+            mismatches = sum(a != b for a, b in zip(decoded, expected))
+            old_mismatches = sum(a != b for a, b in zip(old, expected))
+            compared_pages += 1
+            mismatch_bytes += mismatches
+            old_mismatch_bytes += old_mismatches
+            exact_pages += mismatches == 0
+            for step in range(STEPS_PER_PAGE):
+                begin = step * ECC_STEP_DATA
+                end = begin + ECC_STEP_DATA
+                exact_steps += decoded[begin:end] == expected[begin:end]
+            if mismatches and first_failure is None:
+                first = next(i for i, (a, b) in enumerate(zip(decoded, expected)) if a != b)
+                first_failure = page_index, first
+            if page_index < 4:
+                page_hashes.append(
+                    (
+                        page_index,
+                        hashlib.sha256(decoded).hexdigest(),
+                        hashlib.sha256(expected).hexdigest(),
+                    )
+                )
+
+    print(f"raw={raw_path}")
+    print(f"image={image_path}")
+    print(f"physical_sector=0x{physical_sector:X} image_offset=0x{image_offset:X}")
+    print(f"layout=8 * (1024 data + 32 overhead) = {RAW_PAGE} -> {DATA_PAGE}")
+    print(f"pages_compared={compared_pages} exact_pages={exact_pages}")
+    print(f"steps_compared={compared_pages * STEPS_PER_PAGE} exact_steps={exact_steps}")
+    print(f"decoded_mismatch_bytes={mismatch_bytes}")
+    print(f"record_512_plus_16_mismatch_bytes={old_mismatch_bytes}")
+    print(f"first_failure={first_failure}")
+    for page_index, actual_hash, expected_hash in page_hashes:
+        print(f"page={page_index} decoded_sha256={actual_hash} expected_sha256={expected_hash}")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("raw", type=Path)
+    parser.add_argument("image", type=Path)
+    parser.add_argument("--physical-sector", type=lambda value: int(value, 0), required=True)
+    parser.add_argument("--image-offset", type=lambda value: int(value, 0), default=0)
+    parser.add_argument("--pages", type=int, required=True)
+    args = parser.parse_args()
+    compare(args.raw, args.image, args.physical_sector, args.image_offset, args.pages)
+
+
+if __name__ == "__main__":
+    main()

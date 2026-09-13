@@ -1,0 +1,58 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/startup_ftl_capacity_hardware_attempt01/result.json",
+  "interpretation": "Hardware A/B of fallback capacity; correct physical-block count.",
+  "data": {
+    "commands": "<REDACTED:RAW_LOG_OR_IDENTIFIER>",
+    "cases": [
+      {
+        "name": "ftl_capacity_original",
+        "sha256": "<REDACTED:HASH_OR_BYTES>",
+        "cut_pc": "0x60086b00",
+        "returned": true,
+        "RAM_exact_before": true,
+        "result_record": {
+          "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+          "original_items": 31
+        },
+        "nand_ids": [
+          "2c44444ba900",
+          "000000000000",
+          "000000000000",
+          "000000000000"
+        ],
+        "nand_controller_revision": 6,
+        "nand_geometry_bytes": "<REDACTED:HASH_OR_BYTES>",
+        "ftl_block_count": 0,
+        "after_sha256": "<REDACTED:HASH_OR_BYTES>"
+      },
+      {
+        "name": "ftl_capacity_fixed",
+        "sha256": "<REDACTED:HASH_OR_BYTES>",
+        "cut_pc": "0x60086b00",
+        "returned": true,
+        "RAM_exact_before": true,
+        "result_record": {
+          "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+          "original_items": 31
+        },
+        "nand_ids": [
+          "2c44444ba900",
+          "000000000000",
+          "000000000000",
+          "000000000000"
+        ],
+        "nand_controller_revision": 6,
+        "nand_geometry_bytes": "<REDACTED:HASH_OR_BYTES>",
+        "ftl_block_count": 2048,
+        "after_sha256": "<REDACTED:HASH_OR_BYTES>"
+      }
+    ],
+    "loader_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "system_repair_performed": false,
+    "scope": "Existing bridge; bounded startup prefixes only, no full FlashBoot/FTL init",
+    "bridge_marker_exact": true,
+    "previous_hardware_state_exact": true,
+    "conclusion": "Hardware A/B: original fallback produces0 FTL blocks; one-instruction4GiB correction produces2048. Both return to USB, no BBT/FTL service writes. Full FlashBoot enumeration not yet proved."
+  }
+}

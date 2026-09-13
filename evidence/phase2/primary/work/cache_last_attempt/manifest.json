@@ -1,0 +1,115 @@
+{
+  "all_pass": true,
+  "hardware_access": false,
+  "only_local_regular_images_created_or_checked": true,
+  "image_path": "<THREAD_ROOT>\\work\\cache_last_attempt\\cache64.img",
+  "image_sha256": "<HISTORICAL_HASH_REDACTED>",
+  "image_bytes": 67108864,
+  "partition": "cache",
+  "cache_start_lba": 98304,
+  "cache_sector_count": 131072,
+  "logical_block_allowlist": [
+    24,
+    25,
+    26
+  ],
+  "source_blocks": {
+    "24": {
+      "path": "<THREAD_ROOT>\\work\\cache_last_attempt\\block24.source.bin",
+      "sha256": "<HISTORICAL_HASH_REDACTED>",
+      "crc32": "0x69ce6892",
+      "bytes": 2097152,
+      "cache_offset": 0,
+      "logical_block": 24,
+      "zero_chunk": false
+    },
+    "25": {
+      "path": "<THREAD_ROOT>\\work\\cache_last_attempt\\block25.source.bin",
+      "sha256": "<HISTORICAL_HASH_REDACTED>",
+      "crc32": "0x8d89877e",
+      "bytes": 2097152,
+      "cache_offset": 2097152,
+      "logical_block": 25,
+      "zero_chunk": true
+    },
+    "26": {
+      "path": "<THREAD_ROOT>\\work\\cache_last_attempt\\block26.source.bin",
+      "sha256": "<HISTORICAL_HASH_REDACTED>",
+      "crc32": "0x8d89877e",
+      "bytes": 2097152,
+      "cache_offset": 4194304,
+      "logical_block": 26,
+      "zero_chunk": true
+    }
+  },
+  "filesystem": {
+    "type": "ext4",
+    "block_size": 4096,
+    "blocks": 16384,
+    "block_groups": 1,
+    "inodes": 4096,
+    "inode_size": 256,
+    "journal_bytes": 4194304,
+    "journal_start": 0,
+    "root_contents": [
+      "lost+found"
+    ],
+    "state": "clean",
+    "feature_compat": "0x3c",
+    "feature_incompat": "0x42",
+    "feature_ro_compat": "0x3",
+    "features": [
+      "has_journal",
+      "ext_attr",
+      "resize_inode",
+      "dir_index",
+      "filetype",
+      "extent",
+      "sparse_super",
+      "large_file"
+    ],
+    "no_64bit_metadata_csum_or_recovery": true,
+    "kernel_compatibility": "Only legacy ext4 features present in existing kernel3.0.8; no modern features enabled."
+  },
+  "allocation_proof": {
+    "block_bitmap_fsblock": 5,
+    "inode_bitmap_fsblock": 6,
+    "inode_table_first_fsblock": 7,
+    "allocated_fsblocks": 1293,
+    "allocated_fsblock_ranges_inclusive": [
+      [
+        0,
+        1292
+      ]
+    ],
+    "required_2MiB_cache_chunks": [
+      0,
+      1,
+      2
+    ],
+    "every_allocated_block_inside_written_chunks": true,
+    "all_unwritten_chunks_have_no_allocated_filesystem_blocks": true,
+    "bitmap_sha256": "<HISTORICAL_HASH_REDACTED>",
+    "unwritten_free_space_test_pattern": "A5",
+    "unwritten_free_space_fsck_returncode": 0,
+    "unwritten_free_space_proof_image_sha256": "<HISTORICAL_HASH_REDACTED>"
+  },
+  "checks": {
+    "mke2fs_returncode": 0,
+    "e2fsck_force_read_only_returncode": 0,
+    "dumpe2fs_returncode": 0,
+    "debugfs_root_read_only_returncode": 0,
+    "read_only_fsck_images_unchanged": true
+  },
+  "important_scope": "This resets cache filesystem metadata/journal. Unallocated space outside the three written chunks may retain old bytes; these are not referenced by the new empty filesystem. This is not a secure erasure.",
+  "init_root_permissions": "Stock on post-fs chowns /cache to system:cache and chmod0770 after mount.",
+  "files": {
+    "mkfs.log": "<HISTORICAL_HASH_REDACTED>",
+    "e2fsck.exe.log": "<HISTORICAL_HASH_REDACTED>",
+    "dumpe2fs.exe.log": "<HISTORICAL_HASH_REDACTED>",
+    "debugfs.exe.log": "<HISTORICAL_HASH_REDACTED>",
+    "selective_write_fsck.log": "<HISTORICAL_HASH_REDACTED>",
+    "portable_manifest.json": "<HISTORICAL_HASH_REDACTED>",
+    "make_cache.py": "<HISTORICAL_HASH_REDACTED>"
+  }
+}

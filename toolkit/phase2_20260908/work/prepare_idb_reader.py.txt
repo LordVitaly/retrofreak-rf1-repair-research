@@ -1,0 +1,29 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/prepare_idb_reader.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Build PC-side reader only; inherit all unconditional NAND write denials."""
+from pathlib import Path
+import sys,struct,hashlib,json
+OLD=Path('<EXTERNAL_STAGE_03>')
+HERE=Path(__file__).resolve().parent
+sys.path.insert(0,str(OLD/'work'))
+from audit_ram_loader_container import rc4,crc32
+b=bytearray((OLD/'work/bbt_ecc40_readonly_v1/reader.bin').read_bytes())
+assert hashlib.sha256(b).hexdigest()=='<HISTORICAL_HASH_REDACTED>'
+h=struct.unpack_from('<H',b,4)[0];o,n=struct.unpack_from('<II',b,h+57+45)
+usb=bytearray(rc4(b[o:o+n]))
+assert usb[0x74cc:0x74d0]==bytes.fromhex('0400a021')
+usb[0x74cc:0x74d0]=bytes.fromhex('1800a023')
+reject=bytes.fromhex('0000e0e31eff2fe1')
+for off in (0x3620,0x3fa4,0x4230,0x7528,0x75ac,0x7614,0x7624,0x7718,59896,59904,59912,58368):
+    assert usb[off:off+8]==reject
+assert usb[0x1868:0x186c]==bytes.fromhex('ff0c50e3')
+b[o:o+n]=rc4(usb);struct.pack_into('<I',b,len(b)-4,crc32(b[:-4]))
+out=HERE/'idb_readonly';out.mkdir(exist_ok=False)
+(out/'reader.bin').write_bytes(b)
+digest=hashlib.sha256(b).hexdigest()
+(out/'build.json').write_text(json.dumps(dict(sha256=digest,scope='Same audited BBT reader, only ECC24 boot-read instruction restored; all write denials retained',hardware_executed=False),indent=2))
+print(digest)

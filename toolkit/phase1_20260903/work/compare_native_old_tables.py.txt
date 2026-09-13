@@ -1,0 +1,35 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/compare_native_old_tables.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Read-only physical-coordinate comparisons; no assumed ECC success or oracle fill."""
+from pathlib import Path
+from verify_native_ecc_page import extract
+
+OLD = Path(r'<HOST_PATH>')
+NEW = Path(__file__).parent/'nand_native_ecc40'
+
+
+def main():
+    # Compare only shared physical user coordinates of the two read strides.
+    old_coords = {(s//1024)*1070+s%1024:s for s in range(8192)}
+    pairs = [(s,old_coords[p]) for s in range(8192)
+             if (p := (s//1024)*1098+s%1024) in old_coords]
+    print('shared main physical byte positions',len(pairs))
+    for block in (17,22,24,30,31,32,33,68,72,73,74,82,85,208,236,244,260,640,652,656,664,668):
+        chunk, within = divmod(block,64)
+        with (OLD/f'NAND_{chunk:02d}.RAW').open('rb') as source:
+            source.seek(within*256*8448)
+            old = extract(source.read(8448))
+        with (NEW/f'NAND_{chunk:02d}.RAW').open('rb') as source:
+            source.seek(within*256*8448)
+            new = extract(source.read(8448))
+        direct = sum(a != b for a,b in zip(old,new))
+        physical = sum(new[a] != old[b] for a,b in pairs)
+        first = sum(a != b for a,b in zip(old[:1024],new[:1024]))
+        print('block',block,'direct differences',direct,'shared-physical differences',physical,'first1K',first)
+
+
+if __name__ == '__main__':
+    main()

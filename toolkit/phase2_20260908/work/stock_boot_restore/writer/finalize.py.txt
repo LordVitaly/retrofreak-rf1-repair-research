@@ -1,0 +1,88 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/stock_boot_restore/writer/finalize.py
+Role: completed_stock_return_or_temporary_USB_probe_historical_source
+No binaries or specimen auxiliary headers are included. Do not resume this old hardware session.
+
+"""Finalize the exact tested offline bundle; no USB or hardware calls."""
+from common import *
+
+m, build_manifest_sha256 = proof_inputs()
+assert m['allowed_physical_blocks'] == m['execution_order'] == [77, 78, 74]
+assert m['allowed_logical_blocks'] == [6, 9, 10]
+assert m['fresh_native_backups_complete'] and m['fresh_maps_both_modes_pass']
+assert m['stock_vendor_digest_pass'] and m['fresh_tail_exact']
+expected_variants = set(m['variants'])
+assert len(expected_variants) == 6
+proofs = {}
+for name in ('offline_proof.json', 'error_proof.json', 'handoff_proof.json'):
+    p = OUT / name
+    r = read_json(p)
+    assert r['all_pass'] and not r['device_access'] and not r['synthetic_only']
+    assert r['build_manifest_sha256'] == build_manifest_sha256
+    rows = r['variants']
+    keys = [x['variant'] for x in rows]
+    assert len(keys) == len(set(keys)) > 0 and r['tested_variant_count'] == len(keys)
+    if name == 'offline_proof.json':
+        assert set(keys) == expected_variants and r['executed_case_count'] == 6
+        assert all(x['core_cases'] == ['normal'] for x in rows)
+    elif name == 'error_proof.json':
+        assert keys == [m['error_test_variant']] and r['executed_case_count'] == 9
+        assert rows[0]['core_cases'] == ERROR_CASES
+    else:
+        assert set(keys) == expected_variants
+        assert all(x['core_install_exact'] and x['core_called_once'] and x['guard_export_exact']
+                   and x['return_status_index13'] and x['stack_registers_return_exact'] for x in rows)
+    if name != 'handoff_proof.json':
+        assert all(x['all_other_2047_blocks_erase_and_program_denied']
+                   and x['pointer_mode_sequence_token_geometry_guards']
+                   and x['actual_fifth_read_argument_verified']
+                   and x['native_u16_only_metadata_exact']
+                   and x['return_stack_registers_preserved'] for x in rows)
+        assert r['geometry_fixture_sha256'] == m['native_geometry_fixture']['sha256']
+    proofs[name] = digest(p)
+
+for key, v in m['variants'].items():
+    block = v['physical_block']
+    b = m['blocks'][str(block)]
+    assert b['fresh_main_equals_current_linux_slice'] and b['native_aux_from_this_physical_backup']
+    assert b['source_equals_stock_with_fresh_tail_slice']
+    dry = key.endswith('_dry')
+    sector = v['sector']
+    v['expected_status_u32'] = [0x31574250,1,block,2 if dry else 4,0xd002 if dry else 0,
+        1,0 if dry else 256,256,0 if dry else 256,sector if dry else sector+4080,
+        0xffffffff if dry else 0,int(b['old_main_crc32'],16),int(b['source_crc32'],16),
+        0xffffffff if dry else 0,40,0]
+    v['expected_guard_u32'] = [0,0xd002 if dry else 0,2 if dry else 4,0 if dry else sector+4096,
+        1,0 if dry else 256,0xffffffff if dry else 0,sector if dry else sector+4080]
+
+assert proof_inputs()[1] == build_manifest_sha256
+m['tested_build_manifest_sha256'] = build_manifest_sha256
+m['proof_sha256'] = proofs
+m['core_tests_pass'] = m['error_tests_pass'] = m['handoff_tests_pass'] = True
+m['metadata_export'] = {'RS':'0x7f00d1','count':2,'offset':0,'RAM_address':'0x6101af10',
+    'u32_fields':['PBW1_magic','version','physical_block','phase','error','erase_attempts',
+                  'program_attempts','preflight_pages','verified_pages','current_physical',
+                  'last_native_rc','old_main_crc32','source_crc32','core_return','ECC_strength','reserved']}
+m['guard_export'] = {'RS':'0x800000','count':1,'offset':0,
+    'u32_fields':['token','fault','phase','next_physical','erase_attempts','program_attempts','last_rc','last_physical'],
+    'source_first32_overwritten_after_return':True}
+m['native_aux_contract'] = {'valid_bytes_per_528_record':2,'ignored_aux_bytes':14,
+    'input':'Fresh native u16 values of this physical block at all 4096 sectors',
+    'generated_ECC_bits_exported':False,'rest_of_aux_filled':'FF','expanded_RAM':'0x63210000',
+    'expanded_bytes':8192,'page_templates_bound_checked':True,'full_expanded_aux_crc_checked':True}
+m['geometry'] = {'controller':6,'ECC_strength':40,'sectors_per_page':16,'sectors_per_block':4096,
+    'one_plane_one_die':True,'original_capacity_opcode':'0101a0e3','original_geometry_opcode':'0003a0e1'}
+m['safety_properties'] = {'fixed_single_physical_block_per_payload':True,
+    'six_nonphysical_denials_retained_exact':True,'two_native_physical_entries_guarded':True,
+    'all_source_and_oldmain_native_aux_checked_before_erase':True,'all_256_preflight_reads_required_rc0':True,
+    'one_erase_attempt_max':True,'ascending_256_pages_once_each':True,
+    'each_program_followed_by_exact_main_and_native_aux_readback':True,
+    'no_FTL_mapping_mutation_called_by_core':True,'dry_native_erase_program_calls':0,
+    'host_must_enforce_once_only_dispatch':True,'core_guard_is_not_persistent_between_invocations':True,
+    'multi_block_update_is_not_atomic':True,'cold_boot_between_partial_writes_forbidden':True}
+m['all_pass'] = True
+m['hardware_ready'] = True
+dump(OUT / 'manifest.json', m)
+print(json.dumps({'all_pass':True,'hardware_ready':True,'targets':m['execution_order'],
+                  'manifest_sha256':digest(OUT/'manifest.json'),'proofs':proofs},indent=2))

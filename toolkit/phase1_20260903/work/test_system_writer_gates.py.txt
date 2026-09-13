@@ -1,0 +1,101 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_system_writer_gates.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Actual compiled guards and core, hardware-derived mapping, bounded I/O inputs."""
+import hashlib,json,struct
+from emulate_flashboot_offline import ROOT,REGS,UC_ARM_REG_LR,UC_ARM_REG_PC,UC_ARM_REG_SP
+from unicorn import Uc,UC_ARCH_ARM,UC_MODE_ARM,UC_HOOK_CODE
+from ram_artifact import branch
+build=json.loads((ROOT/'outputs/system_writer_gated_v3_build.json').read_text())
+snapshot=(ROOT/'work/ftl_capture_hardware_attempt01/ftl_nand_ram.bin').read_bytes()
+donor=(ROOT.parent.parent/'2026-09-01/retro-freak-retrofreak-systemupdate-0-2/work/rkfw_contents/components/system.img').read_bytes()
+protected=set(build['protected_blocks']);allresults=[]
+for variant in ('write','dry'):
+    spec=build['variants'][variant];syms={k:int(v,16) for k,v in spec['symbols'].items()}
+    code=(ROOT/f'work/system_writer_gated_v3/{variant}.NOT_FOR_UPLOAD.bin').read_bytes()
+    assert hashlib.sha256(code).hexdigest()==spec['sha256']
+    u=Uc(UC_ARCH_ARM,UC_MODE_ARM)
+    for p,n in ((0x61800000,0x2000),(0x61700000,0x5000),(0x60200000,0x600000),(0x6101a000,0x3000),(0x63000000,0x210000),(0x60080000,0x10000)):
+        u.mem_map(p,n)
+    u.mem_write(0x61800000,code);u.mem_write(0x602b3000,snapshot[:0xa6000]);u.mem_write(0x60359000,snapshot[0xa6000:])
+    u.mem_write(0x60087398,struct.pack('<I',branch(0x60087398,syms['gate_logical'])))
+    mode={'status':0,'logical':'normal'};calls=[];media={}
+    def backend(uc,pc,size,ctx):
+        args=[uc.reg_read(r) for r in REGS];calls.append((pc,args))
+        if pc==syms['original_logical']:
+            if mode['logical']=='hidden_failure':
+                uc.mem_write(0x61700000,struct.pack('<II',0,0x3002));rc=0
+            elif variant=='dry':
+                for r,v in zip(REGS,(64*4096,args[3],0,1)):uc.reg_write(r,v)
+                uc.reg_write(UC_ARM_REG_PC,syms['gate_program']);return
+            else:
+                assert args[0]==0
+                media[args[1]]=bytes(uc.mem_read(args[3],args[2]*512));rc=mode['status']
+        elif pc==0x600846a0:
+            assert args[0]==0
+            uc.mem_write(args[3],media[args[1]]);rc=0
+        else:
+            assert variant=='write','DRY variant reached original physical backend'
+            if pc==syms['original_erase'] and args[1]:uc.mem_write(args[1],struct.pack('<I',args[0]+4096))
+            rc=mode['status']
+        uc.reg_write(REGS[0],rc);uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR))
+    for pc in (syms['original_logical'],syms['original_program'],syms['original_erase'],syms['original_wrapper'],0x600846a0):u.hook_add(UC_HOOK_CODE,backend,begin=pc,end=pc)
+    def call(name,args=(),budget=1000000):
+        for r,v in zip(REGS,args):u.reg_write(r,v)
+        u.reg_write(UC_ARM_REG_SP,0x603df000);u.reg_write(UC_ARM_REG_LR,0x607ffffc)
+        u.emu_start(syms[name],0x607ffffc,count=budget)
+        assert u.reg_read(UC_ARM_REG_PC)==0x607ffffc,name
+        return u.reg_read(REGS[0])
+    assert call('gate_prepare',(0xba000,))==0
+    ready=bytearray(u.mem_read(0x61700000,32));struct.pack_into('<I',ready,0,0x31575246)
+    def reset():u.mem_write(0x61700000,bytes(ready));calls.clear();mode['status']=0;mode['logical']='normal'
+    u.mem_write(0x61700000,bytes(32));calls.clear()
+    assert call('gate_wrapper',(0,0,0,0))==0xffffffff and not calls
+    assert bytes(u.mem_read(0x61700000,32))==bytes(32)
+    # Every physical block, both erase/program: protected blocks NEVER enter backend.
+    for block in range(2048):
+        for name,args in [('gate_program',(block*4096,0x63000000,0,1)),('gate_erase',(block*4096,0x603d0000,0,0))]:
+            reset();rc=call(name,args)
+            allowed=variant=='write' and block not in protected
+            assert rc==(0 if allowed else 0xffffffff) and len(calls)==int(allowed),(variant,block,name)
+    for name,args in [
+        ('gate_program',(0x800000,0x63000000,0,1)),('gate_program',(0x40001,0x63000000,0,1)),
+        ('gate_program',(0x40000,0x631ff000,0,1)),('gate_program',(0x40000,0x63000000,0,2)),
+        ('gate_erase',(0x40001,0x603d0000,0,0)),('gate_erase',(0x40000,0x60800000,0,0)),
+        ('gate_logical',(0,0x6000,16,0x63000000)),('gate_logical',(0,0xba000,129,0x63000000)),
+        ('gate_logical',(0,0xbb000,16,0x63000000)),('gate_logical',(1,0xba000,16,0x63000000)),
+        ('gate_logical',(0,0xba000,16,0x63000200)),('gate_copy',(0,0,1,0)),('gate_forbidden',(0,0,0,0))]:
+        reset();assert call(name,args)==0xffffffff and not calls
+    reset();assert call('gate_copy',(0,0,0,0))==0xffffffff and not calls and bytes(u.mem_read(0x61700004,4))==bytes(4)
+    reset();u.mem_write(0x61700000,bytes(4));assert call('gate_program',(0x40000,0x63000000,0,1))==0xffffffff and not calls
+    reset();u.mem_write(0x61700014,struct.pack('<I',512));assert call('gate_program',(0x40000,0x63000000,0,1))==0xffffffff and not calls
+    if variant=='write':
+        for name,args in [('gate_program',(0x40000,0x63000000,0,1)),('gate_erase',(0x40000,0x603d0000,0,0))]:
+            reset();mode['status']=0xffffffff
+            assert call(name,args)==0xffffffff and len(calls)==1
+            assert struct.unpack('<II',u.mem_read(0x61700000,8))[0]==0
+            if name=='gate_erase':assert struct.unpack('<I',u.mem_read(0x603d0000,4))[0]==0x40000
+            u.mem_write(0x61700000,struct.pack('<I',0x31575246))
+            assert call(name,args)==0xffffffff and len(calls)==1 # latched even if rearmed
+    for offset,value in [(0x602b3188,8),(0x602b3f00+6*2,23),(0x602b3f00+186*2,22),(0x602b3f00+188*2,0x6900)]:
+        old=bytes(u.mem_read(offset,2));u.mem_write(offset,struct.pack('<H',value))
+        assert call('gate_prepare',(0xba000,))==0xffffffff
+        assert bytes(u.mem_read(0x61700008,4))==bytes(4)
+        u.mem_write(offset,old)
+    assert call('gate_prepare',(0xba000,))==0
+    u.mem_write(0x63000000,donor[:2097152])
+    for hidden in ((False,True) if variant=='write' else (False,)):
+        calls.clear();mode.update(status=0,logical='hidden_failure' if hidden else 'normal')
+        rc=call('system_write_portion',(0,0xba000,4096,0x63000000),budget=300000000)
+        status=struct.unpack('<7I',u.mem_read(0x6101af10,28))
+        if variant=='write' and not hidden:assert rc==0 and status[3:5]==(6,4096)
+        else:assert rc==0xffffffff and status[3:5]==(3,0) and len(calls)==1
+    result=dict(variant=variant,pass_test=True,every_physical_block_checked=True,physical_checks=4096,negative_cases=13,zero_copy_noop=True,map_geometry_guards=True,hidden_error_latches=variant=='write',dry_never_calls_original_physical=variant=='dry',core_integrated=True)
+    allresults.append(result);print('PASS',result,flush=True)
+# Audit already proven original FTL portion-model physical operations against this exact policy.
+replay=json.loads((ROOT/'outputs/system_portion_persistence_attempt4.json').read_text());assert replay['all_pass']
+ops=[op for c in replay['cases'] for op in c['program_erase_operations']]
+assert all((op['physical_block'] if op['kind']=='simulated_erase' else op['physical_sector']//4096) not in protected for op in ops)
+with (ROOT/'outputs/system_writer_gates_v3_offline.json').open('x') as f:json.dump(dict(all_pass=True,device_access=False,variants=allresults,build_variants=build['variants'],existing_original_FTL_model_operations_accepted=len(ops),inactive_wrapper_exact_stub=True,limits=['Physical backend status inputs, not real controller/ECC execution','Original FTL dry return is a separate test']),f,indent=2)

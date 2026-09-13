@@ -1,0 +1,26 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_system_read_portion.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""One fixed logical system portion, all original write-disabled guards retained."""
+import argparse,hashlib,json,subprocess
+from pathlib import Path
+from ram_artifact import elf_code,fix_crc
+p=argparse.ArgumentParser();p.add_argument('--logical',type=int,required=True);a=p.parse_args();assert 186<=a.logical<=259
+ROOT=Path(__file__).resolve().parents[1];out=ROOT/f'work/system_read_portion_{a.logical}';out.mkdir(exist_ok=False)
+sectors=4088 if a.logical==259 else 4096
+parent=(ROOT/'work/ftl_fullmap_system_read_v1/read.raw').read_bytes()
+assert hashlib.sha256(parent).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+elf=out/'read.elf'
+subprocess.run([str(ROOT/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe'),'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-nostdlib','-DREAD_LBA='+str(a.logical*4096),'-DREAD_SECTORS='+str(sectors),'work/system_read_portion.S','-Wl,-T,work/ftl_bridge_read.ld','-Wl,-e,ftl_bridge_read','-o',str(elf)],cwd=ROOT,check=True)
+code=elf_code(elf.read_bytes(),0x60007040,0x180)
+data=bytearray(parent[:110080]);data[0x7040:0x71c0]=code+bytes(0x180-len(code));fix_crc(data)
+assert all(0x7040<=i<0x71c0 or 0x1e0<=i<0x1e4 for i,(x,y) in enumerate(zip(data,parent)) if x!=y)
+for off in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):assert data[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+for off in (0xbbc8,0xbc90):assert data[off:off+4]==bytes.fromhex('feffffea')
+raw=bytes(data)+bytes(272)
+with (out/'read.raw').open('xb') as f:f.write(raw)
+report=dict(nand_writes_enabled=False,sha256=hashlib.sha256(raw).hexdigest(),logical=a.logical,lba=a.logical*4096,sectors=sectors,helper_bytes=len(code))
+with (out/'build.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

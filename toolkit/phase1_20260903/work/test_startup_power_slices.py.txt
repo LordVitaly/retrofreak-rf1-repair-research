@@ -1,0 +1,71 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_startup_power_slices.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Bounded prefix tests. Only one masked GRF register, not peripheral emulation."""
+import hashlib,json,struct
+import startup_slice_test_harness as h
+from unicorn import UC_HOOK_CODE,UC_HOOK_MEM_WRITE
+from unicorn.arm_const import UC_ARM_REG_CPSR,UC_ARM_REG_CP_REG,UC_ARM_REG_SP
+ROOT=h.ROOT
+build=json.loads((ROOT/'outputs/startup_power_slices_build.json').read_text())
+results=[]
+for case in build['cases']:
+    raw=(ROOT/case['file']).read_bytes();assert hashlib.sha256(raw).hexdigest()==case['sha256']
+    cut=int(case['cut_pc'],16)
+    configs=[(m,rom,0,0x1234) for m in (0x13,0x12) for rom in (0x56313030,0x56323030)]
+    if case['name']=='after_remap':configs += [(0x12,0x56323030,0xe,0x1234),(0x12,0x56323030,0x100,0x1234),(0x12,0x56323030,0,0x234)]
+    for mode,rom,pmu,grf in configs:
+        u=h.machine()
+        for base in (0x10080000,0x10102000,0x20004000,0x20008000):u.mem_map(base,0x1000)
+        ga=0x200080a0 if rom==0x56313030 else 0x20008150
+        sram=0xe59ff018
+        for addr,val in ((0x10080000,sram),(0x101027fc,rom),(0x20004008,pmu),(ga,grf)):u.mem_write(addr,struct.pack('<I',val))
+        u.mem_write(h.B+61440,bytes([0xa5])*(110268-61440+64))
+        before=bytes(u.mem_read(h.B,110268+64));u.mem_write(h.STAGE,raw)
+        u.reg_write(UC_ARM_REG_CPSR,mode)
+        initial_sctlr=u.reg_read(UC_ARM_REG_CP_REG,(15,0,0,1,0,0,0))
+        h.SP=0x60022268 if mode==0x12 else 0x60422268
+        allowed=pmu&~0xe==0 and bool(grf&0x1000)
+        seen=[];hw=[]
+        def trace(uc,pc,size,ctx):
+            if h.B<=pc<h.B+110268:
+                assert pc in (h.B,h.B+4) or h.B+0x20<=pc<h.B+0x17c or h.B+0x20c<=pc<=cut,hex(pc)
+                if h.B+0x20c<=pc:seen.append(pc)
+            if pc==h.B+0x28c:
+                # Apply the isolated high-half write-mask contract after STR.
+                assert hw[-1]==(ga,0x10001000)
+                uc.mem_write(ga,struct.pack('<I',grf|0x1000))
+        def hw_write(uc,access,addr,size,value,ctx):
+            if 0x20000000<=addr<0x20100000:
+                assert size==4 and ((addr==0x20004008 and value==0xe) or (addr==ga and value==0x10001000))
+                hw.append((addr,value))
+        hk=u.hook_add(UC_HOOK_CODE,trace);hwk=u.hook_add(UC_HOOK_MEM_WRITE,hw_write)
+        size=h.symbols['bridge_relocated_end']-h.symbols['bridge_relocated']
+        rc,_=h.call(u,h.symbols['bridge_execute'],ranges=(
+            (0x61200000,0x61200000+110268),(0x62000000,0x62000000+size),
+            (h.B,h.B+110268),(0x60801000,0x60801018),(0x10080000,0x10080004),
+            (h.STAGE+110080,h.STAGE+110128),(0x20004008,0x2000400c),(ga,ga+4)),budget=16000000)
+        u.hook_del(hk);u.hook_del(hwk)
+        assert rc==0xffffffff
+        assert bytes(u.mem_read(h.B,110268+64))==before
+        assert u.reg_read(UC_ARM_REG_CP_REG,(15,0,0,1,0,0,0))==initial_sctlr
+        assert bytes(u.mem_read(0x10080000,4))==struct.pack('<I',sram)
+        assert u.reg_read(UC_ARM_REG_CPSR)&0xff==mode and u.reg_read(UC_ARM_REG_SP)==h.SP
+        after=bytes(u.mem_read(h.STAGE,len(raw)));record=struct.unpack_from('<12I',after,110080)
+        pa=0xe if allowed and cut>h.B+0x260 else pmu
+        assert record==(0x32475453,cut if allowed else 0,initial_sctlr,initial_sctlr&~0x10003805 if allowed else initial_sctlr,0x18 if allowed else sram,sram,pmu,pa,rom,ga,grf,grf),record
+        expected_hw=[]
+        if allowed and cut>h.B+0x260:expected_hw.append((0x20004008,0xe))
+        if allowed and cut>h.B+0x288:expected_hw.append((ga,0x10001000))
+        assert hw==expected_hw
+        assert (seen and seen[-1]==cut) if allowed else not seen
+        assert after[:110080]==raw[:110080] and after[110128:]==bytes(224)
+        rc,_=h.call(u,h.B+0x787c,(0,0x7f0000,h.BUF,209),((h.BUF,h.BUF+len(raw)),))
+        assert rc==0 and bytes(u.mem_read(h.BUF,len(raw)))==after
+        results.append(dict(name=case['name'],mode=hex(mode),rom=hex(rom),pmu_before=hex(pmu),grf_before=hex(grf),refused=not allowed,pass_test=True))
+        print('PASS',results[-1],flush=True)
+report=dict(all_pass=True,device_access=False,bridge_sha256=build['bridge_sha256'],cases=results,
+    limits=['No peripheral startup simulation','GRF mask modeled for one register only','Hardware return not yet proved','PMU shutdown intentionally retained, never wake secondary cores'])
+with (ROOT/'outputs/startup_power_slices_offline.json').open('x',encoding='utf-8') as f:json.dump(report,f,indent=2)

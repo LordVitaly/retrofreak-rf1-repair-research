@@ -1,0 +1,48 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/boot_header_secondary/handoff.S
+Role: historical_unexecuted_superseded_boot1028
+Original repair session must not be resumed from this public copy.
+
+.syntax unified
+.arm
+.section .text,"ax",%progbits
+.global writer_before,writer_after
+writer_before:
+ ldr r0,=0x60002800
+ ldr r1,=0x61800000
+ ldr r2,=CORE_BYTES
+1: ldr r3,[r0],#4
+ str r3,[r1],#4
+ subs r2,r2,#4
+ bne 1b
+ ldr r0,=0x61700000
+ mov r1,#0
+ mov r2,#8
+2: str r1,[r0],#4
+ subs r2,r2,#1
+ bne 2b
+ dsb sy
+ mcr p15,0,r1,c7,c5,0
+ mcr p15,0,r1,c7,c5,6
+ dsb sy
+ isb sy
+ ldr pc,=0x60000020
+writer_after:
+ push {r4,lr}
+ cpsid if
+ ldr r12,=0x61800000
+ blx r12
+ ldr r1,=0x6101af44
+ str r0,[r1]
+ /* Copy8 guard words to source window for host audit after source consumed. */
+ ldr r0,=0x61700000
+ ldr r1,=0x63000000
+ mov r2,#8
+3: ldr r3,[r0],#4
+ str r3,[r1],#4
+ subs r2,r2,#1
+ bne 3b
+ pop {r4,lr}
+ ldr pc,=0x60000100
+ .ltorg

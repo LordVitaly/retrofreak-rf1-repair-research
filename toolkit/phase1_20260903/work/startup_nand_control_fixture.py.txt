@@ -1,0 +1,58 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/startup_nand_control_fixture.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Only controller revision probe and timing registers; no NAND media model."""
+import struct
+from unicorn import UC_HOOK_MEM_READ,UC_HOOK_MEM_WRITE
+class NANDControlContract:
+    def __init__(self,u,revision,ids=False,geometry=False,firstread=False,ecc_error=False):
+        self.revision=revision;self.regs={};self.writes=[];self.ids=ids;self.commands=[];self.idpos={};self.geometry=geometry;self.firstread=firstread;self.ecc_error=ecc_error
+        u.mem_map(0x10500000,0x3000 if firstread else 0x1000)
+        u.hook_add(UC_HOOK_MEM_READ,self.read,begin=0x10500000,end=0x10502fff if firstread else 0x10500fff)
+        u.hook_add(UC_HOOK_MEM_WRITE,self.write,begin=0x10500000,end=0x10502fff if firstread else 0x10500fff)
+    def read(self,u,access,a,size,value,ctx):
+        off=a-0x10500000
+        if self.firstread and (0x1000<=off<0x1800 or off in (8,0x10,0x20)):
+            assert size in (1,2,4)
+            val=(1<<20) if off==8 else (4 if self.ecc_error else 0) if off==0x20 else 0
+            u.mem_write(a,val.to_bytes(size,'little'));return
+        if self.ids and off in self.windows():
+            chip=self.windows().index(off);idx=self.idpos.get(chip,0)
+            assert size==4 and idx<6 and (chip,0x90) in self.commands
+            u.mem_write(a,struct.pack('<I',(bytes.fromhex('2c44444ba900') if chip==0 else bytes([0 if self.geometry else 255])*6)[idx]))
+            self.idpos[chip]=idx+1;return
+        assert size==4 and off in ((0,0xc,0x160) if self.geometry else (0,0x160)),(hex(a),size)
+        val=(self.regs.get(0,0)&(0xffffff00 if self.revision==2 else 0xffffffff)) if off==0 else self.regs.get(0xc,0) if off==0xc else self.revision<<16
+        if self.ids and off==0 and self.commands:val|=0x20 if self.revision==2 else 0x200
+        u.mem_write(a,struct.pack('<I',val))
+    def windows(self):
+        return [0x200+i*0x200 for i in range(4)] if self.revision==2 else [0x800+i*0x100 for i in range(4)]
+    def write(self,u,access,a,size,val,ctx):
+        off=a-0x10500000
+        if self.ids and off in [x+8 for x in self.windows()]:
+            chip=self.windows().index(off-8)
+            assert size==4 and val in ((0xff,0x90,0,0x30) if self.firstread else (0xff,0x90)),'No program/erase commands'
+            self.commands.append((chip,val));return
+        if self.ids and off in [x+4 for x in self.windows()]:
+            assert size==4 and (0<=val<=255 if self.firstread else val==0);return
+        assert size==4 and off in ((0,4,8,0xc,0x10,0x130,0x150) if self.firstread else (0,4,8,0xc,0x130,0x150) if self.geometry else (0,4,0x130,0x150)),(hex(a),hex(val))
+        if off==8:assert val in ((1,0x42c,0x43c) if self.firstread else (1,))
+        if off==0xc:assert val in (0x11,0x2001) or (self.firstread and val in (0x40001,0x40011))
+        if off==0x10:assert val==0
+        if off==0:
+            if self.ids:assert val&~(0x33ff if self.geometry else 0x23ff)==0
+            else:assert val in (0,0xff,0x2000,0x10,0x100)
+        if off in (0x130,0x150):assert val==0 or (self.firstread and off==0x150 and 0<=val<=0xffff),(hex(a),hex(val))
+        self.regs[off]=val;self.writes.append((a,val))
+    def verify(self):
+        assert self.writes[:2]==[(0x10500000,0),(0x10500000,0xff)]
+        assert (0x10500130 if self.revision==3 else 0x10500150,0) in self.writes
+        assert any(a==0x10500004 for a,v in self.writes),'Original timing function must complete'
+        if self.ids:
+            expected=[(i,cmd) for i in range(4) for cmd in (0xff,0x90)]
+            assert self.commands[:8]==expected
+            if self.firstread:assert self.commands[8:] and all(i==0 and cmd in (0,0x30) for i,cmd in self.commands[8:])
+            else:assert self.commands==expected
+            assert self.idpos==dict.fromkeys(range(4),6)

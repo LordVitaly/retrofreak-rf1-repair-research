@@ -1,0 +1,92 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/system_writer_core.c
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+/* OFFLINE core, NOT a hardware upload. Requires separately audited physical gates.
+ * One aligned 2 MiB system portion; last portion stops at exact donor length.
+ * No USB, allocation, init, format, restart or retry here. */
+typedef unsigned int u32;
+typedef unsigned char u8;
+#define FIRST 0xba000u
+#define IMAGE_SECTORS 303096u
+#define BLOCK_SECTORS 4096u
+#define SOURCE ((const u8 *)0x63000000u)
+#define VERIFY ((u8 *)0x63200000u)
+#define STATUS ((volatile u32 *)0x6101af10u)
+#define ARMED ((volatile u32 *)0x61700000u)
+#define TOKEN 0x31575246u
+#ifdef RF_GATED
+#include "system_writer_gate.h"
+#endif
+typedef int (*io_fn)(u32,u32,u32,void *);
+static u32 crc32(const u8 *data,u32 count) {
+    u32 c=~0u;
+    for (u32 i=0;i<count;i++) {
+        c^=data[i];
+        for (u32 b=0;b<8;b++) c=(c>>1)^((0u-(c&1u))&0xedb88320u);
+    }
+    return ~c;
+}
+/* Manifest compiled from the SHA-pinned official donor; not host request CRC. */
+#include "system_writer_manifest.h"
+__attribute__((used)) int system_write_portion(u32 chip,u32 lba,u32 sectors,u32 source) {
+    *ARMED=0;
+    STATUS[0]=0x31575246u; STATUS[1]=lba; STATUS[2]=sectors;
+    STATUS[3]=0; STATUS[4]=0; STATUS[5]=0; STATUS[6]=0;
+    if(chip || source!=0x63000000u || lba<FIRST || lba-FIRST>=IMAGE_SECTORS ||
+       (lba-FIRST)%BLOCK_SECTORS) { STATUS[3]=1; return -1; }
+    u32 offset=lba-FIRST;
+    u32 wanted=IMAGE_SECTORS-offset;
+    if(wanted>BLOCK_SECTORS) wanted=BLOCK_SECTORS;
+    if(sectors!=wanted) { STATUS[3]=1; return -1; }
+    if(crc32(SOURCE,sectors*512u)!=donor_crc[offset/BLOCK_SECTORS]) {
+        STATUS[3]=2; return -1;
+    }
+#ifdef RF_GATED
+    if(gate_prepare(lba)) { STATUS[3]=8; return -1; }
+#endif
+    io_fn write=(io_fn)0x60087398u, read=(io_fn)0x600846a0u;
+    u32 programmed=sectors;
+    if(sectors!=BLOCK_SECTORS) {
+        /* Preserve the 4096 bytes beyond the donor, inside the same system
+         * page. Do not enter the original half-page cache-update path. */
+        int rc=read(0,lba+BLOCK_SECTORS-16u,16u,VERIFY);
+#ifdef RF_GATED
+        if(GATE->fault) rc=-1;
+#endif
+        STATUS[6]=(u32)rc;
+        if(rc) { STATUS[3]=7; return -1; }
+        u8 *padding=(u8 *)SOURCE+sectors*512u;
+        for(u32 i=0;i<4096u;i++) padding[i]=VERIFY[4096u+i];
+        programmed=BLOCK_SECTORS;
+    }
+    for(u32 done=0;done<programmed;) {
+        u32 count=programmed-done;
+        if(count>128u) count=128u;
+        STATUS[5]=lba+done;
+        *ARMED=TOKEN;
+        int rc=write(0,lba+done,count,(void *)(SOURCE+done*512u));
+        *ARMED=0;
+#ifdef RF_GATED
+        if(GATE->fault) rc=-1;
+#endif
+        STATUS[6]=(u32)rc;
+        if(rc) { STATUS[3]=3; return -1; }
+        /* Complement input so a reader falsely returning success without data
+         * cannot pass the byte comparison, even for all-FF/zero source. */
+        for(u32 i=0;i<count*512u;i++) VERIFY[i]=(u8)~SOURCE[done*512u+i];
+        rc=read(0,lba+done,count,VERIFY);
+#ifdef RF_GATED
+        if(GATE->fault) rc=-1;
+#endif
+        STATUS[6]=(u32)rc;
+        if(rc) { STATUS[3]=4; return -1; }
+        for(u32 i=0;i<count*512u;i++) if(VERIFY[i]!=SOURCE[done*512u+i]) {
+            STATUS[3]=5; return -1;
+        }
+        done+=count; STATUS[4]=done<sectors ? done : sectors;
+    }
+    STATUS[3]=6;
+    return 0;
+}

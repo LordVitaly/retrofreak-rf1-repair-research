@@ -1,0 +1,131 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/emulate_flashboot_offline.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Execute verified ARM code on the PC only. No device/USB API or writable dump.
+
+First-stage harness: real saved-parameter acceptance and FtlVarInit, with a
+single physical-read boundary replaced by saved bytes. Unknown hardware access
+fails closed. This does NOT emulate the controller or ECC status.
+"""
+import hashlib
+import json
+from pathlib import Path
+import struct
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT/'work/emulator_deps'))
+from unicorn import Uc, UcError, UC_ARCH_ARM, UC_MODE_ARM, UC_PROT_READ, UC_PROT_WRITE, UC_PROT_EXEC, UC_HOOK_CODE, UC_HOOK_MEM_INVALID, UC_HOOK_MEM_WRITE
+from unicorn.arm_const import UC_ARM_REG_R0, UC_ARM_REG_R1, UC_ARM_REG_R2, UC_ARM_REG_R3, UC_ARM_REG_SP, UC_ARM_REG_LR, UC_ARM_REG_PC
+
+REGS = [UC_ARM_REG_R0, UC_ARM_REG_R1, UC_ARM_REG_R2, UC_ARM_REG_R3]
+FLASH = 0x60359a34
+FTL = 0x602b3180
+STACK = 0x607ff000
+STOP = 0x6007f000
+def address(offset):
+    assert offset >= 0xa34
+    return 0x60080000 + offset - 0xa34
+
+class OfflineFlashBoot:
+    def __init__(self, record, read_result=0):
+        self.uc = Uc(UC_ARCH_ARM, UC_MODE_ARM)
+        self.events = []
+        self.record = bytes(record)
+        self.read_result = read_result
+        self.stopped = None
+        self.write_entries = {address(o) for o in (0x3b0c,0xba10,0xbc1c,0xbd5c,0x7038)}
+        binary = (ROOT/'work/FlashBoot.packet512.STATIC_ONLY.bin').read_bytes()
+        assert hashlib.sha256(binary).hexdigest() == '<REDACTED:HASH_OR_BYTES>'
+        self.uc.mem_map(0x60080000, 0x20000, UC_PROT_READ | UC_PROT_EXEC)
+        self.uc.mem_write(0x60080000, binary[0xa34:])
+        self.uc.mem_map(STOP, 0x1000, UC_PROT_READ | UC_PROT_EXEC)
+        self.uc.mem_map(0x60200000, 0x600000, UC_PROT_READ | UC_PROT_WRITE)
+        self.uc.mem_write(FLASH+0xc, b'\x01')
+        self.uc.mem_write(FLASH+0x14, b'\x04')
+        self.uc.hook_add(UC_HOOK_CODE, self.code_hook)
+        self.uc.hook_add(UC_HOOK_MEM_INVALID, self.invalid_hook)
+
+    def invalid_hook(self, uc, access, addr, size, value, unused):
+        self.stopped = dict(reason='unmapped_or_protected_memory', address=hex(addr), access=access, pc=hex(uc.reg_read(UC_ARM_REG_PC)))
+        return False
+
+    def allow_statistics_data(self):
+        # 765C uses 60099E28 as a 0x14-byte statistics structure; 4CE0
+        # increments its +8 counter. It shares a 4K page with code.
+        # Page permissions alone are too coarse: whitelist the data bytes.
+        def check_write(uc,access,addr,size,value,unused):
+            if not (0x60099e28<=addr and addr+size<=0x60099e3c):
+                self.stopped=dict(reason='nonwhitelisted_binary_write',address=hex(addr),pc=hex(uc.reg_read(UC_ARM_REG_PC)))
+                uc.emu_stop()
+        self.uc.hook_add(UC_HOOK_MEM_WRITE,check_write,begin=0x60099000,end=0x60099fff)
+        self.uc.mem_protect(0x60099000,0x1000,UC_PROT_READ|UC_PROT_WRITE|UC_PROT_EXEC)
+
+    def code_hook(self, uc, pc, size, unused):
+        if pc == address(0x9ef4):
+            r0,r1,r2,r3 = [uc.reg_read(r) for r in REGS]
+            assert r0 == 0x50f4 and r1 and r2 == 0 and r3 == 1, (r0,r1,r2,r3)
+            uc.mem_write(r1, self.record)
+            self.events.append(dict(kind='saved_parameter_read', sector=r0, count=r3, assumed_result=self.read_result))
+            uc.reg_write(UC_ARM_REG_R0, self.read_result & 0xffffffff)
+            uc.reg_write(UC_ARM_REG_PC, uc.reg_read(UC_ARM_REG_LR))
+        elif pc in self.write_entries:
+            self.stopped = dict(reason='write_or_format_entry', pc=hex(pc), args=[uc.reg_read(r) for r in REGS])
+            uc.emu_stop()
+
+    def call(self, offset, r0=0, *, instruction_limit=1_000_000, timeout_us=5_000_000):
+        self.uc.reg_write(UC_ARM_REG_SP, STACK)
+        self.uc.reg_write(UC_ARM_REG_LR, STOP)
+        self.uc.reg_write(UC_ARM_REG_R0, r0)
+        self.stopped = None
+        try:
+            self.uc.emu_start(address(offset), STOP, timeout=timeout_us, count=instruction_limit)
+        except UcError as error:
+            raise RuntimeError(dict(error=str(error), stop=self.stopped, pc=hex(self.uc.reg_read(UC_ARM_REG_PC)))) from error
+        if self.stopped or self.uc.reg_read(UC_ARM_REG_PC) != STOP:
+            raise RuntimeError(self.stopped or 'instruction/time limit reached')
+        return self.uc.reg_read(UC_ARM_REG_R0)
+
+def main():
+    raw = (ROOT/'work/idb_ecc24_parameter_attempt2/block05_page15.raw').read_bytes()
+    assert raw == (ROOT/'work/idb_ecc24_parameter_attempt2/block06_page15.raw').read_bytes()
+    record = raw[:512]
+    cases = []
+    for name, offset, status in [('valid',None,0),('bad_magic',16,0),('bad_length',20,0),('bad_manufacturer',0x24,0),('bad_interface',0x1c,0),('failed_read',None,-1)]:
+        sample = bytearray(record)
+        if offset is not None: sample[offset] ^= 1
+        emulator = OfflineFlashBoot(sample,status)
+        result = emulator.call(0xa158,0x50f4)
+        expected = 0 if name == 'valid' else 0xffffffff
+        assert result == expected, (name,result)
+        entry = dict(case=name, returned=hex(result), expected=hex(expected), events=emulator.events)
+        if name == 'valid':
+            assert bytes(emulator.uc.mem_read(FLASH+8,0x78)) == record[0x18:0x90]
+            emulator.uc.mem_write(FLASH+0xa0, struct.pack('<H',12))
+            emulator.call(0x74e0)
+            fields = struct.unpack('<5H', emulator.uc.mem_read(FTL+6,10))
+            assert fields == (0x438,16,4096,12,2048), fields
+            entry['ftl_version_page_block_reserved_capacity'] = list(fields)
+        cases.append(entry)
+    guard_tests = []
+    for offset in (0x3b0c,0xba10,0xbc1c,0xbd5c,0x7038,0x125c):
+        emulator = OfflineFlashBoot(record)
+        try:
+            emulator.call(offset)
+        except RuntimeError:
+            assert emulator.stopped is not None
+            expected_reason = 'unmapped_or_protected_memory' if offset == 0x125c else 'write_or_format_entry'
+            assert emulator.stopped['reason'] == expected_reason, emulator.stopped
+            guard_tests.append(dict(entry=hex(offset), stop=emulator.stopped))
+        else:
+            raise AssertionError(f'Guard did not stop {offset:x}')
+    report = dict(scope='Actual ARM/Thumb A158 and 74E0 execution on PC; not full FTL initialization',
+                  physical_read_return_is_assumed=True, hardware_access=False,
+                  tests=cases, guard_tests=guard_tests, limits=['No controller/ECC emulation','Reserved IDB blocks seeded to 12','No BBT/remap/cache initialization yet','No proof of safe device execution'])
+    with (ROOT/'outputs/flashboot_offline_emulator_stage1.json').open('x',encoding='utf-8') as f:
+        json.dump(report,f,indent=2)
+    print(json.dumps(report,indent=2))
+
+if __name__ == '__main__': main()

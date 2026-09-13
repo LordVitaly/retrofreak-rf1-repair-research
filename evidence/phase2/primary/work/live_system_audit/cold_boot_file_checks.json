@@ -1,0 +1,31 @@
+{
+  "all_pass": true,
+  "hardware_access": false,
+  "nand_writes": false,
+  "source_system_image_path": "<EXTERNAL_STAGE_01>\\work\\rkfw_contents\\components\\system.img",
+  "source_system_image_bytes": 155185152,
+  "source_system_image_sha256": "b9ca511124e6c3d9ee2a1e31220f6bf5a858f06d88f9003f5fd7f7e25cf5676a",
+  "main_gui_apk_zip_members_crc_valid": true,
+  "checks": [
+    {
+      "device_path": "/system/app/RetroFreakGUI.apk",
+      "local_official_path": "<THREAD_ROOT>\\work\\live_system_audit\\RetroFreakGUI.apk",
+      "source_inode": 578,
+      "bytes": 12933601,
+      "md5": "<HISTORICAL_HASH_REDACTED>",
+      "sha256": "603be20a1a301f6f3d455a50a2236e461eb64f8ed8f58ac5b92cf9191ba190a8",
+      "magic_hex": "504b03040a000008"
+    },
+    {
+      "device_path": "/system/lib/libGLESv1_CM.so",
+      "local_official_path": "<THREAD_ROOT>\\work\\live_system_audit\\libGLESv1_CM.so",
+      "source_inode": 225,
+      "bytes": 21564,
+      "md5": "<HISTORICAL_HASH_REDACTED>",
+      "sha256": "1ee117f323c6d5af4781abe8e2f50297044ec26810d525410b38f4449223cbe1",
+      "magic_hex": "7f454c4601010100"
+    }
+  ],
+  "readonly_device_command_for_root": "/sbin/busybox md5sum /system/app/RetroFreakGUI.apk /system/lib/libGLESv1_CM.so",
+  "scope": "Compare named files after cold boot; unaffected by superblock runtime error-history changes. This artifact does not read the device."
+}

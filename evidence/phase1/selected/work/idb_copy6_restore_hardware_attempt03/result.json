@@ -1,0 +1,23 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/idb_copy6_restore_hardware_attempt03/result.json",
+  "interpretation": "Target exact, but all_pass=false during the later protected-view check; do not repeat the write.",
+  "data": {
+    "all_pass": false,
+    "writer_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "target_physical_block": 6,
+    "authorized": "Latest user explicitly permits NAND write if necessary; single-copy6 scope",
+    "erase_control_dispatched": true,
+    "program_chunks_dispatched": 16,
+    "automatic_reset": false,
+    "ftl_init": false,
+    "phase": "final_target_and_protected_readback",
+    "intro": "<REDACTED:RAW_LOG_OR_IDENTIFIER>",
+    "identity": "<REDACTED:RAW_LOG_OR_IDENTIFIER>",
+    "loaded_marker": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+    "flash_info": "<REDACTED:RAW_LOG_OR_IDENTIFIER>",
+    "final_target_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "error": "AssertionError('Protected block 0 readout differs; stop, no retry')",
+    "commands": "<REDACTED:RAW_LOG_OR_IDENTIFIER>"
+  }
+}

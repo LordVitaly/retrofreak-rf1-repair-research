@@ -1,0 +1,12 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/system_writer_gate.h
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+typedef unsigned int gate_u32;
+struct GateState {
+    volatile gate_u32 armed,fault,ready,first,end,operations,programs,erases;
+};
+#define GATE ((struct GateState *)0x61700000u)
+#define GATE_TOKEN 0x31575246u
+int gate_prepare(gate_u32 first);

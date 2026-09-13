@@ -1,0 +1,83 @@
+{
+  "packages": [
+    {
+      "package": "libblkid1",
+      "url": "https://cygwin.mirror.constant.com/x86_64/release/util-linux/libblkid1/libblkid1-2.40.2-2.tar.xz",
+      "bytes": 120936,
+      "sha512": "d931c47cce5a7caf18799a16ed526e0f0d0f82c0f6d0af952420d50d88f1e0f0ea9d6c07be72f9d0baa06a3299b2db8c3bd3c43d13d94400edc816e7c00da148"
+    },
+    {
+      "package": "libcom_err2",
+      "url": "https://cygwin.mirror.constant.com/x86_64/release/e2fsprogs/libcom_err2/libcom_err2-1.44.5-1.tar.xz",
+      "bytes": 4132,
+      "sha512": "3344fbc09364d789e92a81af5ba1e830dd47cef3392a1ee389a2fd49a9cc56a63afc78bebefb92c025d8222e6e454c114d572f0f395e5e20ede2b2266b0fe709"
+    },
+    {
+      "package": "libe2p2",
+      "url": "https://cygwin.mirror.constant.com/x86_64/release/e2fsprogs/libe2p2/libe2p2-1.44.5-1.tar.xz",
+      "bytes": 10024,
+      "sha512": "9d56cd56ffc2488806588bce243761ce5a8719492ee974b6140a09253024a3e35242b398b92c80e873799ed7b909a14bb8d0f410879d83ab457d6db5dbb14430"
+    },
+    {
+      "package": "libintl8",
+      "url": "https://cygwin.mirror.constant.com/x86_64/release/gettext/libintl8/libintl8-0.22.5-1.tar.xz",
+      "bytes": 43256,
+      "sha512": "370a19af888bc7c9ed95cf8ade0d36d5e7cdb634abdebcba260cad61fa9a4cc05b5e748e315c9709f66861e8756b227d6757d529846591189e19ee2b2d00002d"
+    },
+    {
+      "package": "libss2",
+      "url": "https://cygwin.mirror.constant.com/x86_64/release/e2fsprogs/libss2/libss2-1.44.5-1.tar.xz",
+      "bytes": 8132,
+      "sha512": "a434560c0b52e5a13ee035346a6d3217d8d39026abe9f4f3cfafed7a16daef33c1322a18bbd99fcfd89fd702812e3463fafa521e78617f478600846a46c5ca9e"
+    },
+    {
+      "package": "libuuid1",
+      "url": "https://cygwin.mirror.constant.com/x86_64/release/util-linux/libuuid1/libuuid1-2.40.2-2.tar.xz",
+      "bytes": 12532,
+      "sha512": "3ba0c5d5a401c88796077e9f45164532408882f2f5d9f0ab99b2fdf6eb915917250124cde3653a7c53b648866e091aa3baf3304d0b243337f0d4e254a7631f55"
+    },
+    {
+      "package": "libgcc1",
+      "url": "https://cygwin.mirror.constant.com/x86_64/release/gcc/libgcc1/libgcc1-14.4.0-1-x86_64.tar.zst",
+      "bytes": 59166,
+      "sha512": "5ac8a56e5eee285efcd6dbd05a473e795e181021d7194b8a98dfe2fa201a71f0abe2908e0b4c81490eb5ef472efaeac8e56a61a5f289eee4ad6e90e52a844ff8"
+    },
+    {
+      "package": "libext2fs2",
+      "url": "https://cygwin.mirror.constant.com/x86_64/release/e2fsprogs/libext2fs2/libext2fs2-1.44.5-1.tar.xz",
+      "bytes": 126164,
+      "sha512": "55e1ccb30354f84ac88762db54efc4d4d8d7475062935214795a26a48b7a72e897d4a870ff72c82ae3a7cd6924ff903ec52773f0b004d490a759b2cb2d7907ce"
+    },
+    {
+      "package": "zlib0",
+      "url": "https://cygwin.mirror.constant.com/x86_64/release/zlib/zlib0/zlib0-1.3.2-1-x86_64.tar.zst",
+      "bytes": 46254,
+      "sha512": "d79ba6098cadf6bf2f32f35d9cd54729293c64b3c9daabb9d080f52861a19db71544d5710fdbd61ff45e7c2ae4eecb3f2e3b8a1e3bc05695b8cfe01c7639c53a"
+    },
+    {
+      "package": "libiconv2",
+      "url": "https://cygwin.mirror.constant.com/x86_64/release/libiconv/libiconv2/libiconv2-1.19-2-x86_64.tar.xz",
+      "bytes": 555664,
+      "sha512": "a1b23e24e0a495e7163923bcf40a4b933403e0826cfc0d9bde785bc92c909b8c4fb94b1e6b2c0242f4328a723855e72ff3baab9f557ef855b7fe7a7d901b0943"
+    },
+    {
+      "package": "libzstd1",
+      "url": "https://cygwin.mirror.constant.com/x86_64/release/zstd/libzstd1/libzstd1-1.5.7-1.tar.zst",
+      "bytes": 253786,
+      "sha512": "f89cdaa004487ec8c4796b8f56887c81f6f497873c1495b9cb585ffe6c8d6e6b8ad4b52617d5238075f965f1fe001da287d9a00d121590274b2d87672b415a0f"
+    },
+    {
+      "package": "e2fsprogs",
+      "url": "https://cygwin.mirror.constant.com/x86_64/release/e2fsprogs/e2fsprogs-1.44.5-1.tar.xz",
+      "bytes": 783804,
+      "sha512": "32730dee0384e1dd8557982133c98e896ceda8e445e0a794413cda32349ac429997dbc7a338d34480b22bafe624a83454fb8d22fbb3b90c771eb95ed345814e1"
+    },
+    {
+      "package": "cygwin",
+      "url": "https://cygwin.mirror.constant.com/x86_64/release/cygwin/cygwin-3.7.0-0.590.gdae171e433cd-x86_64.tar.xz",
+      "bytes": 1638248,
+      "sha512": "5226e0c9787ab6c03818c5f662fa17e27e62f8e2db12b9249fc11953530a6a8dc487b75a206ad0b0c4459eac0b7de7d82a4e600502558c41ab60b4095aa68035"
+    }
+  ],
+  "no_installers_run": true
+}

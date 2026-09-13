@@ -1,0 +1,70 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/ram_console_session.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Existing hidden Rockchip console transport; strictly bounded RAM command helper.
+Callers must pin marker, payload and permitted ranges. No DB/erase/format API.
+"""
+import os,subprocess,threading,time
+from pathlib import Path
+from direct_winpty_console import DirectConsole
+from read_device_identity import TOOL
+from console_completion import completed_response
+class RamConsole:
+    def __init__(self,out):
+        assert 'Android_Console_Tool.exe' not in subprocess.run(['tasklist','/FI','IMAGENAME eq Android_Console_Tool.exe','/FO','CSV','/NH'],capture_output=True,text=True,check=True).stdout
+        env=dict(os.environ);env['__COMPAT_LAYER']='RunAsInvoker'
+        self.cwd=Path(out).resolve()
+        # Native Windows ConPTY: avoid the legacy WinPTY screen-scraping path
+        # which failed to deliver final progress/prompt despite complete files.
+        self.proc=DirectConsole.spawn([str(TOOL)],cwd=str(self.cwd),env=env,dimensions=(40,240),backend=0)
+        self.chunks=[];self.done=threading.Event();self.commands=[];self.reader_error=None;self.log=(out/'transcript.txt').open('x',encoding='utf-8')
+        threading.Thread(target=self.reader,daemon=True).start()
+    def reader(self):
+        try:
+            while self.proc.isalive():
+                s=self.proc.read(4096)
+                if s:self.chunks.append(s);self.log.write(s);self.log.flush()
+        except EOFError:pass
+        except BaseException as e:self.reader_error=repr(e)
+        finally:self.done.set()
+    def send_once(self,value):
+        # ASCII commands have identical character/byte counts. Never repeat an
+        # ambiguous partial write, especially RD (which can execute NAND code).
+        wire=value+'\r\n';expected=len(wire.encode('ascii'))
+        written=self.proc.write(wire)
+        if written!=expected:raise RuntimeError(f'Partial console input {written}/{expected}; no retry')
+    def wait(self,token,start=0):
+        deadline=time.monotonic()+45
+        while time.monotonic()<deadline:
+            text=''.join(self.chunks)[start:]
+            if token in text:return text
+            if self.done.is_set():break
+            time.sleep(.005)
+        raise RuntimeError(f'Missing response; reader_error={self.reader_error}; no retry')
+    def select(self):
+        intro=self.wait('Select input');assert 'Found 1 rockusb' in intro and 'DevNo=1' in intro
+        start=len(''.join(self.chunks));self.send_once('1');self.wait('Rockusb>',start)
+    def command(self,value):
+        op=value.split()[0];assert op in ('RS','WS','RD')
+        if op in ('RS','WS'):
+            fields=value.split(' ',3 if op=='RS' else 2)
+            path=Path(fields[-1]);assert path.is_absolute()
+            fields[-1]=os.path.relpath(path,self.cwd)
+            assert not any(c.isspace() for c in fields[-1])
+            value=' '.join(fields)
+        assert len(value)<220, 'Command exceeds terminal width'
+        token={'RS':'Read Sector to file (100%)','WS':'Write Sector from file (100%)','RD':'Reset Device OK'}[op]
+        self.commands.append(value);start=len(''.join(self.chunks));self.send_once(value)
+        deadline=time.monotonic()+45
+        while time.monotonic()<deadline:
+            response=completed_response(''.join(self.chunks),start,token)
+            if response is not None:return response
+            if self.done.is_set():break
+            time.sleep(.005)
+        raise RuntimeError(f'Missing completion for {value!r}; reader_error={self.reader_error}; no retry')
+    def close(self):
+        if self.proc.isalive():self.proc.terminate(force=True)
+        self.done.wait(2)
+        if self.done.is_set():self.log.close()

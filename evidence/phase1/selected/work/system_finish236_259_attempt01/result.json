@@ -1,0 +1,90 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/system_finish236_259_attempt01/result.json",
+  "interpretation": "Final complete system comparison exact in this session; cold_boot_verified=false.",
+  "data": {
+    "all_pass": true,
+    "authorization": "User approved all remaining system and full final readback; ONLY logical236..259, first error STOP",
+    "batch_mib": 32,
+    "batches": [
+      [
+        236,
+        237,
+        238,
+        239,
+        240,
+        241,
+        242,
+        243,
+        244,
+        245,
+        246,
+        247,
+        248,
+        249,
+        250,
+        251
+      ],
+      [
+        252,
+        253,
+        254,
+        255,
+        256,
+        257,
+        258,
+        259
+      ]
+    ],
+    "range_binding_pass": true,
+    "already_written": {
+      "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+      "original_items": 50
+    },
+    "write_attempts": [
+      236,
+      237,
+      238,
+      239,
+      240,
+      241,
+      242,
+      243,
+      244,
+      245,
+      246,
+      247,
+      248,
+      249,
+      250,
+      251,
+      252,
+      253,
+      254,
+      255,
+      256,
+      257,
+      258,
+      259
+    ],
+    "completed_batches": [
+      5,
+      6
+    ],
+    "executions": {
+      "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+      "original_items": 153
+    },
+    "phase": "SYSTEM_WRITTEN_AND_VERIFIED_AWAIT_NORMAL_BOOT",
+    "current_stage_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "preserved_tail_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "tail_preserved_exact": true,
+    "full_system_readback": {
+      "bytes": 155185152,
+      "sha256": "b9ca511124e6c3d9ee2a1e31220f6bf5a858f06d88f9003f5fd7f7e25cf5676a",
+      "exact": true
+    },
+    "final_ftl": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+    "cold_boot_verified": false
+  }
+}

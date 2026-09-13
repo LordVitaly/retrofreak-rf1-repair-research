@@ -1,0 +1,18 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/usb_stage_restart.ld
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+ENTRY(restart_before)
+SECTIONS {
+ . = 0x60000020;
+ .before : { *(.before) }
+ ASSERT(SIZEOF(.before) <= 0x100, "Reserved prefix slot")
+ . = 0x61007040;
+ .restart : { *(.restart) }
+ ASSERT(SIZEOF(.restart) <= 0x400, "Protected format-body carrier")
+ .data : { *(.data*) }
+ .bss : { *(.bss*) }
+ ASSERT(SIZEOF(.data) == 0 && SIZEOF(.bss) == 0, "No implicit data")
+ /DISCARD/ : { *(.ARM.exidx*) *(.ARM.extab*) *(.comment*) }
+}

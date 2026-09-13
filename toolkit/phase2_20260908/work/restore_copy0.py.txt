@@ -1,0 +1,98 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/restore_copy0.py
+Role: historical_device_runner_or_stateful_scenario_review_before_any_use
+Original repair session must not be resumed from this public copy.
+
+"""One authorized original-IDB0 restoration. Fresh MaskROM required, no retry."""
+from pathlib import Path
+import hashlib,json,os,struct,sys,time
+OLD=Path('<EXTERNAL_STAGE_03>');HERE=Path(__file__).resolve().parent
+sys.path.insert(0,str(OLD/'work'))
+from ram_console_session import RamConsole
+from console_completion import ANSI,completed_response
+assert sys.argv[1:]==['--fresh-maskrom-confirmed']
+builddir=HERE/'copy0_writer_v1';build=json.loads((builddir/'build.json').read_text())
+proof=json.loads((builddir/'final_offline_test.json').read_text())
+pin='<HISTORICAL_HASH_REDACTED>'
+assert proof['all_pass'] and proof['writer_sha256']==pin==build['files']['writer.bin']['sha256']
+assert build['physical_block']==0 and build['erase_calls']==1 and build['native_program_calls']==64
+for name,info in build['files'].items():assert hashlib.sha256((builddir/name).read_bytes()).hexdigest()==info['sha256']
+source=(OLD/'work/idb_restore_material_v1/copy6.BOOT_ORDER_MAIN512.NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(source).hexdigest()==build['source_sha256']=='<HISTORICAL_HASH_REDACTED>'
+CRITICAL_END=248*512
+assert len(source)==131072 and source[CRITICAL_END:]==b'\xff'*(len(source)-CRITICAL_END)
+out=HERE/'copy0_restore_attempt01';out.mkdir(exist_ok=False)
+c=None;result=dict(all_pass=False,authorization='User authorized necessary device repair actions',target_block=0,
+                  erase_dispatched=False,program_chunks=0,reset_commands=0,ftl_init=False,writer_sha256=pin,
+                  source_unmodified=True,critical_end=CRITICAL_END)
+def save(name,data):
+    with (out/name).open('x') as f:json.dump(data,f,indent=2);f.flush();os.fsync(f.fileno())
+def main(raw):return b''.join(raw[i:i+512] for i in range(0,len(raw),528))
+def read(name,sector,count):
+    assert ((sector==0x7effff and count==1) or
+            (sector in (0x5000,0x6000) and count==256) or
+            (0<=sector<0x100 and count in (4,16,256) and sector+count<=0x100))
+    p=out/(name+'.raw');c.command(f'RS {hex(sector)} {hex(count)} {p}')
+    raw=p.read_bytes();assert len(raw)==count*528;return raw
+def marker(name,phase,programs,*,native_zero=False):
+    w=list(struct.unpack_from('<20I',read(name,0x7effff,1)))
+    expected=[0x31424449,0x00000101,phase,0,int(phase!=0),0,programs,0,programs*4,0]
+    assert w[:10]==expected and w[13]==1 and w[14]==build['build_tag'] and w[15:18]==[1,0x5770,1],w
+    if native_zero:assert w[18]>0 and w[19]==0,('Native read error',w)
+    save(name+'.json',w);return w
+def download():
+    cmd='DB '+os.path.relpath(builddir/'writer.bin',out)
+    start=len(''.join(c.chunks));c.commands.append(cmd);c.send_once(cmd);deadline=time.monotonic()+45
+    while time.monotonic()<deadline:
+        text=''.join(c.chunks)
+        if completed_response(text,start,'Download boot ok') is not None:return
+        if 'Error:' in ANSI.sub('',text[start:]):raise RuntimeError('DB error; no retry')
+        time.sleep(.01)
+    raise RuntimeError('DB completion missing; no retry')
+try:
+    c=RamConsole(out);intro=c.wait('Select input');assert 'Found 1 rockusb' in intro and 'Maskrom' in intro
+    c.select();download();marker('loaded_marker',0,0)
+    before0=main(read('before_copy0',0,256));marker('before_copy0_marker',0,0)
+    before5=main(read('before_copy5',0x5000,256));marker('before_copy5_marker',0,0)
+    before6=main(read('before_copy6',0x6000,256));marker('before_copy6_marker',0,0)
+    assert before5[:CRITICAL_END]==source[:CRITICAL_END],'Copy5 changed; no erase'
+    assert before6[:CRITICAL_END]==source[:CRITICAL_END],'Copy6 changed; no erase'
+    assert before0[:1024]!=source[:1024],'IDB0 now has original valid headers; reassess before erase'
+    save('PREWRITE.json',dict(target_block=0,physical_sector_range=['0x0','0x1000'],one_erase=True,
+         native_program_calls=64,source_sha256=hashlib.sha256(source).hexdigest(),copy5_and_copy6_verified=True,
+         before_copy0_bootorder_sha256=hashlib.sha256(before0).hexdigest(),before_copy0_first1024_hex=before0[:1024].hex()))
+    save('ERASE_DISPATCHED_NO_RETRY.json',dict(sector='0x7f0100',control='erase_copy0_once.bin'))
+    result['erase_dispatched']=True;c.command(f'WS 0x7f0100 {builddir/"erase_copy0_once.bin"}');marker('erased_marker',1,0)
+    for i in range(0,256,16):
+        file=builddir/f'part{i:03d}.main512.bin'
+        save(f'program_{i:03d}_DISPATCHED_NO_RETRY.json',dict(sector=hex(i),sha256=hashlib.sha256(file.read_bytes()).hexdigest()))
+        result['program_chunks']+=1;c.command(f'WS {hex(i)} {file}')
+        marker(f'program_{i:03d}_marker',3 if i==240 else 1,(i+16)//4)
+        got=main(read(f'program_{i:03d}_readback',i,16))
+        valid=min(8192,CRITICAL_END-i*512)
+        assert got[:valid]==source[i*512:i*512+valid],'Meaningful program readback mismatch; no retry'
+        marker(f'program_{i:03d}_readback_marker',3 if i==240 else 1,(i+16)//4,native_zero=i<240)
+        print(f'Original IDB0 verified {min(i+16,248)}/248 meaningful records',flush=True)
+    groups=[];previous_counter=marker('before_group_checks_marker',3,64)[18]
+    for i in range(0,248,4):
+        got=main(read(f'group_{i:03d}',i,4))
+        assert got==source[i*512:(i+4)*512],('Meaningful IDB0 group differs',i)
+        w=marker(f'group_{i:03d}_marker',3,64,native_zero=True)
+        assert w[18]==previous_counter+1,('Expected one fresh native read per meaningful group',i,w)
+        previous_counter=w[18]
+        groups.append(dict(record=i,native_calls=1,total_native_calls=w[18],native_return=w[19],source_exact=True))
+    save('meaningful_group_checks.json',groups)
+    final0=main(read('final_copy0',0,256));marker('final_copy0_marker',3,64)
+    final5=main(read('final_copy5',0x5000,256));marker('final_copy5_marker',3,64)
+    final6=main(read('final_copy6',0x6000,256))
+    assert final0[:CRITICAL_END]==source[:CRITICAL_END]
+    assert final5[:CRITICAL_END]==before5[:CRITICAL_END] and final6[:CRITICAL_END]==before6[:CRITICAL_END]
+    result['final_marker']=marker('final_marker',3,64)
+    result.update(all_pass=True,copy0_meaningful_exact=True,copy0_meaningful_native_reads_all_zero=True,
+                  copy0_full_main_exact=(final0==source),copy0_padding_differences=sum(a!=b for a,b in zip(final0[CRITICAL_END:],source[CRITICAL_END:])),
+                  copy5_and_copy6_meaningful_unchanged=True,normal_boot_verified=False,cold_check_pending=True)
+except BaseException as exc:result['error']=repr(exc);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    save('result.json',result);print(json.dumps({k:v for k,v in result.items() if k!='commands'},indent=2))

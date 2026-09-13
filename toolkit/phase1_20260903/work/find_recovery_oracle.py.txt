@@ -1,0 +1,19 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/find_recovery_oracle.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+from pathlib import Path
+root=Path(r'<HOST_PATH>')
+official=Path(r'<HOST_PATH>').read_bytes()
+for name in ['NAND_00.RAW','NAND_01.RAW']:
+    data=(root/name).read_bytes()
+    for offset in [0,8192,16384]:
+        needle=official[offset:offset+128]
+        start=0; hits=[]
+        while True:
+            hit=data.find(needle,start)
+            if hit<0: break
+            if hit%8448==0: hits.append((hit,hit//528))
+            start=hit+1
+        print(name,'image_offset',hex(offset),'page_aligned_hits',hits[:30])

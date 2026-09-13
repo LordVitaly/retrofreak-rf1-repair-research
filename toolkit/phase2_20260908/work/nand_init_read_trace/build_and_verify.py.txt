@@ -1,0 +1,201 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/nand_init_read_trace/build_and_verify.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Offline build/test of bounded NAND-init read trace. No USB/device APIs."""
+import hashlib
+import importlib.util
+import json
+from pathlib import Path
+import struct
+import subprocess
+import sys
+import zlib
+sys.dont_write_bytecode = True
+OLD = Path('<EXTERNAL_STAGE_03>')
+OUT = Path(__file__).resolve().parent
+SOURCE = OLD / 'work/startup_slices_v20_nand_init/nand_init_return.raw'
+SOURCE_SHA = '<HISTORICAL_HASH_REDACTED>'
+def sha(data): return hashlib.sha256(data).hexdigest()
+source = SOURCE.read_bytes()
+assert sha(source) == SOURCE_SHA and len(source) == 110352
+assert source[110080:] == bytes(272) and zlib.crc32(source[:110080]) == 0xad0dadee
+assert source[0xb408:0xb40c] == bytes.fromhex('0101a0e3')
+helper_path = OLD / 'work/ram_artifact.py'
+assert sha(helper_path.read_bytes()) == '<HISTORICAL_HASH_REDACTED>'
+spec = importlib.util.spec_from_file_location('checked_pure_ram_artifact', helper_path)
+helper = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(helper)
+elfpath = OUT / 'trace.elf'
+subprocess.run([str(OLD/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe'),'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-nostdlib',str(OUT/'trace.S'),'-Wl,-T,'+str(OUT/'trace.ld'),'-o',str(elfpath)],check=True,cwd=OUT)
+elf = elfpath.read_bytes()
+code = helper.elf_code(elf,0x60007040,0x478)
+symbols = helper.symbols(elf)
+data = bytearray(source[:110080])
+data[0x7040:0x7040+len(code)] = code
+def addr(off): return 0x60080000 + off - 0xa34
+def target(raw,off):
+    word = struct.unpack_from('<I',raw,off)[0]
+    assert (word&0x0e000000)==0x0a000000 and word>>28!=15
+    d=word&0xffffff
+    if d&0x800000:d-=0x1000000
+    return addr(off)+8+d*4
+patches = [(0x769c,0xabe0,'trace_init'),(0xb464,0x9ef4,'trace_read'),(0xb4a0,0x9ef4,'trace_read'),(0xa194,0x9ef4,'trace_read'),(0xb5e0,0xa158,'trace_flashinfo'),(0xb608,0xa158,'trace_flashinfo')]
+for off,original,symbol in patches:
+    assert source[off+3] == 0xeb and target(source,off) == addr(original)
+    word = 0xeb000000 | (((symbols[symbol]-addr(off)-8)//4)&0xffffff)
+    struct.pack_into('<I',data,off,word)
+helper.fix_crc(data)
+raw = bytes(data)+bytes(272)
+allowed=[(0x7040,0x7040+len(code)),(0x1e0,0x1e4)]+[(off,off+4) for off,_,_ in patches]
+changed=[i for i,(a,b) in enumerate(zip(source,raw)) if a!=b]
+assert all(any(a<=i<b for a,b in allowed) for i in changed)
+assert raw[0xb408:0xb40c] == bytes.fromhex('0101a0e3')
+assert raw[0x76a0:0x76a4] == source[0x76a0:0x76a4]
+assert target(raw,0x76a0) == 0x60000100 and addr(0x76a0)==0x60086c6c
+assert len(raw)==110352 and raw[110080:]==bytes(272) and zlib.crc32(raw[:110080])==0xad0dadee
+guards=(0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c)
+stops=(0xbbc8,0xbc90)
+assert all(raw[o:o+8]==source[o:o+8]==bytes.fromhex('0000e0e31eff2fe1') for o in guards)
+assert all(raw[o:o+4]==source[o:o+4]==bytes.fromhex('feffffea') for o in stops)
+# Format body has no external direct ARM B/BL entry. Original guard remains.
+inbound=[]
+for off in range(0xa34,110080-3,4):
+    word=struct.unpack_from('<I',source,off)[0]
+    if (word&0x0e000000)!=0x0a000000 or word>>28==15:continue
+    dest=target(source,off)
+    if addr(0x7040)<=dest<addr(0x74b8) and not 0x7038<=off<0x74b8:
+        inbound.append((hex(off),hex(dest)))
+assert not inbound,inbound
+
+sys.path.insert(0,str(OLD/'work/emulator_deps'))
+from unicorn import Uc,UC_ARCH_ARM,UC_MODE_ARM,UC_HOOK_CODE,UC_HOOK_MEM_WRITE,UC_HOOK_MEM_READ
+from unicorn.arm_const import *
+def base_machine():
+    u=Uc(UC_ARCH_ARM,UC_MODE_ARM)
+    u.mem_map(0x60000000,0x400000)
+    u.mem_map(0x61000000,0x20000)
+    u.mem_write(0x60080000,raw[0xa34:110080])
+    u.mem_write(0x60007040,code)
+    return u
+# Execute original vector/image copy loops, stopping before relocated entry.
+# Both low source carrier and relocated copy must still contain exact wrappers.
+copy_u=base_machine()
+copy_u.mem_map(0,0x1000)
+copy_u.mem_write(0x60000000,raw)
+copy_u.emu_start(0x6000028c,0x600002ac,count=1000000)
+assert copy_u.reg_read(UC_ARM_REG_PC)==0x600002ac
+assert bytes(copy_u.mem_read(0x60007040,len(code)))==code
+assert bytes(copy_u.mem_read(addr(0x7040),len(code)))==code
+assert bytes(copy_u.mem_read(0x60000000,110080))==raw[:110080]
+for off in guards:
+    u=base_machine();writes=[]
+    u.hook_add(UC_HOOK_MEM_WRITE,lambda *args:writes.append(args[2]))
+    u.reg_write(UC_ARM_REG_R0,0);u.reg_write(UC_ARM_REG_LR,0x601e0000)
+    u.emu_start(addr(off),0x601e0000,count=3)
+    assert u.reg_read(UC_ARM_REG_PC)==0x601e0000 and u.reg_read(UC_ARM_REG_R0)==0xffffffff and not writes
+for off in stops:
+    u=base_machine();writes=[]
+    u.hook_add(UC_HOOK_MEM_WRITE,lambda *args:writes.append(args[2]))
+    u.emu_start(addr(off),0x601e0000,count=32)
+    assert u.reg_read(UC_ARM_REG_PC)==addr(off) and not writes
+routes={0:0x2d24,1:0x2d2c,3:0x2d3c,4:0x2d44,0x14:0x2d5c}
+for op in range(256):
+    u=base_machine();u.reg_write(UC_ARM_REG_R0,op)
+    def gate(uc,pc,size,ctx):
+        if not addr(0x2c58)<=pc<addr(0x2c58+44):uc.emu_stop()
+    u.hook_add(UC_HOOK_CODE,gate)
+    u.emu_start(addr(0x2c58),0,count=20)
+    assert u.reg_read(UC_ARM_REG_PC)==addr(routes.get(op,0x2d10))
+
+u=base_machine();TRACE=0x6101af10;G=0x60359a3c;SP=0x601f0000;STOP=0x601e0000;DEST=0x60101000
+R=(UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3)
+SAVE=(UC_ARM_REG_R4,UC_ARM_REG_R5,UC_ARM_REG_R6,UC_ARM_REG_R7,UC_ARM_REG_R8,UC_ARM_REG_R9,UC_ARM_REG_R10,UC_ARM_REG_R11)
+active={};write_events=[];read_events=[]
+native_out=(0xa1111111,0xa2222222,0xa3333333,0xaccccccc)
+geometry=bytes([9,8,7,6,1,4,3,2,1,9,24,8,2,7,4,6])
+u.mem_write(G,geometry)
+def native(uc,pc,size,ctx):
+    if pc==addr(0xabe0):
+        assert [uc.reg_read(r) for r in R]==[7,8,9,10]
+        assert bytes(uc.mem_read(TRACE,16))==struct.pack('<4I',0x3154494e,0,0,0)
+        value=0xfffffffd
+    elif pc==addr(0x9ef4):
+        assert [uc.reg_read(r) for r in R]==active['args']
+        assert struct.unpack('<I',uc.mem_read(uc.reg_read(UC_ARM_REG_SP),4))[0]==0x76543210
+        value=active['rc']
+    elif pc==addr(0xa158):
+        assert [uc.reg_read(r) for r in R]==active['args']
+        value=active['rc']
+    else:return
+    uc.reg_write(R[0],value)
+    for r,v in zip((R[1],R[2],R[3],UC_ARM_REG_R12),native_out):uc.reg_write(r,v)
+    uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR))
+def writes(uc,access,address,size,value,ctx):
+    assert SP-80<=address and address+size<=SP or TRACE<=address and address+size<=TRACE+1056,hex(address)
+    write_events.append((address,size))
+def reads(uc,access,address,size,value,ctx):
+    read_events.append((address,size))
+u.hook_add(UC_HOOK_CODE,native)
+u.hook_add(UC_HOOK_MEM_WRITE,writes)
+u.hook_add(UC_HOOK_MEM_READ,reads)
+def call(name,args,caller=STOP):
+    active['args']=list(args)
+    for r,v in zip(R,args):u.reg_write(r,v)
+    for i,r in enumerate(SAVE):u.reg_write(r,0x13570000+i)
+    u.reg_write(UC_ARM_REG_SP,SP);u.reg_write(UC_ARM_REG_LR,caller)
+    u.mem_write(SP,struct.pack('<I',0x76543210))
+    u.emu_start(symbols[name],caller,count=10000)
+    assert u.reg_read(UC_ARM_REG_PC)==caller and u.reg_read(UC_ARM_REG_SP)==SP
+    assert all(u.reg_read(r)==0x13570000+i for i,r in enumerate(SAVE))
+    assert tuple(u.reg_read(r) for r in (R[1],R[2],R[3]))==native_out[:3]
+    return u.reg_read(R[0])
+assert call('trace_init',(7,8,9,10))==0xfffffffd
+assert struct.unpack('<4I',u.mem_read(TRACE,16))==(0x3154494e,0,0,0xfffffffd)
+expected=[]
+for i in range(30):
+    count=4 if i%2==0 else 1
+    content=bytearray(2048 if count==4 else 512)
+    for off,val in ((0,0xfcdc8c3b+i),(16,0x4e414e44),(20,0x00010120),(28,0x01020304),(36,0x05060708)):
+        struct.pack_into('<I',content,off,val)
+    if count==4:
+        struct.pack_into('<I',content,512,0x12340001+i)
+        struct.pack_into('<H',content,522,0x4b52)
+        struct.pack_into('<H',content,608,0x3c+i)
+        content[1001:1006]=bytes([11,12,13,14,24])
+    u.mem_write(DEST,bytes(content))
+    before=bytes(u.mem_read(DEST,len(content)))
+    active['rc']=0xffffffff if i%3==0 else 0
+    caller=addr(0xb468 if count==4 else 0xa198)
+    assert call('trace_read',(i*4096,DEST,0,count),caller)==active['rc']
+    assert tuple(u.reg_read(r) for r in (R[1],R[2],R[3],UC_ARM_REG_R12))==native_out
+    assert bytes(u.mem_read(DEST,len(content)))==before
+    expected.append((caller,i*4096,count,active['rc'],0xfcdc8c3b+i,0x12340001+i if count==4 else 0x4e414e44,0x4b52|((0x3c+i)<<16) if count==4 else 0x10120,0x04021801,0x0e0d0c0b if count==4 else 0x01020304,24 if count==4 else 0x05060708))
+assert struct.unpack('<2I',u.mem_read(TRACE+4,8))==(30,24)
+records=bytes(u.mem_read(TRACE+96,960))
+assert [struct.unpack_from('<10I',records,i*40) for i in range(24)]==expected[:24]
+assert bytes(u.mem_read(G,len(geometry)))==geometry
+for i in range(6):
+    active['rc']=0xffffffff if i%2 else 0
+    caller=addr(0xb5e4 if i%2==0 else 0xb60c)
+    assert call('trace_flashinfo',(0x50f4+i,8,9,10),caller)==active['rc']
+    assert struct.unpack('<4I',u.mem_read(TRACE+16,16))==(i+1,0x50f4+i,active['rc'],caller)
+for i in range(4):
+    assert struct.unpack('<4I',u.mem_read(TRACE+32+i*16,16))==(addr(0xb5e4 if i%2==0 else 0xb60c),0x50f4+i,0xffffffff if i%2 else 0,30)
+assert bytes(u.mem_read(TRACE+96,960))==records
+# Reset log, then invalid-size/NULL destination tests prove no unbounded reads.
+assert call('trace_init',(7,8,9,10))==0xfffffffd
+for i,(dest,count) in enumerate(((0,4),(0x77770000,2),(0,1),(0x77770000,0))):
+    active['rc']=0xffffffff
+    assert call('trace_read',(0,dest,0,count))==0xffffffff
+    row=struct.unpack('<10I',u.mem_read(TRACE+96+i*40,40))
+    assert row[4:7]==(0,0,0) and row[8:]==(0,0)
+
+path=OUT/'trace.raw'
+if path.exists():assert path.read_bytes()==raw,'Do not overwrite differing payload'
+else:path.write_bytes(raw)
+report={'all_pass':True,'device_access':False,'source':str(SOURCE),'source_sha256':SOURCE_SHA,'payload':str(path),'sha256':sha(raw),'bytes':len(raw),'body_bytes':110080,'body_crc32':hex(zlib.crc32(raw[:110080])),'tail272_zero':True,'code_bytes':len(code),'code_raw_range':[hex(0x7040),hex(0x7040+len(code))],'symbols':{k:hex(symbols[k]) for k in ('trace_init','trace_read','trace_flashinfo')},'patches':[{'raw_offset':hex(o),'original_target':hex(addr(t)),'trace_target':hex(symbols[s]),'kind':s} for o,t,s in patches],'allowed_ranges':[[hex(a),hex(b)] for a,b in allowed],'all_changed_bytes_within_allowlist':True,'cut_pc':'0x60086c6c','cut_target':'0x60000100','capacity_original_unchanged':True,'all_eight_denials_executed_no_writes':True,'both_confirm_stops_executed_no_writes':True,'all_256_opcode_routes_checked':True,'no_external_direct_branch_to_format_carrier':True,'conditional_and_unconditional_direct_branches_checked':True,'original_vector_and_image_copy_loops_executed_carrier_retained':True,'trace_export_base':hex(TRACE),'trace_export_bytes':1056,'header_bytes':96,'read_record_bytes':40,'max_read_records':24,'read_record_words':['caller_return_pc','physical_sector','count','native_read_rc','main_0','count4_main_200_else_main_10','count4_sig20a_and_ptr260_else_main14','G04_G0a_G0c_G0e_bytes','count4_main3e9_bytes_else_main1c','count4_main3ed_byte_else_main24'],'header_words':['NIT1_magic','total_reads','stored_reads','nand_init_rc','FlashInfo_total_calls','latest_FlashInfo_sector','latest_FlashInfo_rc','latest_FlashInfo_caller_return_pc'],'FlashInfo_records':{'offset':32,'max':4,'stride':16,'words':['caller_return_pc','sector','parser_rc','total_reads_at_return']},'wrapper_tests':{'read_calls':34,'FlashInfo_calls':6,'exact_first24_records':True,'null_and_wrong_count_destinations_not_dereferenced':True,'buffers_geometry_unchanged':True,'ABI_callee_saved_and_SP_preserved':True,'native_return_and_caller_saved_read_outputs_preserved':True,'fifth_argument_forwarded':True,'writes_confined_to_stack_and_export':True},'limits':['Original NAND-init prefix/return helper reused byte-exact outside stated trace changes.','Native NAND reads/init/parser are ABI stand-ins in these new tests; no peripheral/cache/ECC model or hardware proof.','Read log stops storing after24 calls; total counts continue. First4 FlashInfo parser records are retained plus latest fields.']}
+(OUT/'manifest.json').write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps(report,indent=2))

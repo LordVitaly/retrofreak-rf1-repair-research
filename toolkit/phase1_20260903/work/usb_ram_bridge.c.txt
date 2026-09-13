@@ -1,0 +1,73 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/usb_ram_bridge.c
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+/* RAM-only transport callbacks for this exact USBplug. No peripheral access. */
+typedef unsigned int u32;
+typedef unsigned char u8;
+#define STAGE ((volatile u8 *)0x61000000u)
+#define FIRST 0x007f0000u
+#define RECORDS 215u
+#define LENGTH 110080u
+#ifndef EXPECTED_CRC
+#define EXPECTED_CRC <REDACTED:ARTIFACT_CRC>u
+#endif
+
+static int buffer_ok(u32 p, u32 n) {
+    return p >= 0x60000000u && p <= 0x60800000u && n <= 0x60800000u-p;
+}
+static int range_ok(u32 sector, u32 count) {
+    return sector >= FIRST && sector-FIRST < RECORDS && count && count <= RECORDS-(sector-FIRST);
+}
+static void copy(volatile u8 *dst, const volatile u8 *src, u32 n) {
+    while (n--) *dst++ = *src++;
+}
+__attribute__((used))
+int bridge_read(u32 chip, u32 sector, u32 buffer, u32 count) {
+    if (chip || !count || count > RECORDS || !buffer_ok(buffer,count*528u)) return -1;
+    if (sector == FIRST-1 && count == 1) {
+        volatile u8 *p = (volatile u8 *)buffer;
+        for (u32 i=0;i<528;i++) p[i]=0;
+        volatile u32 *w=(volatile u32 *)buffer;
+#ifdef RF_ENTRY_CHECKPOINT
+        w[0]=0x43314652u; w[1]=0x3230504bu; /* RF1CKP02: restore caller's banked SP */
+        w[4]=*(volatile u32 *)0x60801000u;
+        w[5]=w[4] ? 0x60000004u : 0;
+#else
+#ifdef RF_IRQ_HANDOFF
+        w[0]=0x52314652u; w[1]=0x34304d41u; /* RF1RAM04: IRQ EOI before permanent handoff */
+#else
+        w[0]=0x52314652u; w[1]=0x33304d41u; /* RF1RAM03: same WS; disconnect before handoff */
+#endif
+#endif
+        w[2]=LENGTH; w[3]=EXPECTED_CRC;
+        return 0;
+    }
+    if (!range_ok(sector,count)) return -1;
+    copy((volatile u8 *)buffer,STAGE+(sector-FIRST)*528u,count*528u);
+    return 0;
+}
+__attribute__((used))
+int bridge_write(u32 chip, u32 sector, u32 buffer, u32 count) {
+    if (chip || !range_ok(sector,count) || !buffer_ok(buffer,count*528u)) return -1;
+    /* Console WS expands each 512-byte input sector to a 528-byte record.
+       Ignore its auxiliary bytes; execute/readback use a contiguous RAM image. */
+    for (u32 i=0;i<count;i++)
+        copy(STAGE+(sector-FIRST+i)*512u,(const volatile u8 *)(buffer+i*528u),512u);
+    if (sector-FIRST+count==RECORDS)
+        for (u32 i=LENGTH;i<209u*528u;i++) STAGE[i]=0;
+    return 0;
+}
+extern void bridge_handoff(void);
+__attribute__((used))
+int bridge_execute(void) {
+    u32 crc=~0u;
+    for (u32 i=0;i<LENGTH;i++) {
+        crc^=STAGE[i];
+        for (u32 bit=0;bit<8;bit++) crc=(crc>>1)^((0u-(crc&1u))&0xedb88320u);
+    }
+    if (~crc != EXPECTED_CRC) return -1;
+    bridge_handoff();
+    return -1;
+}

@@ -1,0 +1,44 @@
+{
+  "all_pass": true,
+  "hardware_access": false,
+  "live_result_pins": {
+    "26": {
+      "path": "<THREAD_ROOT>\\work\\cache_last_block26_attempt01\\result.json",
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "24": {
+      "path": "<THREAD_ROOT>\\work\\cache_last_block24_attempt01\\result.json",
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    }
+  },
+  "readbacks": {
+    "24": {
+      "path": "<THREAD_ROOT>\\work\\cache_last_block24_attempt01\\reopen\\data.bin",
+      "bytes": 2097152,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "25": {
+      "path": "<THREAD_ROOT>\\work\\white_screen_reads_cache_last_backup2526\\cache_last_block25\\data.bin",
+      "bytes": 2097152,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "26": {
+      "path": "<THREAD_ROOT>\\work\\cache_last_block26_attempt01\\reopen\\data.bin",
+      "bytes": 2097152,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    }
+  },
+  "first_6MiB_exact": true,
+  "reconstructed_image": "<THREAD_ROOT>\\work\\cache_last_attempt\\cache_live_reconstructed.img",
+  "reconstructed_sha256": "<HISTORICAL_HASH_REDACTED>",
+  "source_image_sha256": "<HISTORICAL_HASH_REDACTED>",
+  "e2fsck_command": [
+    "<THREAD_ROOT>\\work\\cache_last_attempt\\portable\\usr\\sbin\\e2fsck.exe",
+    "-f",
+    "-n",
+    "<THREAD_ROOT>/work/cache_last_attempt/cache_live_reconstructed.img"
+  ],
+  "e2fsck_returncode": 0,
+  "image_hash_unchanged": true,
+  "note": "Unwritten free space is reconstructed from the clean image; only allocated filesystem blocks are covered by the three actual readbacks."
+}

@@ -1,0 +1,18 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/usb_ram_bridge_capacity_fixed_hardware_attempt01/result.json",
+  "interpretation": "Full USB startup still failed after the RAM capacity fix.",
+  "data": {
+    "commands": "<REDACTED:RAW_LOG_OR_IDENTIFIER>",
+    "marker_exact": true,
+    "RAM_roundtrip_exact": true,
+    "handoff_command_sent": true,
+    "system_repair_performed": false,
+    "capacity_fixed": true,
+    "payload_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "scope": "WS allowed only after exact bridge marker; targets RAM, not NAND",
+    "RFI_response": "<REDACTED:RAW_LOG_OR_IDENTIFIER>",
+    "readback_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "handoff_response": "<REDACTED:RAW_LOG_OR_IDENTIFIER>"
+  }
+}

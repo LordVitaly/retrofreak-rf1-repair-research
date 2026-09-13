@@ -1,0 +1,141 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/run_header_map_recheck.py
+Role: historical_device_runner_or_stateful_scenario_review_before_any_use
+Original repair session must not be resumed from this public copy.
+
+"""Read-only recovery from the pinned post-header22 map-comparison stop.
+
+Only the authenticated existing RAM bridge is used. No DB, NAND writer,
+automatic retry, or reset after an ambiguous command. --offline has no device API.
+Older map differences are evidence, not a claim about the completed header write.
+"""
+from pathlib import Path
+import hashlib,json,os,struct,sys,zlib
+
+if sys.flags.optimize:
+    raise RuntimeError('Assertions must remain enabled')
+assert len(sys.argv)==2 and sys.argv[1] in ('--offline','--verified-resume')
+offline=sys.argv[1]=='--offline'
+HERE=Path(__file__).resolve().parent
+OLD=Path('<EXTERNAL_STAGE_03>')
+def sha(b):return hashlib.sha256(b).hexdigest()
+def getjson(p):return json.loads(p.read_text())
+def pin(p,digest):
+    b=p.read_bytes();assert sha(b)==digest,str(p);return b
+
+prior_dir=HERE/'boot_header_block22_attempt01'
+prior=getjson(prior_dir/'result.json')
+assert not prior['all_pass'] and prior['write_launches']==1
+assert prior['dry_pass'] and prior['immediate_main_and_native_aux_exact'] and prior['reopened_readback_exact']
+assert prior['reopened_readback_sha256']=='<HISTORICAL_HASH_REDACTED>'
+previous=pin(prior_dir/'capture_mode0/ram_after.raw','<HISTORICAL_HASH_REDACTED>')
+prior_status=pin(prior_dir/'capture_mode0/status.raw','<HISTORICAL_HASH_REDACTED>')
+assert len(prior_status)==1056 and prior_status[:8]==b'RF1READ1'
+assert struct.unpack_from('<4I',prior_status,8)==(0x6020,1,0,0xa8000)
+prior_snapshot=pin(prior_dir/'capture_mode0/data.bin','<HISTORICAL_HASH_REDACTED>')
+prior_mode0=list(struct.unpack_from('<1896H',prior_snapshot,0xf00))
+map_manifest=json.loads(pin(HERE/'boot_map_compare/manifest.json','<HISTORICAL_HASH_REDACTED>'))
+assert map_manifest['all_pass']
+payloads={};old_maps={}
+payload_pins={0:'<HISTORICAL_HASH_REDACTED>',1:'<HISTORICAL_HASH_REDACTED>'}
+for mode in (0,1):
+    name=f'capture_mode{mode}';meta=map_manifest['profiles'][name]
+    assert meta['all_pass'] and meta['mode']==mode and meta['lba']==0x6020 and meta['sectors']==1
+    raw=pin(Path(meta['path']),payload_pins[mode]);assert meta['sha256']==sha(raw)
+    assert len(raw)==110352 and raw[110080:]==bytes(272) and zlib.crc32(raw[:110080])==0xad0dadee
+    assert raw[0x76f8:0x76fc]==struct.pack('<I',0xe3a00000|mode)
+    assert raw[0xb408:0xb40c]==bytes.fromhex('0101a0e3') and raw[0xaf60:0xaf64]==bytes.fromhex('0003a0e1')
+    for off in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):
+        assert raw[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+    for off in (0xbbc8,0xbc90):assert raw[off:off+4]==bytes.fromhex('feffffea')
+    payloads[name]=raw
+    snapshot=(HERE/f'boot_visibility_compare_attempt01/{name}/data.bin').read_bytes()
+    assert len(snapshot)==688128
+    old_maps[name]=list(struct.unpack_from('<1896H',snapshot,0xf00))
+assert previous[:110080]==payloads['capture_mode0'][:110080]
+assert struct.unpack_from('<2I',previous,110080)==(0x44475453,0x600982e4) and previous[110348:]==bytes(4)
+if offline:
+    print(json.dumps(dict(offline_pass=True,nand_writers_enabled=False,resume_ram_sha256=sha(previous),payload_pins=payload_pins)))
+    sys.exit(0)
+
+statefile=HERE/'white_screen_read_state.json'
+state=getjson(statefile)
+assert not state['valid'] and state['phase']=='physical22_failed'
+out=HERE/'boot_header_map_recheck_attempt01';out.mkdir(exist_ok=False)
+result=dict(all_pass=False,nand_writers_enabled=False,header22_write_not_repeated=True,old_baseline_is_historical=True,executions=[],map_checks={})
+marker=b'RF1CKP02'+struct.pack('<IIII',110080,0xad0dadee,1,0x60000004)+bytes(504)
+window=b'RF1WIN01'+struct.pack('<IIII',0x800000,4096,0x63000000,16)+bytes(504)
+sys.path.insert(0,str(OLD/'work'))
+from ram_console_session import RamConsole
+c=None
+def save(path,obj):
+    with path.open('x') as f:
+        json.dump(obj,f,indent=2);f.flush();os.fsync(f.fileno())
+def update(obj):
+    tmp=statefile.with_suffix('.tmp')
+    with tmp.open('w') as f:
+        json.dump(obj,f,indent=2);f.flush();os.fsync(f.fileno())
+    os.replace(tmp,statefile)
+def read(path,lba,count):
+    assert not path.exists()
+    assert (lba,count) in ((0x7effff,1),(0x7efffe,1),(0x7f0000,209),(0x7f00d1,2)) or (0x800000<=lba<0x800540 and 0<count<=16 and lba+count<=0x800540)
+    c.command(f'RS {hex(lba)} {hex(count)} {path}')
+    b=path.read_bytes();assert len(b)==count*528;return b
+def read_snapshot(d):
+    data=bytearray()
+    for offset in range(0,1344,16):
+        part=read(d/f'ftl_{offset:04d}.raw',0x800000+offset,16)
+        assert all(part[j+512:j+528]==bytes(16) for j in range(0,len(part),528))
+        data.extend(b''.join(part[j:j+512] for j in range(0,len(part),528)))
+    assert len(data)==688128
+    return bytes(data)
+def execute(name):
+    global previous
+    d=out/name;d.mkdir();raw=payloads[name]
+    assert read(d/'previous.raw',0x7f0000,209)==previous
+    for index,offset in enumerate(range(0,110080,8192)):
+        p=d/f'part{index:02d}.bin';p.write_bytes(raw[offset:min(offset+8192,110080)])
+        c.command(f'WS {hex(0x7f0000+offset//512)} {p}')
+    assert read(d/'ram_before.raw',0x7f0000,209)==raw
+    save(d/'DISPATCHED_NO_RETRY.json',dict(kind=name,payload_sha256=sha(raw),nand_writers_enabled=False))
+    update(dict(valid=False,phase=f'header_map_recheck_{name}_dispatched',output=str(out)))
+    c.command('RD')
+    assert read(d/'marker.raw',0x7effff,1)==marker
+    after=read(d/'ram_after.raw',0x7f0000,209)
+    status=read(d/'status.raw',0x7f00d1,2)
+    result['executions'].append(dict(kind=name,ram_sha256=sha(after),status_hex=status[:24].hex()))
+    assert after[:110080]==raw[:110080] and after[110348:]==bytes(4)
+    assert struct.unpack_from('<2I',after,110080)==(0x44475453,0x600982e4)
+    assert status[:8]==b'RF1READ1' and struct.unpack_from('<4I',status,8)==(0x6020,1,0,0xa8000)
+    previous=after
+    return d
+def differences(before,after):
+    return [dict(logical=i,before=a,after=b) for i,(a,b) in enumerate(zip(before,after)) if a!=b]
+try:
+    c=RamConsole(out);c.select()
+    assert read(out/'marker.raw',0x7effff,1)==marker
+    assert read(out/'window.raw',0x7efffe,1)==window
+    assert read(out/'resume_ram.raw',0x7f0000,209)==previous
+    assert read(out/'resume_status.raw',0x7f00d1,2)==prior_status
+    result['resume_reauthenticated']=True
+    for mode,expected in ((0,[22,25,26]),(1,[1028,1032,1036])):
+        name=f'capture_mode{mode}';d=execute(name)
+        snapshot=read_snapshot(d);(d/'data.bin').write_bytes(snapshot)
+        mapping=list(struct.unpack_from('<1896H',snapshot,0xf00))
+        actual=[mapping[i] for i in (6,9,10)]
+        check=dict(snapshot_sha256=sha(snapshot),map_entries=mapping,boot_logicals=[6,9,10],boot_physicals=actual,expected_boot_physicals=expected,differences_from_historical_baseline=differences(old_maps[name],mapping))
+        if mode==0:check['differences_from_completed_header22_capture']=differences(prior_mode0,mapping)
+        result['map_checks'][name]=check
+        assert actual==expected,('boot mapping',mode,actual)
+        print(json.dumps(dict(mode=mode,boot_physicals=actual,historical_difference_count=len(check['differences_from_historical_baseline']),snapshot_sha256=sha(snapshot))),flush=True)
+    result['all_pass']=True
+    update(dict(valid=True,ram_path=str(d/'ram_after.raw'),ram_sha256=sha(previous),last_case='header_map_recheck_capture_mode1',batch='boot_header_map_recheck_attempt01'))
+except BaseException as exc:
+    result['error']=repr(exc)
+    update(dict(valid=False,phase='header_map_recheck_failed',error=repr(exc),output=str(out)))
+    raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    save(out/'result.json',result)
+    print(json.dumps({k:v for k,v in result.items() if k not in ('commands','map_checks')},indent=2),flush=True)

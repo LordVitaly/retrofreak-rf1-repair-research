@@ -1,0 +1,164 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/early_boot_ecc24_attempt01/interpretation.json",
+  "interpretation": "Correct ECC24 interpretation instead of the incorrect native40 baseline.",
+  "data": {
+    "scope": "Read artifacts only; four known IDB copies. Copy5 loader compared to same-mode original backup and independently verified donor. No physical NAND modification inference from RS errors.",
+    "rows": [
+      {
+        "block": 1,
+        "current_raw_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "old_ecc24_raw_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "header_magic_valid": false,
+        "current_main_vs_old_ecc24": {
+          "bytes": 126125,
+          "bits": 518187,
+          "first_offsets": {
+            "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+            "original_items": 32
+          },
+          "exact": false
+        },
+        "header_main_vs_old_ecc24": {
+          "bytes": 510,
+          "bits": 2056,
+          "first_offsets": {
+            "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+            "original_items": 32
+          },
+          "exact": false
+        }
+      },
+      {
+        "block": 3,
+        "current_raw_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "old_ecc24_raw_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "header_magic_valid": false,
+        "current_main_vs_old_ecc24": {
+          "bytes": 125998,
+          "bits": 518034,
+          "first_offsets": {
+            "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+            "original_items": 32
+          },
+          "exact": false
+        },
+        "header_main_vs_old_ecc24": {
+          "bytes": 510,
+          "bits": 2050,
+          "first_offsets": {
+            "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+            "original_items": 32
+          },
+          "exact": false
+        }
+      },
+      {
+        "block": 5,
+        "current_raw_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "old_ecc24_raw_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "header_magic_valid": true,
+        "current_main_vs_old_ecc24": {
+          "bytes": 77,
+          "bits": 78,
+          "first_offsets": {
+            "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+            "original_items": 32
+          },
+          "exact": false
+        },
+        "header_main_vs_old_ecc24": {
+          "bytes": 0,
+          "bits": 0,
+          "first_offsets": [],
+          "exact": true
+        },
+        "init_offset": 4,
+        "init_records": 24,
+        "total_records": 240,
+        "init_vs_old": {
+          "bytes": 0,
+          "bits": 0,
+          "first_offsets": [],
+          "exact": true
+        },
+        "flashboot_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "flashboot_prefix108544_vs_verified": {
+          "bytes": 0,
+          "bits": 0,
+          "first_offsets": [],
+          "exact": true
+        },
+        "flashboot_whole_vs_verified": {
+          "bytes": 64,
+          "bits": 65,
+          "first_offsets": {
+            "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+            "original_items": 32
+          },
+          "exact": false
+        },
+        "flashboot_vs_old_ecc24": {
+          "bytes": 36,
+          "bits": 37,
+          "first_offsets": {
+            "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+            "original_items": 32
+          },
+          "exact": false
+        },
+        "flashboot_tail1536_vs_saved_ecc24": {
+          "bytes": 39,
+          "bits": 40,
+          "first_offsets": {
+            "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+            "original_items": 32
+          },
+          "exact": false
+        },
+        "saved_ecc24_tail_vs_verified": {
+          "bytes": 27,
+          "bits": 27,
+          "first_offsets": {
+            "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+            "original_items": 27
+          },
+          "exact": false
+        },
+        "header_records0_3_vs_old": {
+          "bytes": 0,
+          "bits": 0,
+          "first_offsets": [],
+          "exact": true
+        }
+      },
+      {
+        "block": 6,
+        "current_raw_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "old_ecc24_raw_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "header_magic_valid": false,
+        "current_main_vs_old_ecc24": {
+          "bytes": 126358,
+          "bits": 521497,
+          "first_offsets": {
+            "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+            "original_items": 32
+          },
+          "exact": false
+        },
+        "header_main_vs_old_ecc24": {
+          "bytes": 507,
+          "bits": 2048,
+          "first_offsets": {
+            "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+            "original_items": 32
+          },
+          "exact": false
+        }
+      }
+    ],
+    "nand_writes": 0,
+    "ecc_status_available": false,
+    "normal_boot_failure_explanation": "Damaged/unreadable early boot data is a supported hypothesis, not proof of when/how it arose or of all BootROM rejection conditions."
+  }
+}

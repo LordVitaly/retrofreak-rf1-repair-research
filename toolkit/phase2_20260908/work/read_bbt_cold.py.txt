@@ -1,0 +1,61 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/read_bbt_cold.py
+Role: historical_device_runner_or_stateful_scenario_review_before_any_use
+Original repair session must not be resumed from this public copy.
+
+"""Fresh MaskROM: save BBT blocks12/13 with permanently write-disabled reader."""
+import hashlib,json,os,struct,sys,time
+from pathlib import Path
+sys.path.insert(0, '<EXTERNAL_STAGE_03>\\work')
+from ram_console_session import RamConsole
+from console_completion import ANSI,completed_response
+ROOT=Path('<EXTERNAL_STAGE_03>')
+assert sys.argv[1:]==['--fresh-maskrom-confirmed']
+loader=ROOT/'work/bbt_ecc40_readonly_v1/reader.bin'
+assert hashlib.sha256(loader.read_bytes()).hexdigest()=='<HISTORICAL_HASH_REDACTED>'
+proof=json.loads((loader.parent/'build.json').read_text());assert proof['all_pass'] and proof['unconditional_write_denials_tested']==8
+out=Path('<THREAD_ROOT>\\work\\bbt_cold_attempt01');out.mkdir(exist_ok=False)
+c=None;result=dict(all_pass=False,nand_writes_enabled=False,reset_commands=0,ftl_init=False,blocks=[])
+def read(name,sector,count):
+    assert (sector,count) in ((0x7effff,1),(0xc000,4096),(0xd000,4096),(0xc000,16),(0xd000,16))
+    p=out/(name+'.raw');c.command(f'RS {hex(sector)} {hex(count)} {p}')
+    b=p.read_bytes();assert len(b)==count*528;return b
+def command(cmd,token):
+    assert cmd=='RFI' or cmd=='DB '+os.path.relpath(loader,out)
+    start=len(''.join(c.chunks));c.commands.append(cmd);c.send_once(cmd);deadline=time.monotonic()+45
+    while time.monotonic()<deadline:
+        response=''.join(c.chunks)
+        done=completed_response(response,start,token)
+        if done is not None:return done
+        if 'Error:' in ANSI.sub('',response[start:]):raise RuntimeError('Device error; no retry')
+        time.sleep(.01)
+    raise RuntimeError('No completion; no retry')
+def marker(name):
+    w=list(struct.unpack_from('<18I',read(name,0x7effff,1)))
+    assert w[:10]==[0x31424449,0x06000103,0,0,0,0,0,0,0x6000,0] and w[13]==1
+    result[name]=w
+def mains(raw):return b''.join(raw[i:i+512] for i in range(0,len(raw),528))
+def aux(raw):return [struct.unpack_from('<H',raw,i+512)[0] for i in range(0,len(raw),528)]
+try:
+    c=RamConsole(out);intro=c.wait('Select input');assert 'Found 1 rockusb' in intro and 'Maskrom' in intro;c.select()
+    command('DB '+os.path.relpath(loader,out),'Download boot ok');marker('loaded_marker')
+    result['flash_info']=command('RFI','Flash Info:');assert all(x in result['flash_info'] for x in ('MICRON','4096MB','ECC Bits: 40'))
+    with (ROOT/'work/nand_native_ecc40/NAND_00.RAW').open('rb') as backup:
+        for block in (12,13):
+            raw=read(f'block{block}_full',block*4096,4096)
+            repeat=read(f'block{block}_firstpage_repeat',block*4096,16)
+            backup.seek(block*4096*528);old=backup.read(len(raw));assert len(old)==len(raw)
+            current_main,old_main=mains(raw),mains(old)
+            diffs=[i for i,(x,y) in enumerate(zip(current_main,old_main)) if x!=y]
+            current_aux,old_aux=aux(raw),aux(old)
+            meta_diffs=[dict(record=i,current=x,backup=y) for i,(x,y) in enumerate(zip(current_aux,old_aux)) if x!=y]
+            row=dict(block=block,raw_sha256=hashlib.sha256(raw).hexdigest(),main_sha256=hashlib.sha256(current_main).hexdigest(),first_page_main_sha256=hashlib.sha256(current_main[:8192]).hexdigest(),main_differences=len(diffs),first_main_offsets=diffs[:24],metadata_differences=len(meta_diffs),first_metadata_differences=meta_diffs[:24],first_page_meta=current_aux[:16],backup_first_page_meta=old_aux[:16],first_page_repeat_exact=mains(repeat)==current_main[:8192] and aux(repeat)==current_aux[:16])
+            result['blocks'].append(row);print(json.dumps(row),flush=True)
+            assert row['first_page_repeat_exact'],'Read instability; stop without any write'
+    marker('final_marker');result['all_pass']=True
+except BaseException as e:result['error']=repr(e);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    with (out/'result.json').open('x') as f:json.dump(result,f,indent=2);f.flush();os.fsync(f.fileno())
+    print(json.dumps({k:v for k,v in result.items() if k not in ('commands','blocks')},indent=2),flush=True)

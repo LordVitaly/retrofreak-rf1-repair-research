@@ -1,0 +1,96 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/inspect_rs_aux_variants.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+from __future__ import annotations
+
+from pathlib import Path
+from difflib import SequenceMatcher
+
+
+ROOT = Path(
+    r"<HOST_PATH>"
+    r"\retro-freak-rf-1-handoff-low\work"
+)
+BOOT = Path(
+    r"<HOST_PATH>"
+    r"\retro-freak-retrofreak-systemupdate-0-2\work\rkfw_contents"
+    r"\components\boot.img"
+).read_bytes()
+RECORD = 528
+
+
+def records(blob: bytes) -> list[bytes]:
+    return [blob[pos : pos + RECORD] for pos in range(0, len(blob), RECORD)]
+
+
+bulk = records((ROOT / "probe_page_full.raw").read_bytes())
+pair = []
+for index in range(0, 16, 2):
+    pair.extend(records((ROOT / f"probe_pair_{index:02d}.raw").read_bytes()))
+
+expected = BOOT[0x4000 : 0x6000]
+missing = expected[8012:]
+print(f"missing_tail_len={len(missing)} hex={missing[:16].hex()}")
+for label, recs in (("bulk", bulk), ("pair", pair)):
+    full = b"".join(recs)
+    aux = b"".join(record[512:] for record in recs)
+    main = b"".join(record[:512] for record in recs)
+    print(f"{label}: tail_in_full={full.find(missing)} tail_in_main={main.find(missing)} tail_in_aux={aux.find(missing)}")
+
+main = b"".join(record[:512] for record in bulk)
+removed = bytearray()
+visible = bytearray(main[:1024])
+cursor = 1024
+while cursor < len(main):
+    removed.extend(main[cursor : cursor + 28])
+    cursor += 28
+    visible.extend(main[cursor : cursor + 1024])
+    cursor += 1024
+print(
+    f"main_model: visible={len(visible)} removed={len(removed)} "
+    f"visible_matches_expected_prefix={bytes(visible) == expected[:len(visible)]} "
+    f"removed_matches_expected_tail={bytes(removed) == expected[len(visible):]}"
+)
+visible_mismatches = [
+    index for index, (left, right) in enumerate(zip(visible, expected)) if left != right
+]
+print(
+    f"visible_mismatch_count={len(visible_mismatches)} "
+    f"first_visible_mismatches={visible_mismatches[:32]}"
+)
+print(f"removed_hex={bytes(removed).hex()}")
+print(f"expected_tail_hex={expected[len(visible):].hex()}")
+matcher = SequenceMatcher(None, main, expected, autojunk=False)
+print("matching_blocks_main_to_expected(size>=16):")
+for block in matcher.get_matching_blocks():
+    if block.size >= 16:
+        print(f"  main=0x{block.a:04X} expected=0x{block.b:04X} size={block.size} delta={block.a-block.b:+d}")
+for part_index in range(0, len(removed), 28):
+    part = bytes(removed[part_index : part_index + 28])
+    matches = []
+    start = 0
+    while True:
+        pos = expected.find(part, start)
+        if pos < 0:
+            break
+        matches.append(pos)
+        start = pos + 1
+    print(f"removed[{part_index // 28}] expected_positions={matches}")
+
+print("idx bulk_aux pair_aux equal")
+for index, (left, right) in enumerate(zip(bulk, pair)):
+    first4 = left[512:516]
+    positions = []
+    start = 0
+    while True:
+        pos = expected.find(first4, start)
+        if pos < 0:
+            break
+        positions.append(pos)
+        start = pos + 1
+    print(
+        f"{index:02d} {left[512:].hex()} {right[512:].hex()} "
+        f"{left[512:] == right[512:]} first4_expected={positions[:8]}"
+    )

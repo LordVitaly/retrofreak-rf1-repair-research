@@ -1,0 +1,33 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/accept_actual_boot_map_baseline.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Validate observed current maps; retain original stopped-result evidence."""
+from pathlib import Path
+import hashlib,json,struct
+p=Path(__file__).resolve().parent
+source=p/'boot_header_map_recheck_attempt01'
+r=json.loads((source/'result.json').read_text())
+assert not r['all_pass'] and r['resume_reauthenticated'] and r['header22_write_not_repeated']
+assert r['error']=="AssertionError(('boot mapping', 1, [74, 77, 78]))"
+assert [x['kind'] for x in r['executions']]==['capture_mode0','capture_mode1']
+out=dict(all_pass=False,accepted_actual_mappings=True,original_stopped_result_retained=True,historical_map_equality_claimed=False,maps={})
+for mode,expected,pin in ((0,[22,25,26],'<HISTORICAL_HASH_REDACTED>'),(1,[74,77,78],'<HISTORICAL_HASH_REDACTED>')):
+ d=source/f'capture_mode{mode}'
+ status=(d/'status.raw').read_bytes()
+ assert status[:8]==b'RF1READ1' and struct.unpack_from('<4I',status,8)==(0x6020,1,0,0xa8000)
+ raw=(d/'ram_after.raw').read_bytes();profile=(p/f'boot_map_compare/capture_mode{mode}.raw').read_bytes()
+ assert raw[:110080]==profile[:110080] and struct.unpack_from('<2I',raw,110080)==(0x44475453,0x600982e4)
+ data=(d/'data.bin').read_bytes();assert len(data)==688128 and hashlib.sha256(data).hexdigest()==pin
+ mapping=list(struct.unpack_from('<1896H',data,0xf00))
+ assert [mapping[i] for i in (6,9,10)]==expected
+ out['maps'][f'capture_mode{mode}']=dict(path=str(d/'data.bin'),sha256=pin,boot_physicals=expected)
+backup=json.loads((p/'boot_relocated_backup_attempt01/result.json').read_text());assert backup['all_pass']
+for physical,logical in ((74,6),(77,9),(78,10)):
+ b=json.loads((p/f'boot_relocated_backup_attempt01/block{physical}.json').read_text())
+ assert b['all_pass'] and b['physical_block']==physical and b['logical']==logical and b['native_page_rc']==[0]*256 and b['diagnostic_main_exact']
+out['all_pass']=True
+with (p/'boot_actual_map_baseline.json').open('x') as f:json.dump(out,f,indent=2)
+print(json.dumps(out,indent=2))

@@ -1,0 +1,60 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_system_dry_original_ftl.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Compiled dry gates around ORIGINAL FTL. Physical backend must never execute."""
+import hashlib,json,struct
+from emulate_flashboot_overlay import OverlayReplay
+from emulate_flashboot_offline import ROOT,FLASH,REGS,address,UC_ARM_REG_SP,UC_ARM_REG_LR,UC_ARM_REG_PC,STOP
+from ram_artifact import branch
+spec=json.loads((ROOT/'outputs/system_writer_gated_v3_build.json').read_text())['variants']['dry']
+syms={k:int(v,16) for k,v in spec['symbols'].items()}
+code=(ROOT/'work/system_writer_gated_v3/dry.NOT_FOR_UPLOAD.bin').read_bytes();assert hashlib.sha256(code).hexdigest()==spec['sha256']
+patched={address(o):syms[n] for o,n in [(0x3b0c,'gate_wrapper'),(0x7dcc,'gate_logical'),(0xba10,'gate_program'),(0xbc1c,'gate_erase'),(0xbd5c,'gate_copy'),(0x1934,'gate_forbidden'),(0x5b60,'gate_forbidden'),(0x7038,'gate_forbidden')]}
+class DryReplay(OverlayReplay):
+    def __init__(self,record):
+        self.installed=False
+        super().__init__(record)
+    def code_hook(self,uc,pc,size,ctx):
+        if self.installed:
+            if pc in (syms['original_program'],syms['original_erase']):raise AssertionError('Dry run entered original physical backend')
+            if pc in patched:return
+        super().code_hook(uc,pc,size,ctx)
+record=(ROOT/'work/idb_ecc24_parameter_attempt2/block05_page15.raw').read_bytes()[:512]
+emu=DryReplay(record);emu.allow_statistics_data();emu.allow_zero_length_copy=True
+for p,n in ((0x61800000,0x2000),(0x61700000,0x5000),(0x63000000,0x210000)):emu.uc.mem_map(p,n)
+emu.uc.mem_write(0x61800000,code)
+for pc,target in patched.items():emu.uc.mem_write(pc,struct.pack('<I',branch(pc,target)))
+emu.installed=True
+assert emu.call(0xa158,0x50f4)==0
+emu.uc.mem_write(FLASH+0xa0,struct.pack('<H',12));emu.call(0x74e0);emu.dump_mode=True
+assert emu.call(0x6a24)==0
+assert emu.call(0x6050,1,instruction_limit=10000000,timeout_us=30000000)==0
+emu.enabled=True;emu.write_entries.remove(address(0x3b0c))
+donor=(ROOT.parent.parent/'2026-09-01/retro-freak-retrofreak-systemupdate-0-2/work/rkfw_contents/components/system.img').read_bytes()
+assert hashlib.sha256(donor).hexdigest()=='b9ca511124e6c3d9ee2a1e31220f6bf5a858f06d88f9003f5fd7f7e25cf5676a'
+emu.uc.mem_write(0x63000000,donor[2*2097152:3*2097152])
+emu.uc.reg_write(REGS[0],188*4096);emu.uc.reg_write(UC_ARM_REG_SP,0x607ff000);emu.uc.reg_write(UC_ARM_REG_LR,STOP)
+emu.uc.emu_start(syms['gate_prepare'],STOP,count=1000000)
+assert emu.uc.reg_read(UC_ARM_REG_PC)==STOP and emu.uc.reg_read(REGS[0])==0
+emu.uc.mem_write(0x61700000,struct.pack('<I',0x31575246))
+for r,v in zip(REGS[1:],(188*4096,128,0x63000000)):emu.uc.reg_write(r,v)
+result=dict(all_pass=False,device_access=False,sha256=spec['sha256'])
+try:
+    # Match the proven real FlashBoot stack, not the emulator's synthetic stack.
+    emu.uc.reg_write(REGS[0],0)
+    emu.uc.reg_write(UC_ARM_REG_SP,0x603d3a3c)
+    emu.uc.reg_write(UC_ARM_REG_LR,STOP)
+    emu.uc.emu_start(address(0x7dcc),STOP,count=3000000,timeout=15000000)
+    assert emu.uc.reg_read(UC_ARM_REG_PC)==STOP,hex(emu.uc.reg_read(UC_ARM_REG_PC))
+    rc=emu.uc.reg_read(REGS[0])
+    state=struct.unpack('<8I',emu.uc.mem_read(0x61700000,32))
+    result.update(logical_return=hex(rc),gate_state=[hex(x) for x in state],journal=bytes(emu.uc.mem_read(0x61702000,state[5]*16)).hex())
+    assert rc==0xffffffff and state[0]==0 and state[1] in (0xd001,0xd002),(hex(rc),state)
+    assert not emu.operations and not emu.pages and not emu.erased
+    result.update(all_pass=True,logical_return=hex(rc),gate_state=[hex(x) for x in state],journal=bytes(emu.uc.mem_read(0x61702000,state[5]*16)).hex(),physical_backend_never_entered=True,original_FTL_returned_after_denial=True)
+except BaseException as e:result.update(error=repr(e),stop=emu.stopped);raise
+finally:
+    with (ROOT/'outputs/system_dry_original_ftl_v3_init.json').open('x') as f:json.dump(result,f,indent=2)
+    print(json.dumps(result,indent=2),flush=True)

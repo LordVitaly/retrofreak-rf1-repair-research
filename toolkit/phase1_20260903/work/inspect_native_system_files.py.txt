@@ -1,0 +1,39 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/inspect_native_system_files.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Inspect actual read-only logical system view, reporting failures without substitutions."""
+import json
+from pathlib import Path
+from dissect.extfs import ExtFS
+from native_system_view import NativeSystemView,MissingMappingError
+ROOT=Path(__file__).parent
+view=NativeSystemView()
+fs=ExtFS(view)
+results=[]
+for path in ('/','/bin','/bin/vold','/bin/servicemanager','/bin/surfaceflinger','/app/RetroFreakGUI.apk','/build.prop'):
+    row=dict(path=path)
+    try:
+        node=fs.get(path)
+        row.update(inode=node.inum,size=node.size)
+        if node.filetype==0x4000:
+            row['entries']=[dict(name=n.filename,inode=n.inum) for n in node.iterdir()]
+        else:
+            data=node.open().read()
+            row['read_bytes']=len(data)
+            row['head_hex']=data[:24].hex()
+        row['status']='read_returned'
+    except Exception as error:
+        row.update(status='error',error_type=type(error).__name__,error=str(error))
+    results.append(row)
+    print(json.dumps(row,ensure_ascii=True),flush=True)
+# Positive guard: a known absent range must not silently return invented bytes.
+view.seek((188-186)*2097152)
+try: view.read(1)
+except MissingMappingError: missing_guard=True
+else: raise AssertionError('Missing mapping was silently filled')
+report=dict(scope='Actual NAND critical-partition logical view; no reference/hole substitution',
+    missing_mapping_guard_passed=missing_guard,results=results)
+out=ROOT.parent/'outputs/native_system_file_inspection.json'
+with out.open('x') as f: json.dump(report,f,indent=2)

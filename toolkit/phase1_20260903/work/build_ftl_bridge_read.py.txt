@@ -1,0 +1,44 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_ftl_bridge_read.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""One fixed logical sector read, exact v33 return, unchanged RAM bridge."""
+import hashlib,json,struct,subprocess,zlib
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1]
+source=(ROOT/'work/startup_slices_v33_actual_usb/actual_usb_entry.raw').read_bytes()
+assert hashlib.sha256(source).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+out=ROOT/'work/ftl_bridge_read_v1';out.mkdir(exist_ok=False)
+elfpath=out/'read.elf'
+subprocess.run([str(ROOT/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe'),'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-nostdlib','work/ftl_bridge_read.S','-Wl,-T,work/ftl_bridge_read.ld','-Wl,-e,ftl_bridge_read','-o',str(elfpath)],cwd=ROOT,check=True)
+elf=elfpath.read_bytes();phoff=struct.unpack_from('<I',elf,28)[0];sz,n=struct.unpack_from('<HH',elf,42);code=[]
+for i in range(n):
+    typ,off,va,pa,fs,ms,flags,align=struct.unpack_from('<8I',elf,phoff+i*sz)
+    if typ==1 and fs and flags&1:
+        assert va==0x60007040 and fs<=0x180;code.append(elf[off:off+fs])
+assert len(code)==1
+data=bytearray(source[:110080]);data[0x7040:0x7040+len(code[0])]=code[0]
+data[0x18d18:0x18d1c]=struct.pack('<I',0xea000000|(((0x60007040-0x600982e4-8)//4)&0xffffff))
+data[0x1e0:0x1e4]=bytes(4);base=zlib.crc32(data);basis={}
+for bit in range(32):
+    trial=bytearray(data);trial[0x1e0+bit//8]^=1<<(bit%8);v=zlib.crc32(trial)^base;mask=1<<bit
+    while v:
+        p=v.bit_length()-1
+        if p not in basis:basis[p]=(v,mask);break
+        v^=basis[p][0];mask^=basis[p][1]
+v=<REDACTED:ARTIFACT_CRC>^base;solution=0
+while v:
+    p=v.bit_length()-1;v^=basis[p][0];solution^=basis[p][1]
+data[0x1e0:0x1e4]=struct.pack('<I',solution);assert zlib.crc32(data)==<REDACTED:ARTIFACT_CRC>
+allowed=((0x7040,0x7040+len(code[0])),(0x18d18,0x18d1c),(0x1e0,0x1e4))
+assert all(any(a<=i<b for a,b in allowed) for i,(a,b) in enumerate(zip(source,data)) if a!=b)
+for off in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):assert data[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+for off in (0xbbc8,0xbc90):assert data[off:off+4]==bytes.fromhex('feffffea')
+raw=bytes(data)+bytes(272);file=out/'read.raw'
+with file.open('xb') as f:f.write(raw)
+official=ROOT.parent.parent/'2026-09-01/retro-freak-retrofreak-systemupdate-0-2/work/rkfw_contents/components/boot.img'
+boot=official.read_bytes();assert hashlib.sha256(boot).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+report=dict(cases=[dict(name='actual_usb_entry',file=str(file.relative_to(ROOT)),cut_pc='0x600982e4',sha256=hashlib.sha256(raw).hexdigest())],device_access=False,read_lba='0x6020',read_sectors=1,output_address='0x6101b000',metadata_address='0x6101af10',export_RS=['0x7f00d1','0x2'],expected_sha256=hashlib.sha256(boot[16384:16896]).hexdigest(),official_boot=str(official),guarded=True,scope='Original logical read600846a0 then exact v33 return; own USB driver never runs; no NAND write enabled')
+with (ROOT/'outputs/ftl_bridge_read_build.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

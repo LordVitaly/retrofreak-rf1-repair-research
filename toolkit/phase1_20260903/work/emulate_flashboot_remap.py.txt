@@ -1,0 +1,65 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/emulate_flashboot_remap.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Dump-backed GetRemapTbl replay; injected RAM work buffers, no device access."""
+import json
+import argparse
+import struct
+from emulate_flashboot_bbt import DumpReplay
+from emulate_flashboot_offline import ROOT, FTL, FLASH, address, UC_ARM_REG_PC, UC_ARM_REG_LR
+
+class RemapReplay(DumpReplay):
+    def __init__(self,record):
+        super().__init__(record)
+        self.messages=[]
+    def code_hook(self,uc,pc,size,unused):
+        if pc==address(0x18e7c):
+            self.messages.append('printf intercepted; formatting not executed')
+            uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR))
+            return
+        super().code_hook(uc,pc,size,unused)
+
+def main():
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--mode',type=int,choices=(0,1),default=0)
+    parser.add_argument('--extended',action='store_true')
+    parser.add_argument('--native-buffers',action='store_true')
+    args=parser.parse_args()
+    mode=args.mode
+    record=(ROOT/'work/idb_ecc24_parameter_attempt2/block05_page15.raw').read_bytes()[:512]
+    emu=RemapReplay(record)
+    assert emu.call(0xa158,0x50f4)==0
+    emu.uc.mem_write(FLASH+0xa0,struct.pack('<H',12))
+    emu.call(0x74e0)
+    buffers={0x9dc4:0x60400000,0x9dd8:0x60410000,0x9dec:0x60420000}
+    if args.native_buffers:
+        buffers={field:struct.unpack('<I',emu.uc.mem_read(FTL+field,4))[0] for field in buffers}
+        assert all(0x60200000<=p<0x60700000 for p in buffers.values())
+    else:
+        for field,pointer in buffers.items():
+            emu.uc.mem_write(FTL+field,struct.pack('<I',pointer))
+    emu.dump_mode=True
+    assert emu.call(0x6a24)==0
+    start=len(emu.reads)
+    result=None
+    error=None
+    try: result=emu.call(0x6050,mode,instruction_limit=10_000_000 if args.extended else 1_000_000,timeout_us=30_000_000 if args.extended else 5_000_000)
+    except (RuntimeError,AssertionError) as exc: error=str(exc)
+    report=dict(scope='Actual GetRemapTbl code, dump-backed successful-read assumption, injected work buffers; not hardware startup',
+                mode=mode,result=result,error=error,stop=emu.stopped,
+                buffers_injected=not args.native_buffers,buffers={hex(k):hex(v) for k,v in buffers.items()},
+                remap_read_count=len(emu.reads)-start,reads=emu.reads[start:],printf_intercepts=len(emu.messages),
+                ftl_header_hex=bytes(emu.uc.mem_read(FTL,0x14)).hex())
+    filename='flashboot_offline_remap_stage3.json' if mode==0 else 'flashboot_offline_remap_full_stage3.json'
+    if args.extended: filename=filename.replace('.json','_extended.json')
+    if args.native_buffers: filename=filename.replace('.json','_native_buffers.json')
+    report['extended_limit']=args.extended
+    # 5FCC copies scratch to gFtl+0xD80; cache recovery subsequently reuses scratch.
+    # The scratch snapshot in the earlier report was NOT the final logical map.
+    report['logical_to_physical_u16']=list(struct.unpack('<1896H',emu.uc.mem_read(FTL+0xd80,1896*2)))
+    with (ROOT/'outputs'/filename).open('x') as f: json.dump(report,f,indent=2)
+    print(json.dumps({k:v for k,v in report.items() if k not in ('reads','logical_to_physical_u16')},indent=2))
+
+if __name__=='__main__': main()

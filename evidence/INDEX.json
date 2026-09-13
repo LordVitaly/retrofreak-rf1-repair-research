@@ -1,0 +1,345 @@
+{
+  "scope": "Selected public evidence, not private raw acquisitions",
+  "files": [
+    {
+      "path": "evidence/README.md",
+      "kind": "supporting_text"
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/boot.from_nand.verified.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/external_bootrom_usb_length_test.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/fixed_boundary03_verification.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/flashboot_full_remap_verified.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/flashboot_system_rewrite_attempt3.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/live_idb_ecc24_comparison.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/native_dump_complete_verification.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/native_system_block_audit_2048blocks.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/outputs/vold_nand_evidence.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/bbt_copy12_restore_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/bbt_copy12_writer_v2/offline_test.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/bbt_count_ram_only_hardware_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/bbt_physical_ecc40_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/copy6_cold_readonly_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/early_boot_ecc24_attempt01/interpretation.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/first_system_write188_hardware_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/ftl_boundaries_after_idb_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/ftl_bridge_read_hardware_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/idb_copy6_restore_hardware_attempt03/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/nand_init_after_idb_readonly_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/normal_warm_reset_hardware_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/pmic_devon_hardware_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/pmic_devon_usb_return_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/pmic_readonly_hardware_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/post_idb_powerheld_boot_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/power_hold_snapshot_hardware_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/remap_bbt_count_ram_only_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/second_system_write189_hardware_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/startup_actual_usb_entry_hardware_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/startup_ftl_capacity_hardware_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/system_batches16_hardware_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/system_finish236_259_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/system_next32_220_235_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/system_next32_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/system_recovery_b1_next16_attempt03/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/system_writer_dry_hardware_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase1/selected/work/usb_ram_bridge_capacity_fixed_hardware_attempt01/result.json",
+      "kind": "translated_public_record"
+    },
+    {
+      "path": "evidence/phase2/REPAIR_EVIDENCE_SUMMARY.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/functional_cold_boot_confirmation.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/adb_boot_diagnostic/ramdisk_changes.diff",
+      "kind": "supporting_text"
+    },
+    {
+      "path": "evidence/phase2/primary/work/bbt_restore_after_copy0_attempt04/result.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/boot_diagnostic_writer/handoff_proof.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/boot_diagnostic_writer/offline_proof.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/boot_final_verified/result.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/boot_header_block22_attempt01/result.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/boot_header_validation_audit/report.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/boot_header_validation_audit/sysprot_trace.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/boot_relocated_header_block74_attempt01/result.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/boot_visibility_repair_result.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/cache_last_attempt/e2fsck.exe.log",
+      "kind": "supporting_text"
+    },
+    {
+      "path": "evidence/phase2/primary/work/cache_last_attempt/live_verify_fsck.log",
+      "kind": "supporting_text"
+    },
+    {
+      "path": "evidence/phase2/primary/work/cache_last_attempt/live_verify_result.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/cache_last_attempt/manifest.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/cache_last_attempt/selective_write_fsck.log",
+      "kind": "supporting_text"
+    },
+    {
+      "path": "evidence/phase2/primary/work/cache_last_block24_attempt01/result.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/cache_last_block26_attempt01/result.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/cache_last_writer/handoff_proof.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/cache_last_writer/manifest.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/cache_last_writer/offline_proof.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/copy0_writer_v1/build.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/copy0_writer_v1/offline_test.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/copy5_writer_v1/build.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/copy5_writer_v1/offline_test.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/early_adb_failure_audit/report.md",
+      "kind": "supporting_text"
+    },
+    {
+      "path": "evidence/phase2/primary/work/early_adb_failure_audit/timer_arm_proof.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/hardened_bridge_v1/offline_test.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/idb_analysis.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/journal_analysis/cache_report.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/journal_analysis/data_report.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/linux_system_four_repair_attempt01/result.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/live_adb_after_data_repair/functional_validation.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/live_linux_repair_review.md",
+      "kind": "supporting_text"
+    },
+    {
+      "path": "evidence/phase2/primary/work/live_system_audit/cold_boot_file_checks.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/live_system_audit/live_compare_report.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/live_system_audit/repair_candidates.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/live_system_audit/report.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/original_boot_after_idb0_attempt01/result.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/userdata_native_repair_attempt01/result.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/userdata_native_repair_attempt02/result.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/userdata_repair_trial/report.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/zero_capacity_replay.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/zero_capacity_replay_v2.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/primary/work/zero_capacity_replay_v3.json",
+      "kind": "curated_public_record"
+    },
+    {
+      "path": "evidence/phase2/usb_stock_final_evidence.json",
+      "kind": "curated_public_record"
+    }
+  ]
+}

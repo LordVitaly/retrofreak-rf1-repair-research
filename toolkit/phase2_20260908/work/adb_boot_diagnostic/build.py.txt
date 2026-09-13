@@ -1,0 +1,173 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/adb_boot_diagnostic/build.py
+Role: historical_incomplete_builder_old_boot_id_must_not_be_final_recipe
+Original repair session must not be resumed from this public copy.
+
+"""Build a reversible early-ADB boot ramdisk candidate. OFFLINE ONLY.
+
+Only default.prop and init.rc contents change. Kernel, addresses, metadata,
+entry order and all other ramdisk entries are preserved. No flash tool exists
+in this directory, and this script never accesses a device.
+"""
+from pathlib import Path
+import gzip, hashlib, json, struct, zlib, difflib
+
+OUT=Path(__file__).resolve().parent
+SOURCE=Path('<EXTERNAL_STAGE_01>/work/rkfw_contents/components/boot.img')
+SOURCE_SHA='416c84c67be71e89d63530c1902112ebbe54845aca3e377a79506ce5c90b090d'
+sha=lambda b:hashlib.sha256(b).hexdigest()
+align=lambda n,p:(n+p-1)//p*p
+original=SOURCE.read_bytes();assert sha(original)==SOURCE_SHA
+assert original[:8]==b'ANDROID!'
+kernel_size,kernel_addr,ramdisk_size,ramdisk_addr,second_size,second_addr,tags_addr,page,dt_size,unused=struct.unpack_from('<10I',original,8)
+assert (page,second_size,dt_size,unused)==(16384,0,0,0)
+kernel_off=page;ramdisk_off=page+align(kernel_size,page)
+kernel=original[kernel_off:kernel_off+kernel_size]
+compressed=original[ramdisk_off:ramdisk_off+ramdisk_size]
+cpio=gzip.decompress(compressed)
+assert len(original)==ramdisk_off+align(ramdisk_size,page)
+assert set(original[ramdisk_off+ramdisk_size:])=={0}
+assert struct.unpack('<2I',compressed[-8:])==(zlib.crc32(cpio),len(cpio))
+
+def parse_cpio(data):
+    rows=[];pos=0
+    while True:
+        assert data[pos:pos+6]==b'070701'
+        head=data[pos:pos+110]
+        fields=[int(head[6+8*i:14+8*i],16) for i in range(13)]
+        nsz=fields[11];fsz=fields[6]
+        name_raw=data[pos+110:pos+110+nsz]
+        assert name_raw[-1:]==b'\0'
+        name=name_raw[:-1].decode('ascii')
+        body_off=align(pos+110+nsz,4);end=align(body_off+fsz,4)
+        rows.append(dict(name=name,head=head,fields=fields,name_raw=name_raw,
+                         name_pad=data[pos+110+nsz:body_off],
+                         body=data[body_off:body_off+fsz],body_pad=data[body_off+fsz:end]))
+        pos=end
+        if name=='TRAILER!!!':break
+    assert not any(data[pos:])
+    return rows,data[pos:]
+
+rows,tail=parse_cpio(cpio)
+assert len(rows)==30 and len(tail)==20
+entries={r['name']:r for r in rows}
+assert len(entries)==len(rows)
+def pack_cpio(replacements):
+    pieces=[]
+    for row in rows:
+        body=replacements.get(row['name'],row['body'])
+        head=bytearray(row['head'])
+        if body!=row['body']:
+            head[54:62]=f'{len(body):08x}'.encode()
+            body_pad=bytes((-len(body))%4)
+        else:body_pad=row['body_pad']
+        pieces.extend((head,row['name_raw'],row['name_pad'],body,body_pad))
+    result=b''.join(pieces)
+    return result+bytes((-len(result))%512)
+
+assert pack_cpio({})==cpio, 'No-op archive repack must be byte-exact'
+prop=entries['default.prop']['body']
+assert prop.count(b'ro.secure=1\n')==1 and prop.count(b'ro.debuggable=0\n')==1
+new_prop=prop.replace(b'ro.secure=1\n',b'ro.secure=0\n').replace(b'ro.debuggable=0\n',b'ro.debuggable=1\n')
+init=entries['init.rc']['body']
+early=b'''# RF1 diagnostic: start USB ADB before NAND module/filesystem waits.
+# /system is still the RAM rootfs here; the real system mount hides this shim.
+    mkdir /system/bin 0755 root root
+    symlink /sbin/busybox /system/bin/sh
+    write /sys/class/android_usb/android0/enable 0
+    write /sys/bus/platform/drivers/usb20_otg/force_usb_mode 2
+    write /sys/class/android_usb/android0/idVendor 0bb4
+    write /sys/class/android_usb/android0/idProduct 0c01
+    write /sys/class/android_usb/android0/functions adb
+    write /sys/class/android_usb/android0/enable 1
+    setprop sys.usb.config adb
+    start adbd
+
+'''
+assert init.count(b'on fs\n')==1
+new_init=init.replace(b'on fs\n',early+b'on fs\n',1)
+host=b'''on property:sys.usb.config=host_pwr
+    write /sys/class/android_usb/android0/enable 0
+\twrite /sys/bus/platform/drivers/usb20_otg/force_usb_mode 1
+    write /sys/class/android_usb/android0/enable 1
+    setprop sys.usb.state ${sys.usb.config}
+'''
+assert new_init.count(host)==1
+new_init=new_init.replace(host,b'''on property:sys.usb.config=host_pwr
+    # Diagnostic boot keeps the cable in USB device/ADB mode.
+    setprop sys.usb.config adb
+''')
+persist=b'''on property:persist.sys.usb.config=*
+    setprop sys.usb.config ${persist.sys.usb.config}
+'''
+assert new_init.count(persist)==1
+new_init=new_init.replace(persist,b'''on property:persist.sys.usb.config=*
+    # Volatile override only: do not modify the stored persist property.
+    setprop sys.usb.config adb
+''')
+replacements={'default.prop':new_prop,'init.rc':new_init}
+new_cpio=pack_cpio(replacements)
+new_rows,new_tail=parse_cpio(new_cpio)
+assert [r['name'] for r in new_rows]==[r['name'] for r in rows]
+for before,after in zip(rows,new_rows):
+    assert before['name_raw']==after['name_raw']
+    assert before['fields'][:6]+before['fields'][7:]==after['fields'][:6]+after['fields'][7:]
+    assert after['body']==replacements.get(before['name'],before['body'])
+    assert before['name_pad']==after['name_pad']
+assert new_init.index(b'    start adbd\n')<new_init.index(b'on fs\n')<new_init.index(b'insmod /rk30xxnand_ko.ko')<new_init.index(b'exec /sbin/busybox sh /mountfs.sh')
+assert b'force_usb_mode 1\n' not in new_init
+assert b'setprop persist.' not in new_init
+assert new_init.count(b'service adbd /sbin/adbd\n')==1
+
+# adbd and the shell must not require a /system ELF interpreter or libraries.
+elf_proofs={}
+for name in ('sbin/adbd','sbin/busybox'):
+    elf=entries[name]['body'];assert elf[:7]==b'\x7fELF\x01\x01\x01'
+    phoff=struct.unpack_from('<I',elf,28)[0];phsize,phnum=struct.unpack_from('<HH',elf,42)
+    types=[struct.unpack_from('<I',elf,phoff+i*phsize)[0] for i in range(phnum)]
+    assert 3 not in types and 2 not in types
+    elf_proofs[name]=dict(sha256=sha(elf),program_header_types=types,static_no_interp_or_dynamic=True)
+assert b'/system/bin/sh\0' in entries['sbin/adbd']['body']
+
+new_compressed=gzip.compress(new_cpio,compresslevel=9,mtime=0)
+assert gzip.decompress(new_compressed)==new_cpio
+assert struct.unpack('<2I',new_compressed[-8:])==(zlib.crc32(new_cpio),len(new_cpio))
+# The stock ID does not match the standard legacy Android SHA1. Preserve the
+# vendor's opaque original ID rather than silently invent its significance.
+standard_old_id=hashlib.sha1(kernel+struct.pack('<I',kernel_size)+compressed+struct.pack('<I',ramdisk_size)+bytes(4)).digest()
+assert original[576:596]!=standard_old_id
+header=bytearray(original[:page]);struct.pack_into('<I',header,16,len(new_compressed))
+candidate=bytes(header)+original[kernel_off:ramdisk_off]+new_compressed+bytes((-len(new_compressed))%page)
+assert candidate[:16]==original[:16] and candidate[20:ramdisk_off]==original[20:ramdisk_off]
+assert candidate[kernel_off:kernel_off+kernel_size]==kernel
+assert candidate[576:608]==original[576:608]
+assert len(candidate)%page==0
+assert gzip.decompress(candidate[ramdisk_off:ramdisk_off+len(new_compressed)])==new_cpio
+
+files={'boot_early_adb.DIAGNOSTIC_CANDIDATE.img':candidate,'ramdisk.cpio':new_cpio,
+       'ramdisk.gz':new_compressed,'default.prop':new_prop,'init.rc':new_init}
+diff=''.join(''.join(difflib.unified_diff(entries[name]['body'].decode().splitlines(True),data.decode().splitlines(True),fromfile='stock/'+name,tofile='diagnostic/'+name)) for name,data in replacements.items())
+files['ramdisk_changes.diff']=diff.encode()
+for name,data in files.items():
+    with (OUT/name).open('xb') as f:f.write(data)
+report=dict(all_offline_checks_pass=True,hardware_access=False,ready_to_flash=False,
+    source=str(SOURCE),source_sha256=SOURCE_SHA,
+    source_image_bytes=len(original),candidate_image_bytes=len(candidate),
+    kernel_size=kernel_size,kernel_sha256=sha(kernel),kernel_unchanged=True,
+    page_size=page,ramdisk_offset=ramdisk_off,original_ramdisk_gzip_bytes=ramdisk_size,
+    new_ramdisk_gzip_bytes=len(new_compressed),original_cpio_bytes=len(cpio),new_cpio_bytes=len(new_cpio),
+    header_changes=['ramdisk_size only; original opaque ID retained'],
+    original_header_id=original[576:608].hex(),standard_legacy_sha1_of_stock=standard_old_id.hex(),
+    checksum_note='Stock ID does not equal standard legacy Android SHA1. Original opaque ID preserved. Gzip CRC32/ISIZE independently validated. Bootloader acceptance of modified ramdisk remains untested.',
+    cpio_entries=len(rows),cpio_noop_repack_byte_exact=True,
+    changed_cpio_files=sorted(replacements),all_other_cpio_contents_and_metadata_unchanged=True,
+    elf_proofs=elf_proofs,
+    early_start_before_nand_module_and_mountfs=True,volatile_usb_override_only=True,
+    temporary_shell='Rootfs /system/bin/sh symlink to original static /sbin/busybox; NAND /system is not modified.',
+    limitations=['Candidate only, no writer prepared. Back up actual boot before selecting any flash.',
+      'USB gadget/device mode and early init timing are configured using stock paths; hardware enumeration has not been tested.',
+      'Normal filesystem mounting and init flow remain active; their normal existing writes are not disabled.'],
+    files={name:dict(bytes=len(data),sha256=sha(data)) for name,data in files.items()})
+(OUT/'manifest.json').write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps(report,indent=2))

@@ -1,0 +1,59 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/emulate_flashboot_early_metadata.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Replay early metadata maintenance against saved NAND; no hardware access."""
+import hashlib
+import json
+import struct
+from emulate_flashboot_remap import RemapReplay
+from emulate_flashboot_offline import ROOT,FTL,FLASH,address,UC_ARM_REG_PC,UC_ARM_REG_LR,UC_PROT_READ,UC_PROT_WRITE,UC_PROT_EXEC
+from unicorn import UC_HOOK_MEM_WRITE
+candidate=(ROOT/'work/FlashBoot.machine_guards_usb_only.UNPACKAGED_NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(candidate).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+record=(ROOT/'work/idb_ecc24_parameter_attempt2/block05_page15.raw').read_bytes()[:512]
+class Replay(RemapReplay):
+    def __init__(self):
+        super().__init__(record)
+        self.write_entries.clear()
+        self.guard_hits={address(o):0 for o in (0x3b0c,0xba10,0xbc1c,0xbd5c,0x7038)}
+        self.uc.mem_write(0x60080000,candidate[0xa34:])
+        self.uc.mem_map(0x60000000,0x20000,UC_PROT_READ|UC_PROT_EXEC)
+        self.uc.mem_write(0x60000000,candidate)
+        self.uc.mem_write(0x60099df0,struct.pack('<I',address(0x1a79c)))
+        self.uc.mem_protect(0x6009a000,0x1000,UC_PROT_READ|UC_PROT_WRITE|UC_PROT_EXEC)
+        def check(uc,access,addr,size,value,ctx):
+            if not (0x6009a104<=addr and addr+size<=0x6009a110):
+                self.stopped=dict(reason='unapproved_data_write',address=hex(addr),pc=hex(uc.reg_read(UC_ARM_REG_PC)));uc.emu_stop()
+        self.uc.hook_add(UC_HOOK_MEM_WRITE,check,begin=0x6009a000,end=0x6009afff)
+    def code_hook(self,uc,pc,size,ctx):
+        if pc in self.guard_hits:
+            self.guard_hits[pc]+=1
+            if self.guard_hits[pc]==8:
+                self.stopped=dict(reason='actual_machine_guard',pc=hex(pc));uc.emu_stop();return
+        super().code_hook(uc,pc,size,ctx)
+
+cases=[]
+for slot in (None,0,1):
+    emu=Replay()
+    assert emu.call(0xa158,0x50f4)==0
+    emu.uc.mem_write(FLASH+0xa0,struct.pack('<H',12))
+    emu.call(0x74e0);emu.dump_mode=True
+    assert emu.call(0x6a24)==0
+    metadata_before=bytes(emu.uc.mem_read(FTL+0x48,0x20)).hex()
+    if slot is not None:
+        # Synthetic negative input: damage cached copy only, never source dump.
+        loc=0x603491b4+slot*512
+        magic=bytearray(emu.uc.mem_read(loc,4));magic[0]^=1
+        emu.uc.mem_write(loc,bytes(magic))
+    result=None;error=None
+    try: result=emu.call(0x13568,instruction_limit=1000000,timeout_us=10000000)
+    except Exception as exc: error=str(exc)
+    case=dict(synthetic_corrupt_slot=slot,result=result,error=error,stop=emu.stopped,guard_hits={hex(k):v for k,v in emu.guard_hits.items()},f900_state_before=metadata_before,physical_reads=len(emu.reads))
+    cases.append(case)
+    if slot is None: assert result==0 and error is None and not any(emu.guard_hits.values()),case
+    else: assert emu.stopped and emu.stopped['reason']=='actual_machine_guard' and emu.guard_hits[address(0x3b0c)]==8,case
+report=dict(candidate_sha256=hashlib.sha256(candidate).hexdigest(),cases=cases,device_access=False,limitation='A158/FtlVarInit/BBT then 13568; not complete main/startup. Native NAND backend pointer set by host; read statuses assumed successful; printf intercepted. Negative cases modify RAM cache only.')
+(ROOT/'outputs/flashboot_early_metadata_replay.json').write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps(report,indent=2))

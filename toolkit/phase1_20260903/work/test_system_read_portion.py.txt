@@ -1,0 +1,35 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_system_read_portion.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Actual bounded reader helper with success/early error/later error ABI contracts."""
+import hashlib,json,struct
+import startup_slice_test_harness as h
+from unicorn import UC_HOOK_CODE
+from unicorn.arm_const import UC_ARM_REG_R4,UC_ARM_REG_LR,UC_ARM_REG_PC
+report=[]
+for logical in (187,259):
+    out=h.ROOT/f'work/system_read_portion_{logical}';build=json.loads((out/'build.json').read_text());raw=(out/'read.raw').read_bytes()
+    assert hashlib.sha256(raw).hexdigest()==build['sha256']
+    for fail in (None,0,15):
+        u=h.machine();u.mem_map(0x62fff000,0x202000);u.mem_write(h.B,raw)
+        u.mem_write(0x62fff000,b'\x69'*0x202000);u.reg_write(UC_ARM_REG_R4,0x6009a1f8);calls=[]
+        pattern=hashlib.shake_256(b'portion read data').digest(build['sectors']*512)
+        def read(uc,pc,size,ctx):
+            n=len(calls);args=[uc.reg_read(r) for r in (h.UC_ARM_REG_R0,h.UC_ARM_REG_R1,h.UC_ARM_REG_R2,h.UC_ARM_REG_R3)]
+            assert args==[0,build['lba']+n*128,min(128,build['sectors']-n*128),0x63000000+n*65536]
+            calls.append(args)
+            if fail!=n:uc.mem_write(args[3],pattern[n*65536:n*65536+args[2]*512])
+            uc.reg_write(h.UC_ARM_REG_R0,0xffffffff if fail==n else 0);uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR))
+        u.hook_add(UC_HOOK_CODE,read,begin=0x600846a0,end=0x600846a0)
+        h.call(u,0x60007040,ranges=((0x6101af10,0x6101af28),),stop=0x60000100)
+        completed=build['sectors'] if fail is None else fail*128
+        assert struct.unpack('<4I',u.mem_read(0x6101af18,16))==(build['lba'],build['sectors'],0 if fail is None else 0xffffffff,completed)
+        assert len(calls)==(32 if fail is None else fail+1)
+        assert bytes(u.mem_read(0x63000000,completed*512))==pattern[:completed*512]
+        assert bytes(u.mem_read(0x63000000+completed*512,0x201000-completed*512))==b'\x69'*(0x201000-completed*512)
+        assert u.reg_read(UC_ARM_REG_R4)==0x6009a1f8
+        report.append(dict(logical=logical,fail_at=fail,passed=True,sha256=build['sha256']))
+with (h.ROOT/'outputs/system_read_portion_offline.json').open('x') as f:json.dump(dict(all_pass=True,device_access=False,cases=report,limits=['Logical reader ABI contract; original code and USB return are already hardware proven']),f,indent=2)
+print('PASS 6 bounded portion reader cases')

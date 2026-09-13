@@ -1,0 +1,24 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/inspect_external_bootrom.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Static inspection of a third-party RK3066 ROM dump; never upload it."""
+import argparse
+import hashlib
+from pathlib import Path
+from capstone import Cs, CS_ARCH_ARM, CS_MODE_ARM
+
+p = argparse.ArgumentParser()
+p.add_argument('start', type=lambda s: int(s, 0), nargs='?', default=0)
+p.add_argument('end', type=lambda s: int(s, 0), nargs='?', default=0x2800)
+p.add_argument('--calls', action='store_true')
+a = p.parse_args()
+d = bytes.fromhex(Path(__file__).with_name('RK3066_external_bootrom.hex').read_text())
+print('EXTERNAL RESEARCH ROM, NOT VERIFIED AGAINST RF-1', len(d), hashlib.sha256(d).hexdigest())
+assert len(d) == 0x2800
+decoder = Cs(CS_ARCH_ARM, CS_MODE_ARM)
+decoder.skipdata = True
+for i in decoder.disasm(d[a.start:a.end], a.start):
+    if not a.calls or i.mnemonic in ('bl', 'blx') or '0x47' in i.op_str:
+        print(f'{i.address:04x}: {i.mnemonic} {i.op_str}')

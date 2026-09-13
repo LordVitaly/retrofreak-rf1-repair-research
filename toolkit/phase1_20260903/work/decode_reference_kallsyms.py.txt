@@ -1,0 +1,70 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/decode_reference_kallsyms.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Offline Linux3.0 kallsyms decoder, validated by markers and token offsets.
+Layout source: https://raw.githubusercontent.com/torvalds/linux/v3.0/scripts/kallsyms.c
+Does not execute kernel or interact with hardware.
+"""
+import json
+import struct
+from pathlib import Path
+ROOT=Path(__file__).parent
+KERNEL=Path(r'<HOST_PATH>')
+data=KERNEL.read_bytes()
+words=struct.unpack('<%dI'%(len(data)//4), data[:len(data)//4*4])
+runs=[]
+start=None
+previous=0
+for i,value in enumerate(words):
+    if 0xc0000000<=value<0xc2000000 and (start is None or value>=previous):
+        if start is None: start=i
+    else:
+        if start is not None and i-start>2000: runs.append((start,i))
+        start=i if 0xc0000000<=value<0xc2000000 else None
+    previous=value
+print('address run candidates',[(hex(a*4), b-a, words[b]) for a,b in runs])
+for a,b in runs:
+    # ARM GAS .align4 means16-byte boundary, not4 bytes.
+    count_offset=(b*4+15)&~15
+    n=struct.unpack_from('<I',data,count_offset)[0]
+    if n!=b-a:
+        print('count does not match run',n,b-a)
+        continue
+    names_start=(count_offset+4+15)&~15
+    pos=names_start
+    compressed=[]
+    markers=[]
+    for i in range(n):
+        if i%256==0: markers.append(pos-names_start)
+        length=data[pos]
+        assert 0<length<128
+        compressed.append(data[pos+1:pos+1+length])
+        pos+=1+length
+    pos=(pos+15)&~15
+    actual=list(struct.unpack_from('<%dI'%len(markers),data,pos))
+    assert actual==markers, 'marker mismatch'
+    pos+=4*len(markers)
+    pos=(pos+15)&~15
+    token_start=pos
+    tokens=[]
+    offsets=[]
+    for i in range(256):
+        offsets.append(pos-token_start)
+        end=data.index(0,pos)
+        tokens.append(data[pos:end].decode('ascii'))
+        pos=end+1
+    pos=(pos+15)&~15
+    assert list(struct.unpack_from('<256H',data,pos))==offsets, 'token offsets mismatch'
+    decoded=[''.join(tokens[x] for x in s) for s in compressed]
+    assert all(s and all(32<=ord(c)<127 for c in s) for s in decoded)
+    result=[dict(address=addr,type=name[0],name=name[1:]) for addr,name in zip(words[a:b],decoded)]
+    output=ROOT.parent/'outputs/reference_kernel_symbols.json'
+    if not output.exists():
+        with output.open('x') as f: json.dump(result,f,indent=2)
+    print('VALIDATED',n,'symbols',hex(names_start),hex(token_start))
+    print('first',result[:5])
+    for row in result:
+        if any(s in row['name'].lower() for s in ('ftl','rknand','flashread','flashinit','maptbl')):
+            print(hex(row['address']),row['type'],row['name'])

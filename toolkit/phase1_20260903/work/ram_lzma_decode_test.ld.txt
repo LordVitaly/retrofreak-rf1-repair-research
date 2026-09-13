@@ -1,0 +1,14 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/ram_lzma_decode_test.ld
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+ENTRY(_start)
+SECTIONS {
+ . = 0x61000000;
+ .text : { *(.text.entry) *(.text*) }
+ .rodata : { *(.rodata*) }
+ .data : { *(.data*) }
+ .bss (NOLOAD) : { *(.bss*) *(COMMON) }
+ /DISCARD/ : { *(.ARM.exidx*) *(.ARM.extab*) *(.comment*) }
+}

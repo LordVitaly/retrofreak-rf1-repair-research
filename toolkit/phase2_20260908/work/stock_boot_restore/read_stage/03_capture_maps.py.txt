@@ -1,0 +1,102 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/stock_boot_restore/read_stage/03_capture_maps.py
+Role: completed_stock_return_or_temporary_USB_probe_historical_source
+No binaries or specimen auxiliary headers are included. Do not resume this old hardware session.
+
+"""Read-only comparison of original boot mapping mode0 versus full mode1."""
+from pathlib import Path
+import hashlib,json,os,struct,sys,zlib
+HERE=Path(__file__).resolve().parents[2]
+BASE=Path(__file__).resolve().parent
+OLD=Path('<EXTERNAL_STAGE_03>')
+sys.path.insert(0,str(OLD/'work'))
+from ram_console_session import RamConsole
+def sha(b):return hashlib.sha256(b).hexdigest()
+assert sys.argv[1:]==['--fresh-window-installed']
+initial=BASE/'window'
+assert json.loads((initial/'result.json').read_text())['all_pass']
+previous=(initial/'final_stage.raw').read_bytes()
+assert sha(previous)=='<HISTORICAL_HASH_REDACTED>'
+manifest_bytes=(HERE/'boot_map_compare/manifest.json').read_bytes()
+assert sha(manifest_bytes)=='<HISTORICAL_HASH_REDACTED>'
+manifest=json.loads(manifest_bytes);assert manifest['all_pass']
+current=(HERE/'stock_boot_restore/fresh_boot_linux.img').read_bytes()
+stock=(HERE/'stock_boot_restore/stock_with_fresh_tail.img').read_bytes()
+assert len(current)==len(stock)==16777216
+assert sha(current)=='<HISTORICAL_HASH_REDACTED>'
+assert sha(current[:8781824])=='3e9556dc6195a7d6616685f9d58a439c23fe55dbe760ba9254f4d233ba79df0f'
+assert sha(stock)=='<HISTORICAL_HASH_REDACTED>'
+assert sha(stock[:8781824])=='416c84c67be71e89d63530c1902112ebbe54845aca3e377a79506ce5c90b090d'
+assert current[8781824:]==stock[8781824:]
+assert current[:8]==stock[:8]==b'ANDROID!'
+names=('boot_header_mode0','capture_mode0','boot_header_mode1','capture_mode1')
+expected_pins=('<HISTORICAL_HASH_REDACTED>','<HISTORICAL_HASH_REDACTED>','<HISTORICAL_HASH_REDACTED>','<HISTORICAL_HASH_REDACTED>')
+profiles=[]
+for name,pin in zip(names,expected_pins):
+    meta=manifest['profiles'][name];raw=Path(meta['path']).read_bytes()
+    assert meta['all_pass'] and sha(raw)==meta['sha256']==pin and meta['mode'] in (0,1)
+    assert len(raw)==110352 and raw[110080:]==bytes(272) and zlib.crc32(raw[:110080])==0xad0dadee
+    assert raw[0x76f8:0x76fc]==struct.pack('<I',0xe3a00000+meta['mode'])
+    assert raw[0xb408:0xb40c]==bytes.fromhex('0101a0e3') and raw[0xaf60:0xaf64]==bytes.fromhex('0003a0e1')
+    for off in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):assert raw[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+    for off in (0xbbc8,0xbc90):assert raw[off:off+4]==bytes.fromhex('feffffea')
+    profiles.append((name,meta,raw))
+out=BASE/'maps';out.mkdir(exist_ok=False)
+statefile=BASE/'ram_read_state.json'
+state=json.loads(statefile.read_text());assert state['valid']
+assert Path(state['ram_path']).resolve()==(initial/'final_stage.raw').resolve()
+assert state['ram_sha256']==sha(previous)
+result=dict(all_pass=False,nand_writes_enabled=False,current_boot_sha256=sha(current),stock_boot_sha256=sha(stock),cases=[]);c=None
+marker=b'RF1CKP02'+struct.pack('<IIII',110080,0xad0dadee,1,0x60000004)+bytes(504)
+window=b'RF1WIN01'+struct.pack('<IIII',0x800000,4096,0x63000000,16)+bytes(504)
+def save(p,obj):
+    with p.open('x') as f:json.dump(obj,f,indent=2);f.flush();os.fsync(f.fileno())
+def update(obj):
+    tmp=statefile.with_suffix('.tmp');tmp.write_text(json.dumps(obj,indent=2));os.replace(tmp,statefile)
+def read(p,lba,count):
+    assert (lba,count) in ((0x7effff,1),(0x7efffe,1),(0x7f0000,209),(0x7f00d1,2)) or (0x800000<=lba<0x801000 and 0<count<=16 and lba+count<=0x801000)
+    c.command(f'RS {hex(lba)} {hex(count)} {p}');data=p.read_bytes();assert len(data)==count*528;return data
+try:
+    c=RamConsole(out);c.select()
+    assert read(out/'marker.raw',0x7effff,1)==marker and read(out/'window.raw',0x7efffe,1)==window
+    for name,meta,raw in profiles:
+        d=out/name;d.mkdir();case=dict(name=name,mode=meta['mode'],lba=meta['lba'],sectors=meta['sectors']);result['cases'].append(case)
+        assert read(d/'previous.raw',0x7f0000,209)==previous
+        for offset in range(0,meta['export']['sectors'],16):
+            n=min(16,meta['export']['sectors']-offset);p=d/f'prefill_{offset:04d}.bin';p.write_bytes(hashlib.shake_256(f'{name}/{offset}'.encode()).digest(n*512));c.command(f'WS {hex(0x800000+offset)} {p}')
+        for i,offset in enumerate(range(0,110080,8192)):
+            p=d/f'part{i:02d}.bin';p.write_bytes(raw[offset:min(offset+8192,110080)]);c.command(f'WS {hex(0x7f0000+offset//512)} {p}')
+        assert read(d/'ram_before.raw',0x7f0000,209)==raw
+        save(d/'DISPATCHED_NO_RETRY.json',dict(payload_sha256=sha(raw),nand_writes_enabled=False))
+        update(dict(valid=False,phase=name+'_dispatched'));c.command('RD')
+        assert read(d/'marker.raw',0x7effff,1)==marker
+        after=read(d/'ram_after.raw',0x7f0000,209)
+        assert after[:110080]==raw[:110080] and after[110348:]==bytes(4)
+        assert struct.unpack_from('<2I',after,110080)==(0x44475453,0x600982e4)
+        status=read(d/'status.raw',0x7f00d1,2);case['status_hex']=status[:32].hex()
+        assert status[:8]==meta['metadata']['magic'].encode() and struct.unpack_from('<4I',status,8)==(meta['lba'],meta['sectors'],0,meta['metadata']['extra_expected'])
+        data=bytearray()
+        for offset in range(0,meta['export']['sectors'],16):
+            n=min(16,meta['export']['sectors']-offset);part=read(d/f'data_{offset:04d}.raw',0x800000+offset,n)
+            assert all(part[j+512:j+528]==bytes(16) for j in range(0,len(part),528))
+            data.extend(b''.join(part[j:j+512] for j in range(0,len(part),528)))
+        assert len(data)==meta['export']['bytes'];(d/'data.bin').write_bytes(data)
+        case.update(complete=True,sha256=sha(data),path=str(d/'data.bin'))
+        if name.startswith('boot_header'):
+            case.update(matches_current=bytes(data)==current[:8192],matches_stock=bytes(data)==stock[:8192],magic=bytes(data[:8]).decode(errors='replace'),ramdisk_size=struct.unpack_from('<I',data,16)[0])
+            assert case['matches_current'],('Fresh mode header differs from verified current Linux boot',name)
+        else:
+            mapping=list(struct.unpack_from('<1896H',data,0xf00));assert all(0<=value<2048 for value in mapping);assert all(mapping[n]>0 for n in (6,7,8,9,10));case.update(logical_to_physical=mapping,boot_physical={str(n):mapping[n] for n in (6,7,8,9,10)},header_hex=data[0x180:0x194].hex())
+        save(d/'result.json',case);previous=after
+        update(dict(valid=True,ram_path=str(d/'ram_after.raw'),ram_sha256=sha(after),last_case=name,batch='stock_boot_restore_maps'))
+        print(json.dumps({k:v for k,v in case.items() if k!='logical_to_physical'}),flush=True)
+    headers=[case for case in result['cases'] if case['name'].startswith('boot_header')]
+    assert len(headers)==2 and {case['mode'] for case in headers}=={0,1}
+    assert all(case['matches_current'] for case in headers)
+    result['both_mode_headers_match_current']=True
+    result['all_pass']=True
+except BaseException as exc:result['error']=repr(exc);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    save(out/'result.json',result)

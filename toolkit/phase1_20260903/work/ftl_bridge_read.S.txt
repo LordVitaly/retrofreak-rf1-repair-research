@@ -1,0 +1,61 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/ftl_bridge_read.S
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+.syntax unified
+.arm
+.section .text,"ax",%progbits
+.global ftl_bridge_read
+ftl_bridge_read:
+    push {r4, lr}
+    cpsid if
+    ldr r4, =0x6101af10
+    ldr r0, =0x52314652
+    str r0, [r4]
+    ldr r0, =0x31444145 /* RF1READ1 */
+    str r0, [r4, #4]
+#ifdef RF_FULLMAP
+    ldr r1, =0x103000
+#else
+    ldr r1, =0x6020
+#endif
+    str r1, [r4, #8]
+    mov r2, #1
+    str r2, [r4, #12]
+    mvn r0, #0
+    str r0, [r4, #16]
+    ldr r3, =0x6101b000
+    mov r0, r3
+    ldr r12, =0xa5a5a5a5
+    mov r2, #128
+1:  str r12, [r0], #4
+    subs r2, r2, #1
+    bne 1b
+    mov r2, #1
+    mov r0, #0
+    ldr r12, =0x600846a0 /* original logical read: chip,lba,count,dst */
+    blx r12
+    str r0, [r4, #16]
+#ifdef RF_EXPORT_FTL
+    /* Snapshot live FTL/NAND state BEFORE the proven helper restores old RAM.
+       Used to derive physical protections from THIS console, not guessed maps. */
+    ldr r0, =0x602b3000
+    ldr r1, =0x63000000
+    ldr r2, =0xa6000
+2:  ldr r3, [r0], #4
+    str r3, [r1], #4
+    subs r2, r2, #4
+    bne 2b
+    ldr r0, =0x60359000
+    mov r2, #0x2000
+3:  ldr r3, [r0], #4
+    str r3, [r1], #4
+    subs r2, r2, #4
+    bne 3b
+    ldr r0, =0xa8000
+    str r0, [r4, #20]
+#endif
+    pop {r4, lr}
+    ldr pc, =0x60000100 /* Proven v33 save/restore return, NOT USBplug restart. */
+    .ltorg

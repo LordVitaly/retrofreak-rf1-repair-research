@@ -1,0 +1,104 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/restore_bbt_after_copy0.py
+Role: historical_device_runner_or_stateful_scenario_review_before_any_use
+Original repair session must not be resumed from this public copy.
+
+"""One authorized BBT copy12 restore, fresh MaskROM, no retry or reboot."""
+import hashlib,json,os,struct,sys,time
+from pathlib import Path
+sys.path.insert(0,'<EXTERNAL_STAGE_03>\\work')
+from ram_console_session import RamConsole
+from console_completion import ANSI,completed_response
+ROOT=Path('<EXTERNAL_STAGE_03>')
+HERE=Path('<THREAD_ROOT>\\work')
+assert sys.argv[1:]==['--fresh-maskrom-confirmed']
+builddir=HERE/'bbt_with_idb0_check_v1'
+build=json.loads((builddir/'build.json').read_text());proof=json.loads((builddir/'offline_test.json').read_text())
+pin='<HISTORICAL_HASH_REDACTED>'
+assert proof['all_pass'] and proof['writer_sha256']==pin==build['files']['writer.bin']['sha256']
+for name,info in build['files'].items():assert hashlib.sha256((builddir/name).read_bytes()).hexdigest()==info['sha256']
+baseline=HERE/'bbt_cold_attempt01'
+assert any('native read status and adaptive ECC: IDB0' in t for t in proof['tests'])
+assert proof['source_main_and_aux_exact'] and proof['preinit_exact']
+assert json.loads((HERE/'copy0_restore_attempt01/result.json').read_text())['all_pass']
+source=(ROOT/'work/idb_restore_material_v1/copy6.BOOT_ORDER_MAIN512.NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(source).hexdigest()=='<HISTORICAL_HASH_REDACTED>'
+CRITICAL_END=248*512
+assert source[CRITICAL_END:]==b'\xff'*(len(source)-CRITICAL_END)
+assert json.loads((baseline/'result.json').read_text())['all_pass']
+with (ROOT/'work/nand_native_ecc40/NAND_00.RAW').open('rb') as f:f.seek(12*4096*528);expected=f.read(4096*528)
+out=HERE/'bbt_restore_after_copy0_attempt01';out.mkdir(exist_ok=False)
+c=None;result=dict(all_pass=False,erase_dispatched=False,program_dispatched=False,target_block=12,other_writes_authorized=False,automatic_reboot=False,ftl_init=False,writer_sha256=pin)
+def save(name,value):
+    with (out/name).open('x') as f:json.dump(value,f,indent=2);f.flush();os.fsync(f.fileno())
+def main(raw):return b''.join(raw[i:i+512] for i in range(0,len(raw),528))
+def aux(raw):return b''.join(raw[i+512:i+514] for i in range(0,len(raw),528))
+def same(a,b):return len(a)==len(b) and main(a)==main(b) and aux(a)==aux(b)
+def read(name,sector,count):
+    assert (sector,count) in ((0x7effff,1),(0xc000,4096),(0xd000,4096),(0xc000,16)) or (0<=sector<0x100 and count in (1,4,256) and sector+count<=0x100) or (sector in (0x5000,0x6000) and count==256)
+    p=out/(name+'.raw');c.command(f'RS {hex(sector)} {hex(count)} {p}')
+    d=p.read_bytes();assert len(d)==count*528;return d
+def marker(name,phase,erase,program):
+    w=list(struct.unpack_from('<20I',read(name,0x7effff,1)));save(name+'.json',w)
+    assert w[:10]==[0x31424449,0x0c000102,phase,0,erase,0,program,0,0xc010 if program else 0xc000,0],w
+    assert w[13]==1 and w[15:18]==[1,0x5770,1],w
+    return w
+def command(cmd,token):
+    assert cmd=='RFI' or cmd=='DB '+os.path.relpath(builddir/'writer.bin',out)
+    start=len(''.join(c.chunks));c.commands.append(cmd);c.send_once(cmd);deadline=time.monotonic()+45
+    while time.monotonic()<deadline:
+        text=''.join(c.chunks);done=completed_response(text,start,token)
+        if done is not None:return done
+        if 'Error:' in ANSI.sub('',text[start:]):raise RuntimeError('Command error; no retry')
+        time.sleep(.01)
+    raise RuntimeError('No completion; no retry')
+def write_once(name,sector,file):
+    assert (sector,file) in ((0x7f0100,'erase_copy12_once.bin'),(0xc000,'page0.main512.bin'))
+    save(name+'_DISPATCHED_NO_RETRY.json',dict(sector=hex(sector),file=file,sha256=build['files'][file]['sha256']))
+    result['erase_dispatched' if sector==0x7f0100 else 'program_dispatched']=True
+    c.command(f'WS {hex(sector)} {builddir/file}')
+try:
+    c=RamConsole(out);intro=c.wait('Select input');assert 'Found 1 rockusb' in intro and 'Maskrom' in intro;c.select()
+    command('DB '+os.path.relpath(builddir/'writer.bin',out),'Download boot ok');marker('loaded_marker',0,0,0)
+    result['flash_info']=command('RFI','Flash Info:');assert all(x in result['flash_info'] for x in ('MICRON','4096MB','2048KB','8KB','ECC Bits: 40'))
+    cold0=main(read('copy0_cold_full',0,256))
+    assert cold0[:CRITICAL_END]==source[:CRITICAL_END], 'IDB0 cold persistence failure; no BBT write'
+    result['copy0_cold_padding_differences']=sum(a!=b for a,b in zip(cold0[CRITICAL_END:],source[CRITICAL_END:]))
+    cold5=main(read('copy5_cold_full',0x5000,256))
+    assert cold5[:CRITICAL_END]==source[:CRITICAL_END], 'Protected IDB5 changed; no BBT write'
+    cold6=main(read('copy6_cold_full',0x6000,256))
+    assert cold6[:CRITICAL_END]==source[:CRITICAL_END], 'Protected IDB6 cold change; no BBT write'
+    result['copy6_cold_padding_differences']=sum(a!=b for a,b in zip(cold6[CRITICAL_END:],source[CRITICAL_END:]))
+    result['copy0_native_status_checks']=[]
+    prev=marker('before_idb_status',0,0,0)
+    for offset,count in [(i,4) for i in range(0,244,4)]+[(244,4)]:
+        sample=main(read(f'copy0_sector_{offset:03d}',offset,count))
+        state=marker(f'copy0_status_{offset:03d}',0,0,0)
+        assert state[18]==prev[18]+1 and state[19]==0, 'IDB0 native read failure; no BBT write'
+        assert sample==source[offset*512:(offset+count)*512], 'IDB0 data mismatch; no BBT write'
+        result['copy0_native_status_checks'].append(dict(offset=offset,count=count,native_return=state[19]))
+        prev=state
+        if offset%32==0:print(f'Cold IDB0 code and native status verified through record {offset+count}',flush=True)
+    result['copy0_cold_code_and_flashinfo_verified']=True
+    before={b:read(f'before_block{b}',b*4096,4096) for b in (12,13)}
+    for b in (12,13):assert same(before[b],(baseline/f'block{b}_full.raw').read_bytes()),'Pre-write data changed; stop without erase'
+    assert main(before[12])==main(expected) and main(before[12])[8192:]==b'\xff'*(2097152-8192)
+    marker('before_erase_marker',0,0,0);save('PREWRITE.json',dict(target_sector_range=['0xc000','0xd000'],one_erase=True,one_program_page='0xc000',copy13_preserved=True))
+    write_once('erase',0x7f0100,'erase_copy12_once.bin');marker('erased_marker',1,1,0)
+    erased=read('erased_block12',0xc000,4096)
+    assert main(erased)==b'\xff'*2097152 and aux(erased)==b'\xff'*8192,'Erase verification failed; stop'
+    write_once('program',0xc000,'page0.main512.bin');marker('programmed_marker',3,1,1)
+    page=read('immediate_page0',0xc000,16);assert same(page,expected[:8448]),'Immediate page readback mismatch; stop'
+    assert marker('immediate_page0_status',3,1,1)[19]==0,'BBT native read failed'
+    final=read('final_block12',0xc000,4096);assert same(final,expected),'Full restored block mismatch; stop'
+    other=read('final_block13',0xd000,4096);assert same(other,before[13]),'Protected copy13 readback mismatch; stop'
+    assert main(read('copy0_final_full',0,256))[:CRITICAL_END]==source[:CRITICAL_END], 'Protected IDB0 changed'
+    assert main(read('copy5_final_full',0x5000,256))[:CRITICAL_END]==source[:CRITICAL_END], 'Protected IDB5 changed'
+    assert main(read('copy6_final_full',0x6000,256))[:CRITICAL_END]==source[:CRITICAL_END], 'Protected IDB6 changed'
+    result['final_marker']=marker('final_marker',3,1,1)
+    result.update(all_pass=True,block12_main_and_valid_aux_exact=True,copy13_main_and_valid_aux_unchanged=True,erase_calls=1,program_calls=1,program_erase_return_codes=[0,0],normal_boot_verified=False,phase='COPY12_RESTORED_NEEDS_SEPARATE_COLD_READ_OR_BOOT')
+except BaseException as e:result['error']=repr(e);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    save('result.json',result);print(json.dumps({k:v for k,v in result.items() if k not in ('commands','copy0_native_status_checks')},indent=2),flush=True)

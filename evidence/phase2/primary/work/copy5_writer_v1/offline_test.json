@@ -1,0 +1,980 @@
+{
+  "all_pass": true,
+  "device_access": false,
+  "writer_sha256": "<HISTORICAL_HASH_REDACTED>",
+  "addon_bytes": 3440,
+  "tests": [
+    {
+      "name": "complete_copy",
+      "reserved": 12,
+      "state": [
+        826426441,
+        83886337,
+        3,
+        0,
+        1,
+        0,
+        64,
+        0,
+        20736,
+        0,
+        22448,
+        22448,
+        1062588799
+      ],
+      "low_calls": [
+        {
+          "op": "erase",
+          "sector": 20480
+        },
+        {
+          "op": "program",
+          "sector": 20480,
+          "index": 0,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20496,
+          "index": 1,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20512,
+          "index": 2,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20528,
+          "index": 3,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20576,
+          "index": 4,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20592,
+          "index": 5,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20640,
+          "index": 6,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20656,
+          "index": 7,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20704,
+          "index": 8,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20720,
+          "index": 9,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20768,
+          "index": 10,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20784,
+          "index": 11,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20832,
+          "index": 12,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20848,
+          "index": 13,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20896,
+          "index": 14,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20912,
+          "index": 15,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20960,
+          "index": 16,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20976,
+          "index": 17,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21024,
+          "index": 18,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21040,
+          "index": 19,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21088,
+          "index": 20,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21104,
+          "index": 21,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21152,
+          "index": 22,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21168,
+          "index": 23,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21216,
+          "index": 24,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21232,
+          "index": 25,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21280,
+          "index": 26,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21296,
+          "index": 27,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21344,
+          "index": 28,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21360,
+          "index": 29,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21408,
+          "index": 30,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21424,
+          "index": 31,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21472,
+          "index": 32,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21488,
+          "index": 33,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21536,
+          "index": 34,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21552,
+          "index": 35,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21600,
+          "index": 36,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21616,
+          "index": 37,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21664,
+          "index": 38,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21680,
+          "index": 39,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21728,
+          "index": 40,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21744,
+          "index": 41,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21792,
+          "index": 42,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21808,
+          "index": 43,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21856,
+          "index": 44,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21872,
+          "index": 45,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21920,
+          "index": 46,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21936,
+          "index": 47,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21984,
+          "index": 48,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22000,
+          "index": 49,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22048,
+          "index": 50,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22064,
+          "index": 51,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22112,
+          "index": 52,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22128,
+          "index": 53,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22176,
+          "index": 54,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22192,
+          "index": 55,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22240,
+          "index": 56,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22256,
+          "index": 57,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22304,
+          "index": 58,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22320,
+          "index": 59,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22368,
+          "index": 60,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22384,
+          "index": 61,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22432,
+          "index": 62,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22448,
+          "index": 63,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        }
+      ]
+    },
+    {
+      "name": "complete_copy",
+      "reserved": 65535,
+      "state": [
+        826426441,
+        83886337,
+        3,
+        0,
+        1,
+        0,
+        64,
+        0,
+        20736,
+        0,
+        22448,
+        22448,
+        1062588799
+      ],
+      "low_calls": [
+        {
+          "op": "erase",
+          "sector": 20480
+        },
+        {
+          "op": "program",
+          "sector": 20480,
+          "index": 0,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20496,
+          "index": 1,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20512,
+          "index": 2,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20528,
+          "index": 3,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20576,
+          "index": 4,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20592,
+          "index": 5,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20640,
+          "index": 6,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20656,
+          "index": 7,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20704,
+          "index": 8,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20720,
+          "index": 9,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20768,
+          "index": 10,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20784,
+          "index": 11,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20832,
+          "index": 12,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20848,
+          "index": 13,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20896,
+          "index": 14,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20912,
+          "index": 15,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20960,
+          "index": 16,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 20976,
+          "index": 17,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21024,
+          "index": 18,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21040,
+          "index": 19,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21088,
+          "index": 20,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21104,
+          "index": 21,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21152,
+          "index": 22,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21168,
+          "index": 23,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21216,
+          "index": 24,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21232,
+          "index": 25,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21280,
+          "index": 26,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21296,
+          "index": 27,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21344,
+          "index": 28,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21360,
+          "index": 29,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21408,
+          "index": 30,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21424,
+          "index": 31,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21472,
+          "index": 32,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21488,
+          "index": 33,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21536,
+          "index": 34,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21552,
+          "index": 35,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21600,
+          "index": 36,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21616,
+          "index": 37,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21664,
+          "index": 38,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21680,
+          "index": 39,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21728,
+          "index": 40,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21744,
+          "index": 41,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21792,
+          "index": 42,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21808,
+          "index": 43,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21856,
+          "index": 44,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21872,
+          "index": 45,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21920,
+          "index": 46,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21936,
+          "index": 47,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 21984,
+          "index": 48,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22000,
+          "index": 49,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22048,
+          "index": 50,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22064,
+          "index": 51,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22112,
+          "index": 52,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22128,
+          "index": 53,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22176,
+          "index": 54,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22192,
+          "index": 55,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22240,
+          "index": 56,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22256,
+          "index": 57,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22304,
+          "index": 58,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22320,
+          "index": 59,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22368,
+          "index": 60,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22384,
+          "index": 61,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22432,
+          "index": 62,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        },
+        {
+          "op": "program",
+          "sector": 22448,
+          "index": 63,
+          "main_sha256": "<HISTORICAL_HASH_REDACTED>"
+        }
+      ]
+    },
+    {
+      "name": "stop_error",
+      "fault": "erase",
+      "state": [
+        826426441,
+        83886337,
+        2,
+        258,
+        1,
+        4294967295,
+        0,
+        0,
+        20480,
+        0,
+        0,
+        20480,
+        0
+      ],
+      "calls": 1
+    },
+    {
+      "name": "stop_error",
+      "fault": 0,
+      "state": [
+        826426441,
+        83886337,
+        1,
+        514,
+        1,
+        0,
+        1,
+        4294967295,
+        20480,
+        0,
+        20480,
+        20480,
+        4261012826
+      ],
+      "calls": 2
+    },
+    {
+      "name": "stop_error",
+      "fault": 3,
+      "state": [
+        826426441,
+        83886337,
+        1,
+        514,
+        1,
+        0,
+        4,
+        4294967295,
+        20492,
+        0,
+        20528,
+        20528,
+        4261012826
+      ],
+      "calls": 5
+    },
+    {
+      "name": "stop_error",
+      "fault": 63,
+      "state": [
+        826426441,
+        83886337,
+        1,
+        514,
+        1,
+        0,
+        64,
+        4294967295,
+        20732,
+        0,
+        22448,
+        22448,
+        1062588799
+      ],
+      "calls": 65
+    },
+    {
+      "name": "outside5",
+      "rejected_without_nand_call": true
+    },
+    {
+      "name": "outside7",
+      "rejected_without_nand_call": true
+    },
+    {
+      "name": "before_erase",
+      "rejected_without_nand_call": true
+    },
+    {
+      "name": "wrong_data",
+      "rejected_without_nand_call": true
+    },
+    {
+      "name": "wrong_count",
+      "rejected_without_nand_call": true
+    },
+    {
+      "name": "wrong_offset",
+      "rejected_without_nand_call": true
+    },
+    {
+      "name": "bad_erase_control",
+      "rejected_without_nand_call": true
+    },
+    {
+      "name": "guarded_low_erase",
+      "args": [
+        16384,
+        0,
+        0,
+        0
+      ],
+      "rejected_without_nand_call": true
+    },
+    {
+      "name": "guarded_low_erase",
+      "args": [
+        20480,
+        0,
+        0,
+        0
+      ],
+      "rejected_without_nand_call": true
+    },
+    {
+      "name": "guarded_low_program",
+      "args": [
+        20480,
+        1610679752,
+        1610745288,
+        0
+      ],
+      "rejected_without_nand_call": true
+    },
+    {
+      "name": "guarded_program",
+      "args": [
+        0,
+        20480,
+        1610679752,
+        1610745288
+      ],
+      "rejected_without_nand_call": true
+    }
+  ],
+  "dispatcher_all_256_checked": true,
+  "preinit_relocation_and_state_exact": true,
+  "saved_flashinfo_accepted_by_original_parser_without_nand_calls": true,
+  "actual_fallback_call_and_native_geometry_continuation_tested": true,
+  "scope": "Actual compiled ARM guards plus original boot-page write loop; mocked native erase/program completion, no MMIO/BCH/NAND hardware emulation. Physical low-level NAND correctness remains inherited, not newly proved.",
+  "next": "Fresh MaskROM, load gated USBplug once, verify marker and before-read snapshots before any destructive control"
+}

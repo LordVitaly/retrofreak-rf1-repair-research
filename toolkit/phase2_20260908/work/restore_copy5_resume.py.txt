@@ -1,0 +1,81 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/restore_copy5_resume.py
+Role: historical_device_runner_or_stateful_scenario_review_before_any_use
+Original repair session must not be resumed from this public copy.
+
+"""One authorized IDB5 erase/program. Stop on every error; no retries/reset."""
+from pathlib import Path
+import hashlib,json,os,struct,sys,time
+OLD=Path('<EXTERNAL_STAGE_03>');HERE=Path(__file__).resolve().parent
+sys.path.insert(0,str(OLD/'work'))
+from ram_console_session import RamConsole
+from console_completion import ANSI,completed_response
+assert sys.argv[1:]==['--same-untouched-writer-session']
+builddir=HERE/'copy5_writer_v1';build=json.loads((builddir/'build.json').read_text())
+proof=json.loads((builddir/'offline_test.json').read_text())
+pin='<HISTORICAL_HASH_REDACTED>'
+assert proof['all_pass'] and proof['writer_sha256']==pin==build['files']['writer.bin']['sha256']
+for name,info in build['files'].items():assert hashlib.sha256((builddir/name).read_bytes()).hexdigest()==info['sha256']
+source=(OLD/'work/idb_restore_material_v1/copy6.BOOT_ORDER_MAIN512.NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(source).hexdigest()==build['source_sha256']
+previous=HERE/'copy5_restore_attempt01'
+prior=json.loads((previous/'result.json').read_text())
+assert prior['erase_dispatched'] is False and prior['program_chunks']==0
+assert prior['error']=="AssertionError('Surviving copy6 changed; no erase')"
+CRITICAL_END=248*512
+assert source[CRITICAL_END:]==b'\xff'*(len(source)-CRITICAL_END)
+enumeration_only=json.loads((HERE/'copy5_restore_attempt02/result.json').read_text())
+assert not enumeration_only['erase_dispatched'] and enumeration_only['program_chunks']==0 and not enumeration_only['commands']
+out=HERE/'copy5_restore_attempt03';out.mkdir(exist_ok=False)
+c=None;result=dict(all_pass=False,authorization='User explicitly authorized any necessary device actions in this task',target_block=5,erase_dispatched=False,program_chunks=0,reset_commands=0,ftl_init=False,writer_sha256=pin)
+def save(name,data):
+    with (out/name).open('x') as f:json.dump(data,f,indent=2);f.flush();os.fsync(f.fileno())
+def main(raw):return b''.join(raw[i:i+512] for i in range(0,len(raw),528))
+def read(name,sector,count):
+    assert (sector==0x7effff and count==1) or (sector==0x6000 and count==256) or (0x5000<=sector<0x5100 and count in (16,256) and sector+count<=0x5100)
+    p=out/(name+'.raw');c.command(f'RS {hex(sector)} {hex(count)} {p}')
+    raw=p.read_bytes();assert len(raw)==count*528;return raw
+def marker(name,phase,programs):
+    w=list(struct.unpack_from('<18I',read(name,0x7effff,1)))
+    expected=[0x31424449,0x05000101,phase,0,int(phase!=0),0,programs,0,0x5000+programs*4,0]
+    assert w[:10]==expected and w[13]==1 and w[15:]==[1,0x5770,1],w
+    save(name+'.json',w);return w
+def command(cmd,token):
+    assert cmd=='DB '+os.path.relpath(builddir/'writer.bin',out)
+    start=len(''.join(c.chunks));c.commands.append(cmd);c.send_once(cmd);deadline=time.monotonic()+45
+    while time.monotonic()<deadline:
+        text=''.join(c.chunks);done=completed_response(text,start,token)
+        if done is not None:return done
+        if 'Error:' in ANSI.sub('',text[start:]):raise RuntimeError('Transport error; no retry')
+        time.sleep(.01)
+    raise RuntimeError('No completion; no retry')
+try:
+    c=RamConsole(out);intro=c.wait('Select input');assert 'Found 1 rockusb' in intro
+    c.select();marker('loaded_marker',0,0)
+    before5raw=(previous/'before_copy5.raw').read_bytes();before6raw=(previous/'before_copy6.raw').read_bytes()
+    (out/'before_copy5.raw').write_bytes(before5raw);(out/'before_copy6.raw').write_bytes(before6raw)
+    before5=main(before5raw);before6=main(before6raw)
+    result['reused_preflight_from']='copy5_restore_attempt01; same phase0 runtime; no intervening device commands'
+    assert before5[:240*512]==source[:240*512],'Unexpected changes outside known damaged tail; no erase'
+    assert before6[:CRITICAL_END]==source[:CRITICAL_END],'Surviving copy6 changed; no erase'
+    save('PREWRITE.json',dict(target_block=5,physical_sector_range=['0x5000','0x6000'],one_erase=True,native_program_calls=64,source_sha256=hashlib.sha256(source).hexdigest(),copy6_verified=True))
+    save('ERASE_DISPATCHED_NO_RETRY.json',dict(sector='0x7f0100',control='erase_copy5_once.bin'))
+    result['erase_dispatched']=True;c.command(f'WS 0x7f0100 {builddir/"erase_copy5_once.bin"}');marker('erased_marker',1,0)
+    for i in range(0,256,16):
+        file=builddir/f'part{i:03d}.main512.bin'
+        save(f'program_{i:03d}_DISPATCHED_NO_RETRY.json',dict(sector=hex(0x5000+i),sha256=hashlib.sha256(file.read_bytes()).hexdigest()))
+        result['program_chunks']+=1;c.command(f'WS {hex(0x5000+i)} {file}')
+        marker(f'program_{i:03d}_marker',3 if i==240 else 1,(i+16)//4)
+        assert main(read(f'program_{i:03d}_readback',0x5000+i,16))==source[i*512:(i+16)*512],'Program readback mismatch; stop'
+        print(f'IDB5 verified {i+16}/256 records',flush=True)
+    final5=main(read('final_copy5',0x5000,256));final6=main(read('final_copy6',0x6000,256))
+    assert final5[:CRITICAL_END]==source[:CRITICAL_END],'Meaningful copy5 readback mismatch'
+    result['copy5_padding_differences']=sum(a!=b for a,b in zip(final5[CRITICAL_END:],source[CRITICAL_END:]))
+    assert final6[:CRITICAL_END]==before6[:CRITICAL_END],'Protected copy6 code changed'
+    result['final_marker']=marker('final_marker',3,64)
+    result.update(all_pass=True,copy5_full_main_exact=(final5==source),copy5_meaningful_exact=True,copy6_code_unchanged=True,copy6_padding_differences=sum(a!=b for a,b in zip(before6[CRITICAL_END:],final6[CRITICAL_END:])),normal_boot_verified=False)
+except BaseException as exc:result['error']=repr(exc);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    save('result.json',result);print(json.dumps({k:v for k,v in result.items() if k!='commands'},indent=2))

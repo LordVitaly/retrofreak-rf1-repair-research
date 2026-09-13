@@ -1,0 +1,42 @@
+{
+  "name": "cache",
+  "bytes": 4194304,
+  "sha256": "<HISTORICAL_HASH_REDACTED>",
+  "sequence": 119,
+  "start": 1,
+  "errno": -5,
+  "feature_compat": 0,
+  "feature_incompat": 1,
+  "integrity": "Legacy format has no enabled transaction checksums; structural validation only",
+  "commits": [],
+  "pending": [],
+  "scan_headers": [],
+  "stop": {
+    "block": 1,
+    "expected_sequence": 119,
+    "observed_header": [
+      0,
+      0,
+      0
+    ],
+    "reason": "Magic or sequence does not continue recovery chain"
+  },
+  "committed_overlay_blocks": [],
+  "visited_journal_blocks": 1,
+  "overlay_inspection": {
+    "paths": [
+      {
+        "path": "/",
+        "inode": 2,
+        "size": 4096,
+        "entries": []
+      },
+      {
+        "path": "/recovery",
+        "error_type": "FileNotFoundError",
+        "error": "File not found: /recovery"
+      }
+    ],
+    "missing_native_lbas": []
+  }
+}

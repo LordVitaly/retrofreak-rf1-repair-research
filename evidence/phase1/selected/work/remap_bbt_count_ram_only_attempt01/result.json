@@ -1,0 +1,75 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/remap_bbt_count_ram_only_attempt01/result.json",
+  "interpretation": "Original mode0 GetRemapTbl returned after a RAM count fix; not stock-boot proof.",
+  "data": {
+    "all_pass": true,
+    "nand_writes_enabled": false,
+    "db_commands": 0,
+    "cases": [
+      {
+        "name": "trace",
+        "sha256": "<REDACTED:HASH_OR_BYTES>",
+        "ram_exact": true,
+        "record": {
+          "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+          "original_items": 67
+        },
+        "return_code": "0x0",
+        "geometry": "<REDACTED:HASH_OR_BYTES>",
+        "bridge_returned": true
+      }
+    ],
+    "trace": {
+      "reads": 5,
+      "nonzero_read_returns": 0,
+      "f000_tags": 3,
+      "rows": [
+        {
+          "sector": 49152,
+          "return_code": 0,
+          "aux_tag": 61440,
+          "aux_version": 65535,
+          "main_first_word": 5963866,
+          "sectors": 1
+        },
+        {
+          "sector": 49168,
+          "return_code": 0,
+          "aux_tag": 65535,
+          "aux_version": 65535,
+          "main_first_word": 4294967295,
+          "sectors": 1
+        },
+        {
+          "sector": 53248,
+          "return_code": 0,
+          "aux_tag": 61440,
+          "aux_version": 65535,
+          "main_first_word": 5963866,
+          "sectors": 1
+        },
+        {
+          "sector": 53264,
+          "return_code": 0,
+          "aux_tag": 65535,
+          "aux_version": 65535,
+          "main_first_word": 4294967295,
+          "sectors": 1
+        },
+        {
+          "sector": 49152,
+          "return_code": 0,
+          "aux_tag": 61440,
+          "aux_version": 1080,
+          "main_first_word": 5963866,
+          "sectors": 8
+        }
+      ],
+      "ftl_header_u16": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+      "original_bbt_meta": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+      "ram_substitution_value": 1896
+    },
+    "commands": "<REDACTED:RAW_LOG_OR_IDENTIFIER>"
+  }
+}

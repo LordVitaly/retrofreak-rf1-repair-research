@@ -1,0 +1,31 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/identify_system_error_inode.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Identify cached system error inode in official reference, with explicit reference scope."""
+import json
+from pathlib import Path
+from dissect.extfs import ExtFS
+ROOT=Path(__file__).parent
+BASE=Path(r'<HOST_PATH>')
+def walk(node,parent=''):
+    for child in node.iterdir():
+        if child.filename in ('.','..'): continue
+        path=parent+'/'+child.filename
+        yield path,child
+        if child.filetype==0x4000: yield from walk(child,path)
+with (BASE/'rkfw_contents/components/system.img').open('rb') as f:
+    fs=ExtFS(f)
+    found=[]
+    for path,node in walk(fs.get('/')):
+        if node.inum==671:
+            row=dict(reference_path=path,inode=node.inum,size=node.size,
+                     inode_data=str(node.inode))
+            found.append(row)
+            print(json.dumps(row,indent=2))
+    assert found, 'No reference path for inode671'
+report=dict(scope='Reference filesystem inode identity; actual inode/directory bytes still to verify',files=found)
+out=ROOT.parent/'outputs/system_error_inode_identity.json'
+if not out.exists():
+    with out.open('x') as f: json.dump(report,f,indent=2)

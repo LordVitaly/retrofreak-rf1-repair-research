@@ -1,0 +1,50 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/report_current_idb_ecc24.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Current IDB boot-order/ECC24 reads vs original ECC24, native40 and donor.
+Only file analysis. Explicitly do not interpret failed-read buffers as NAND writes.
+"""
+import hashlib,json,struct,sys
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'work/emulator_deps'))
+from audit_ram_loader_container import rc4
+current=ROOT/'work/early_boot_ecc24_attempt01'
+assert json.loads((current/'result.json').read_text())['all_reads_complete']
+oldpath=Path(r'<HOST_PATH>')
+ref=(ROOT/'work/FlashBoot.packet512.STATIC_ONLY.bin').read_bytes()
+assert len(ref)==110080 and hashlib.sha256(ref).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+for b in (3,6):assert (ROOT/f'outputs/FlashBoot.from_NAND_block{b:02d}.verified_STATIC_ONLY.bin').read_bytes()==ref
+def main(raw):return b''.join(raw[i:i+512] for i in range(0,len(raw),528))
+def decode(raw):return b''.join(rc4(raw[i:i+512]) for i in range(0,len(raw),528))
+def diff(a,b):
+    assert len(a)==len(b)
+    offsets=[i for i,(x,y) in enumerate(zip(a,b)) if x!=y]
+    return dict(bytes=len(offsets),bits=sum((a[i]^b[i]).bit_count() for i in offsets),first_offsets=offsets[:32],exact=not offsets)
+rows=[]
+with oldpath.open('rb') as f:
+    for block in (1,3,5,6):
+        raw=(current/f'block{block:02d}.raw').read_bytes()
+        f.seek(block*4096*528);old=f.read(len(raw));assert len(raw)==len(old)==135168
+        dec=decode(raw);olddec=decode(old)
+        header=dec[:512];valid=header[:4]==bytes.fromhex('55aaf00f')
+        row=dict(block=block,current_raw_sha256=hashlib.sha256(raw).hexdigest(),old_ecc24_raw_sha256=hashlib.sha256(old).hexdigest(),header_magic_valid=valid,current_main_vs_old_ecc24=diff(main(raw),main(old)),header_main_vs_old_ecc24=diff(raw[:512],old[:512]))
+        if valid:
+            start=struct.unpack_from('<H',header,12)[0]
+            size,total=struct.unpack_from('<HH',header,506)
+            assert (start,size,total)==(4,24,240)
+            init=dec[start*512:(start+size)*512]
+            oldinit=olddec[start*512:(start+size)*512]
+            code=dec[(start+size)*512:(start+size)*512+len(ref)]
+            oldcode=olddec[(start+size)*512:(start+size)*512+len(ref)]
+            saved24=(ROOT/f'work/idb_ecc24_targeted_attempt1/block{block:02d}_page15.raw').read_bytes()
+            oldtail=decode(saved24)[:1536]
+            provenance_code=(ROOT/f'work/IDB_old_block{block:02d}_FlashBoot.CANDIDATE.bin').read_bytes()[:110080]
+            assert oldcode==provenance_code
+            row.update(init_offset=start,init_records=size,total_records=total,init_vs_old=diff(init,oldinit),flashboot_sha256=hashlib.sha256(code).hexdigest(),flashboot_prefix108544_vs_verified=diff(code[:0x1a800],ref[:0x1a800]),flashboot_whole_vs_verified=diff(code,ref),flashboot_vs_old_ecc24=diff(code,oldcode),flashboot_tail1536_vs_saved_ecc24=diff(code[0x1a800:],oldtail),saved_ecc24_tail_vs_verified=diff(oldtail,ref[0x1a800:]),header_records0_3_vs_old=diff(main(raw[:4*528]),main(old[:4*528])))
+            with (current/f'block{block:02d}.flashboot.OBSERVED_NOT_FOR_WRITE.bin').open('xb') as out:out.write(code)
+        rows.append(row)
+report=dict(scope='Read artifacts only; four known IDB copies. Copy5 loader compared to same-mode original backup and independently verified donor. No physical NAND modification inference from RS errors.',rows=rows,nand_writes=0,ecc_status_available=False,normal_boot_failure_explanation='Damaged/unreadable early boot data is a supported hypothesis, not proof of when/how it arose or of all BootROM rejection conditions.')
+with (current/'interpretation.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

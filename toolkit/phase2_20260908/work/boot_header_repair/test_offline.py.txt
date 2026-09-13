@@ -1,0 +1,113 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/boot_header_repair/test_offline.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Actual ARM fixed writer/gates. Native page I/O is a RAM-only fixture."""
+import argparse,hashlib,json,struct,sys,time
+from pathlib import Path
+OUT=Path(__file__).resolve().parent;HERE=OUT.parents[1]
+ap=argparse.ArgumentParser();ap.add_argument('--synthetic',action='store_true');ap.add_argument('--errors-only',action='store_true');a=ap.parse_args();D=OUT/'synthetic' if a.synthetic else OUT
+M=json.loads((D/'manifest.json').read_text());assert M['build_pass'] and M['synthetic_only']==a.synthetic
+sys.path.insert(0,'<EXTERNAL_STAGE_03>/work/emulator_deps')
+from unicorn import Uc,UC_ARCH_ARM,UC_MODE_ARM,UC_HOOK_CODE
+from unicorn.arm_const import UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3,UC_ARM_REG_R4,UC_ARM_REG_SP,UC_ARM_REG_LR,UC_ARM_REG_PC
+REGS=(UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3)
+snapshot=(HERE/'work/boot_visibility_compare_attempt01/capture_mode1/ftl_snapshot.bin')
+if not snapshot.exists():snapshot=HERE/'work/boot_diagnostic_block10_attempt01/capture/ftl_snapshot.bin'
+N=snapshot.read_bytes()[0xa6000:];tests=[];started=time.monotonic()
+for key,spec in M['variants'].items():
+ if a.errors_only and key!='22_write':continue
+ block=spec['physical_block'];variant=key.split('_')[1];sector=block*4096;syms={k:int(v,16) for k,v in spec['symbols'].items()}
+ source=Path(spec['source_path']).read_bytes();oldmain=(D/f'block{block}/oldmain.bin').read_bytes();aux=(D/f'block{block}/native_aux_u16.bin').read_bytes();values=struct.unpack('<4096H',aux)
+ code=(D/f'block{block}/{variant}.core.bin').read_bytes();assert hashlib.sha256(code).hexdigest()==spec['core_sha256']
+ u=Uc(UC_ARCH_ARM,UC_MODE_ARM)
+ for p,n in ((0x61800000,0x2000),(0x61700000,0x1000),(0x60200000,0x600000),(0x6101a000,0x3000),(0x63000000,0x230000),(0x60080000,0x10000)):u.mem_map(p,n)
+ u.mem_write(0x61800000,code);u.mem_write(0x60359000,N);u.mem_write(0x63000000,source)
+ mode={'case':'normal','rc':0};calls=[];pages={};erased=False
+ def backend(uc,pc,size,ctx):
+  global erased
+  args=[uc.reg_read(r) for r in REGS];calls.append((pc,args))
+  if pc==0x600894c0:
+   assert args[0]>=sector and args[0]<sector+4096 and not((args[0]-sector)&15)
+   assert args[1:]==[0x63200000,0x63202200,16]
+   assert struct.unpack('<I',uc.mem_read(uc.reg_read(UC_ARM_REG_SP),4))[0]==0xffffffff
+   page=(args[0]-sector)//16
+   main=pages.get(page,oldmain[page*8192:(page+1)*8192] if not erased else bytes([255])*8192)
+   if mode['case']=='stale' and erased:pass
+   else:
+    if mode['case']=='bad_old_main' and not erased and page==0:main=bytes([main[0]^1])+main[1:]
+    uc.mem_write(args[1],main)
+   meaningful=bytearray(256)
+   for n in range(16):
+    value=values[page*16+n]
+    if mode['case']=='bad_old_aux' and not erased and page==0 and n==0:value^=1
+    if mode['case']=='bad_new_aux' and erased and page==0 and n==0:value^=1
+    struct.pack_into('<H',meaningful,n*16,value)
+   uc.mem_write(args[2],bytes(meaningful))
+   rc=0xffffffff if mode['case']=='read_error' and page==0 else 0
+  elif pc==syms['original_erase']:
+   assert variant=='write' and args==[sector,0x63202400,0,0]
+   erased=True;pages.clear();rc=0xffffffff if mode['case']=='erase_error' else mode['rc']
+   uc.mem_write(args[1],struct.pack('<I',sector+4096))
+  elif pc==syms['original_program']:
+   assert variant=='write' and args[0]==sector+len(pages)*16 and args[1]==0x63000000+len(pages)*8192 and args[2:]==[0x63202000,0]
+   page=len(pages);native=bytes(uc.mem_read(args[2],256))
+   assert all(struct.unpack_from('<H',native,n*16)[0]==values[page*16+n] for n in range(16))
+   assert all(native[n*16+2:(n+1)*16]==bytes([255])*14 for n in range(16))
+   pages[page]=bytes(uc.mem_read(args[1],8192));rc=0xffffffff if mode['case']=='program_error' else mode['rc']
+  else:raise AssertionError(hex(pc))
+  uc.reg_write(UC_ARM_REG_R0,rc);uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR))
+ for pc in (0x600894c0,syms['original_erase'],syms['original_program']):u.hook_add(UC_HOOK_CODE,backend,begin=pc,end=pc)
+ def call(name,args=(),budget=1000000):
+  for r,v in zip(REGS,args):u.reg_write(r,v)
+  u.reg_write(UC_ARM_REG_SP,0x603df000);u.reg_write(UC_ARM_REG_LR,0x607ffffc);u.reg_write(UC_ARM_REG_R4,0xdecafbad)
+  u.emu_start(syms[name],0x607ffffc,count=budget)
+  assert u.reg_read(UC_ARM_REG_PC)==0x607ffffc,(key,name,hex(u.reg_read(UC_ARM_REG_PC)))
+  assert u.reg_read(UC_ARM_REG_SP)==0x603df000 and u.reg_read(UC_ARM_REG_R4)==0xdecafbad
+  return u.reg_read(UC_ARM_REG_R0)
+ def state(token,phase=3,nextsector=sector,erases=1,programs=0,fault=0):
+  u.mem_write(0x61700000,struct.pack('<8I',token,fault,phase,nextsector,erases,programs,0,0));calls.clear();mode.update(case='normal',rc=0);pages.clear()
+ # All other physical blocks fail closed before any native I/O.
+ for other in range(2048):
+  if other==block:continue
+  state(0x45525742,phase=2,erases=0)
+  assert call('gate_erase',(other*4096,0x63202400,0,0))==0xffffffff and not calls
+  state(0x50525742)
+  assert call('gate_program',(other*4096,0x63000000,0x63202000,0))==0xffffffff and not calls
+ for token,phase,erases,programs,fault in ((0,3,1,0,0),(0x50525742,2,1,0,0),(0x50525742,3,0,0,0),(0x50525742,3,1,256,0),(0x50525742,3,1,0,1)):
+  state(token,phase=phase,erases=erases,programs=programs,fault=fault);assert call('gate_program',(sector,0x63000000,0x63202000,0))==0xffffffff and not calls
+ for args in ((sector+1,0x63000000,0x63202000,0),(sector,0x63000004,0x63202000,0),(sector,0x63000000,0x63202200,0),(sector,0x63000000,0x63202000,1)):
+  state(0x50525742);assert call('gate_program',args)==0xffffffff and not calls
+ for args in ((sector,0x63202404,0,0),(sector,0x63202400,1,0),(sector+1,0x63202400,0,0)):
+  state(0x45525742,phase=2,erases=0);assert call('gate_erase',args)==0xffffffff and not calls
+ for name,args in (('gate_copy',(0,0,1,0)),('gate_forbidden',(0,0,0,0))):
+  state(0x50525742);assert call(name,args)==0xffffffff and not calls
+ # Full source+old physical preflight and complete native256-page sequence.
+ cases=['normal']
+ if block==22 and variant=='write' and (a.synthetic or a.errors_only):cases+=['bad_source','read_error','bad_old_aux','bad_old_main','erase_error','program_error','stale','bad_new_aux','bad_geometry']
+ if a.errors_only:cases=cases[1:]
+ for case in cases:
+  erased=False;pages.clear();calls.clear();mode.update(case=case,rc=0);u.mem_write(0x63000000,source);u.mem_write(0x60359000,N)
+  if case=='bad_source':u.mem_write(0x63000000,bytes([source[0]^1]))
+  if case=='bad_geometry':u.mem_write(0x60359a34+18,b'\x18')
+  rc=call('boot_physical_write',budget=600000000)
+  status=struct.unpack('<16I',u.mem_read(0x6101af10,64));guard=struct.unpack('<8I',u.mem_read(0x61700000,32))
+  physical=[c for c in calls if c[0] in (syms['original_erase'],syms['original_program'])]
+  assert guard[0]==0
+  if variant=='dry':assert rc==0xffffffff and not physical and status[3:9]==(2,0xd002,1,0,256,0) and len(calls)==256
+  elif case=='normal':
+   assert rc==0 and status[3:9]==(4,0,1,256,256,256) and len(calls)==769 and len(physical)==257
+   assert b''.join(pages[i] for i in range(256))==source
+  else:
+   assert rc==0xffffffff and status[4]
+   if case in ('bad_source','read_error','bad_old_aux','bad_old_main','bad_geometry'):assert not physical
+   if case=='erase_error':assert len(physical)==1 and not pages and struct.unpack('<I',u.mem_read(0x63202400,4))[0]==sector
+   if case in ('program_error','stale','bad_new_aux'):assert len(physical)==2 and len(pages)==1 and status[8]==0
+  print('PASS',key,case,flush=True)
+ tests.append({'variant':key,'all_other_2047_blocks_erase_and_program_denied':True,'pointer_mode_sequence_token_geometry_guards':True,'core_cases':cases,'actual_fifth_read_argument_verified':True,'native_u16_only_metadata_exact':True,'return_stack_registers_preserved':True})
+report={'all_pass':True,'device_access':False,'synthetic_only':a.synthetic,'actual_ARM_core_gates':True,'variants':tests,'elapsed_seconds':time.monotonic()-started,'limits':['Native I/O uses a RAM fixture, not an ECC/controller model.','Hardware dry must pass full preflight before armed is launched once.','Cold native readback and both FTL modes are still required after hardware write.']}
+(D/('error_proof.json' if a.errors_only else 'offline_proof.json')).write_text(json.dumps(report,indent=2)+'\n');M['error_tests_pass' if a.errors_only else 'core_tests_pass']=True
+(D/'manifest.json').write_text(json.dumps(M,indent=2)+'\n')
+print(json.dumps(report,indent=2))

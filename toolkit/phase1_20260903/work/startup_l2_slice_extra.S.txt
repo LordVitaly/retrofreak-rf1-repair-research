@@ -1,0 +1,88 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/startup_l2_slice_extra.S
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+.syntax unified
+.arm
+.section .extra,"ax",%progbits
+.global l2_before_snapshot,l2_after_restore
+l2_before_snapshot:
+    ldr r0, =0x10138000
+    ldr r1, [r0]
+    str r1, [r4, #88]
+    /* This bounded return uses the r3p2 PL310 clean/sync sequence. Refuse
+       other revisions before running original startup, instead of guessing. */
+    ubfx r1, r1, #0, #12
+    cmp r1, #0xc8
+    bne l2_refused
+    ldr r1, [r0, #0x104]
+    str r1, [r4, #92]
+    ldr r1, [r0, #0x108]
+    str r1, [r4, #96]
+    ldr r1, [r0, #0x10c]
+    str r1, [r4, #100]
+    ldr r1, [r0, #0xf60]
+    str r1, [r4, #104]
+    ldr r1, [r0, #0xf80]
+    str r1, [r4, #108]
+    mrc p15, 0, r1, c1, c0, 1
+    str r1, [r4, #120]
+    bx lr
+l2_refused:
+    mov r0, #0
+    str r0, [r4, #4]
+    ldr r0, =RF_STAGE_TAG
+    str r0, [r4]
+    dsb sy
+    ldr pc, =0x60800c00
+    .ltorg
+l2_after_restore:
+    /* L1 has been cleaned and disabled. No stack or cacheable RAM stores
+       until L2 is flushed and disabled. r8 retains the outer return LR. */
+    ldr r9, =0x10138000
+    ldr r0, [r9, #0x100]
+    cmp r0, #0
+    beq l2_restore_registers
+    mrc p15, 0, r0, c1, c0, 1
+    bic r0, r0, #0xe
+    mcr p15, 0, r0, c1, c0, 1
+    isb sy
+    ldr r0, [r9, #0x104]
+    tst r0, #0x10000
+    mov r1, #0xff
+    movwne r1, #0xffff
+    str r1, [r9, #0x7fc]
+1:
+    ldr r0, [r9, #0x7fc]
+    tst r0, r1
+    bne 1b
+    mov r0, #0
+    str r0, [r9, #0x730]
+2:
+    ldr r0, [r9, #0x730]
+    tst r0, #1
+    bne 2b
+    dsb sy
+    mov r0, #0
+    str r0, [r9, #0x100]
+    dsb sy
+l2_restore_registers:
+    ldr r0, [r4, #92]
+    str r0, [r9, #0x104]
+    ldr r0, [r4, #96]
+    str r0, [r9, #0x108]
+    ldr r0, [r4, #100]
+    str r0, [r9, #0x10c]
+    ldr r0, [r4, #104]
+    str r0, [r9, #0xf60]
+    ldr r0, [r4, #108]
+    str r0, [r9, #0xf80]
+    ldr r0, [r4, #120]
+    mcr p15, 0, r0, c1, c0, 1
+    dsb sy
+    isb sy
+    ldr r0, [r9, #0x100]
+    str r0, [r4, #116]
+    bx lr
+    .ltorg

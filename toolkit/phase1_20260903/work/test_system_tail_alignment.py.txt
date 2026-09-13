@@ -1,0 +1,47 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_system_tail_alignment.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Isolate last half-page behavior; original FTL, virtual NAND, no device."""
+import hashlib,json,struct
+from emulate_flashboot_system_rewrite import initialize
+from emulate_flashboot_offline import ROOT,FTL,REGS,address,UC_ARM_REG_PC,UC_ARM_REG_LR
+from unicorn import UC_HOOK_CODE
+record=(ROOT/'work/idb_ecc24_parameter_attempt2/block05_page15.raw').read_bytes()[:512]
+donor=(ROOT.parent.parent/'2026-09-01/retro-freak-retrofreak-systemupdate-0-2/work/rkfw_contents/components/system.img').read_bytes()
+tail=donor[73*2097152:];assert len(tail)==2093056
+report=dict(device_access=False,cases=[])
+for padded in (False,True):
+    emu=initialize(record);trace=[]
+    def hook(uc,pc,size,ctx):
+        if pc in {address(o) for o in (0x3b0c,0x4ca8,0x5278,0x54c0,0xbc1c)}:
+            trace.append((hex(pc),hex(uc.reg_read(UC_ARM_REG_LR)),[hex(uc.reg_read(r)) for r in REGS]))
+            if len(trace)>24:trace.pop(0)
+    emu.uc.hook_add(UC_HOOK_CODE,hook,begin=address(0x3b0c),end=address(0xbc1c))
+    for r,v in zip(REGS[1:],(0x103ff0,16,0x60600000)):emu.uc.reg_write(r,v)
+    assert emu.call(0x50d4,0)==0
+    old_tail=bytes(emu.uc.mem_read(0x60601000,4096))
+    data=tail+old_tail if padded else tail
+    row=dict(preserve_tail_padding=padded,old_tail_sha256=hashlib.sha256(old_tail).hexdigest(),success=False)
+    try:
+        for offset in range(0,len(data),65536):
+            part=data[offset:offset+65536];lba=0x103000+offset//512
+            emu.uc.mem_write(0x60600000,part)
+            for r,v in zip(REGS[1:],(lba,len(part)//512,0x60600000)):emu.uc.reg_write(r,v)
+            assert emu.call(0x7dcc,0,instruction_limit=3_000_000)==0
+            emu.uc.mem_write(0x60600000,bytes(x^255 for x in part))
+            for r,v in zip(REGS[1:],(lba,len(part)//512,0x60600000)):emu.uc.reg_write(r,v)
+            assert emu.call(0x50d4,0,instruction_limit=3_000_000)==0
+            assert bytes(emu.uc.mem_read(0x60600000,len(part)))==part
+        reboot=initialize(record,emu.pages,emu.erased)
+        for offset in range(0,len(data),65536):
+            part=data[offset:offset+65536]
+            for r,v in zip(REGS[1:],(0x103000+offset//512,len(part)//512,0x60600000)):reboot.uc.reg_write(r,v)
+            assert reboot.call(0x50d4,0,instruction_limit=3_000_000)==0
+            assert bytes(reboot.uc.mem_read(0x60600000,len(part)))==part
+        row.update(success=True,whole_portion_and_preserved_tail_exact_after_restart=True)
+    except BaseException as e:
+        row.update(error=repr(e),offset=offset,pc=hex(emu.uc.reg_read(UC_ARM_REG_PC)),args=[hex(emu.uc.reg_read(r)) for r in REGS],trace=trace)
+    report['cases'].append(row);print(json.dumps(row),flush=True)
+with (ROOT/'outputs/system_tail_alignment.json').open('x') as f:json.dump(report,f,indent=2)

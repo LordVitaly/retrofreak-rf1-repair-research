@@ -1,0 +1,41 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/read_copy0_order_check.py
+Role: historical_device_runner_or_stateful_scenario_review_before_any_use
+Original repair session must not be resumed from this public copy.
+
+"""Read-only address-order check on current BBT writer; no DB/WS/reset."""
+from pathlib import Path
+import sys,json,struct,hashlib,os
+OLD=Path('<EXTERNAL_STAGE_03>');HERE=Path(__file__).resolve().parent
+sys.path.insert(0,str(OLD/'work'))
+from ram_console_session import RamConsole
+assert sys.argv[1:]==['--same-phase0-bbt-writer']
+prior=json.loads((HERE/'bbt_restore_after_copy0_attempt03/result.json').read_text())
+assert not prior['erase_dispatched'] and not prior['program_dispatched'] and prior['resume_verified_same_phase0_runtime']
+source=(OLD/'work/idb_restore_material_v1/copy6.BOOT_ORDER_MAIN512.NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(source).hexdigest()=='<HISTORICAL_HASH_REDACTED>'
+out=HERE/'copy0_read_order_attempt01';out.mkdir(exist_ok=False);c=None
+result=dict(complete=False,read_only=True,rows=[])
+def read(name,sector,count):
+    assert (sector,count) in ((0x7effff,1),(4,4),(0,4),(244,4))
+    p=out/(name+'.raw');c.command(f'RS {hex(sector)} {hex(count)} {p}')
+    data=p.read_bytes();assert len(data)==count*528;return data
+def marker(name):
+    raw=read(name,0x7effff,1);w=list(struct.unpack_from('<20I',raw))
+    assert w[:18]==[826426441,201326850,0,0,0,0,0,0,49152,0,0,0,0,1,2486241045,1,22384,0],w
+    return w
+try:
+    c=RamConsole(out);c.select();prev=marker('start_marker')
+    for i,sector in enumerate((4,0,244,0)):
+        data=read(f'read_{i}_{sector}',sector,4)
+        w=marker(f'marker_{i}');assert w[18]==prev[18]+1
+        main=b''.join(data[j:j+512] for j in range(0,len(data),528))
+        expected=source[sector*512:(sector+4)*512]
+        row=dict(sector=sector,native_return=w[19],main_exact=main==expected,differing=sum(a!=b for a,b in zip(main,expected)),first32=main[:32].hex())
+        result['rows'].append(row);print(json.dumps(row),flush=True);prev=w
+    result['complete']=True
+except BaseException as exc:result['error']=repr(exc);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    with (out/'result.json').open('x') as f:json.dump(result,f,indent=2)

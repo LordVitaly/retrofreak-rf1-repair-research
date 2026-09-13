@@ -1,0 +1,187 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/journal_analysis/analyze.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Offline legacy JBD2 inspection. No replay to NAND or filesystem mutations.
+
+Only journal features observed here (32-bit, REVOKE, no checksum) are accepted.
+Committed metadata overlays are evidence, not a repair artifact.
+"""
+from pathlib import Path
+import argparse, hashlib, io, json, struct, sys
+
+HERE = Path(__file__).resolve().parents[2]
+MAGIC = 0xC03B3998
+BS = 4096
+PARTS = {'data': (0x38000, 0x80000), 'cache': (0x18000, 0x20000)}
+
+def digest(b): return hashlib.sha256(b).hexdigest()
+
+def analyze(raw, name, forensic_start=None):
+    assert len(raw) == 4 * 1024 * 1024
+    h = struct.unpack_from('>12I', raw)
+    assert h[:6] == (MAGIC, 4, 0, BS, 1024, 1), h
+    assert h[9:12] == (0, 1, 0), 'Unsupported journal features'
+    seq, pos = h[6:8]
+    assert 0 <= pos < 1024
+    report = dict(name=name, bytes=len(raw), sha256=digest(raw),
+                  sequence=seq, start=pos, errno=struct.unpack_from('>i',raw,32)[0],
+                  feature_compat=h[9], feature_incompat=h[10],
+                  integrity='Legacy format has no enabled transaction checksums; structural validation only',
+                  commits=[], pending=[], scan_headers=[])
+    if forensic_start is not None:
+        seq, pos = forensic_start
+        report['forensic_chain_override'] = dict(sequence=seq, start=pos,
+            warning='Not reachable through the current journal superblock; do not replay to device')
+    for i in range(1,1024):
+        a,b,c = struct.unpack_from('>3I',raw,i*BS)
+        if a == MAGIC and b in (1,2,5):
+            report['scan_headers'].append(dict(block=i,type=b,sequence=c))
+    if pos == 0:
+        report['stop'] = 'Journal reports no pending recovery'
+        return report, {}
+    visited = set(); pending = []; revokes = []; commits = []
+    overlay = {}; revoked = {}
+    fs_blocks = PARTS[name][1] // 8
+    def nxt(p): return 1 if p+1 == 1024 else p+1
+    def block(p): return raw[p*BS:(p+1)*BS]
+    try:
+        while pos not in visited:
+            visited.add(pos)
+            b = block(pos)
+            magic, kind, gotseq = struct.unpack_from('>3I', b)
+            if magic != MAGIC or gotseq != seq:
+                report['stop'] = dict(block=pos,expected_sequence=seq,
+                    observed_header=[magic,kind,gotseq],reason='Magic or sequence does not continue recovery chain')
+                break
+            if kind == 1:
+                tags = []; off = 12; data_pos = nxt(pos); last_uuid = None
+                for _ in range((BS-12)//8):
+                    if off+8 > BS: raise ValueError('Descriptor tags exceed block')
+                    target, flags = struct.unpack_from('>2I', b, off); off += 8
+                    if flags & ~15: raise ValueError('Unknown tag flags')
+                    if flags & 4: raise ValueError('DELETED tag not implemented; stop without interpreting')
+                    if target >= fs_blocks: raise ValueError('Tag target beyond filesystem')
+                    if not flags & 2:
+                        if off+16 > BS: raise ValueError('UUID exceeds descriptor')
+                        last_uuid = b[off:off+16]; off += 16
+                    elif last_uuid is None:
+                        raise ValueError('First tag omits UUID')
+                    if last_uuid != raw[48:64]: raise ValueError('Tag UUID differs from journal')
+                    if data_pos in visited: raise ValueError('Journal data revisits scanned block')
+                    visited.add(data_pos)
+                    payload = block(data_pos)
+                    if flags & 1:
+                        payload = struct.pack('>I',MAGIC)+payload[4:]
+                    tags.append(dict(target=target, flags=flags,journal_block=data_pos,
+                                     sha256=digest(payload),data=payload))
+                    data_pos = nxt(data_pos)
+                    if flags & 8: break
+                else: raise ValueError('Descriptor has no last tag')
+                pending.append(dict(descriptor_block=pos,sequence=seq,tags=tags))
+                pos = data_pos
+            elif kind == 5:
+                used = struct.unpack_from('>I',b,12)[0]
+                if not 16 <= used <= BS or (used-16)%4: raise ValueError('Invalid revoke size')
+                entries = list(struct.unpack_from('>'+str((used-16)//4)+'I',b,16))
+                if any(t>=fs_blocks for t in entries): raise ValueError('Revoke target beyond filesystem')
+                revokes.extend(entries); pos = nxt(pos)
+            elif kind == 2:
+                commit = dict(sequence=seq,commit_block=pos,
+                    descriptors=[dict(descriptor_block=d['descriptor_block'],
+                                      tags=[{k:v for k,v in t.items() if k!='data'} for t in d['tags']])
+                                 for d in pending],revokes=list(revokes))
+                report['commits'].append(commit)
+                commits.append((seq,pending,revokes))
+                for target in revokes: revoked[target] = seq
+                pending = []; revokes = []; seq = (seq+1)&0xffffffff; pos = nxt(pos)
+            else:
+                report['stop'] = dict(block=pos,reason='Unexpected journal control type',type=kind)
+                break
+        else: report['stop'] = dict(block=pos,reason='Journal ring exhausted')
+    except ValueError as e:
+        report['stop'] = dict(block=pos,reason=str(e),structural_error=True)
+    report['pending'] = [dict(descriptor_block=d['descriptor_block'],sequence=d['sequence'],
+        targets=[t['target'] for t in d['tags']]) for d in pending]
+    # In this bounded sequence range no wrap occurs; refuse an ambiguous wrap.
+    if commits and commits[-1][0] < commits[0][0]: raise ValueError('Sequence wrap needs explicit handling')
+    for sequence,desc,_ in commits:
+        for d in desc:
+            for t in d['tags']:
+                if t['target'] not in revoked or sequence > revoked[t['target']]:
+                    overlay[t['target']] = t['data']
+    report['committed_overlay_blocks'] = sorted(overlay)
+    report['visited_journal_blocks'] = len(visited)
+    return report, overlay
+
+class MissingRange(OSError): pass
+
+class SparseView(io.RawIOBase):
+    def __init__(self,name,overlay):
+        self.name=name; self.start,self.sectors=PARTS[name]; self.pos=0
+        self.overlay=overlay; self.blocks={}; self.missing=[]
+        # Import only completed, recorded current native read ranges.
+        for root in HERE.glob('work/white_screen_reads_*'):
+            rp=root/'result.json'
+            if not rp.exists():continue
+            result=json.loads(rp.read_text())
+            for c in result.get('cases',[]):
+                if not c.get('complete') or c['read_status'][2] != 0:continue
+                first=c['lba']; count=c['sectors']
+                if first<self.start or first+count>self.start+self.sectors:continue
+                data=Path(c['path']).read_bytes()
+                assert len(data)==count*512 and digest(data)==c['sha256']
+                for off in range(0,len(data),512):
+                    sector=first-self.start+off//512
+                    self.blocks[sector]=data[off:off+512]
+    def readable(self):return True
+    def seekable(self):return True
+    def tell(self):return self.pos
+    def seek(self,p,w=0):self.pos=p if w==0 else self.pos+p if w==1 else self.sectors*512+p;return self.pos
+    def read(self,n=-1):
+        if n<0:n=self.sectors*512-self.pos
+        out=bytearray()
+        while n:
+            blk,within=divmod(self.pos,BS); sec,inner=divmod(self.pos,512)
+            if blk in self.overlay:
+                take=min(n,BS-within); d=self.overlay[blk][within:within+take]
+            elif sec in self.blocks:
+                take=min(n,512-inner); d=self.blocks[sec][inner:inner+take]
+            else:
+                self.missing.append(self.start+sec)
+                raise MissingRange(f'Missing native LBA 0x{self.start+sec:x}, ext4 block {blk}')
+            out.extend(d);self.pos+=take;n-=take
+        return bytes(out)
+
+def inspect_files(name,overlay):
+    from dissect.extfs import ExtFS
+    view=SparseView(name,overlay);fs=ExtFS(view)
+    rows=[]
+    paths=['/','/system','/system/dropbox','/data','/property','/dalvik-cache','/tombstones'] if name=='data' else ['/','/recovery']
+    for p in paths:
+        row={'path':p}
+        try:
+            node=fs.get(p);row.update(inode=node.inum,size=node.size)
+            if node.filetype==0x4000:
+                row['entries']=[dict(name=n.filename,inode=n.inum,size=n.size)
+                                for n in node.iterdir() if n.filename not in ('.','..')]
+        except Exception as e:row.update(error_type=type(e).__name__,error=str(e))
+        rows.append(row)
+    return dict(paths=rows,missing_native_lbas=sorted(set(view.missing)))
+
+def main():
+    parser=argparse.ArgumentParser();parser.add_argument('name',choices=PARTS);args=parser.parse_args()
+    root=HERE/'work/white_screen_reads_journalfull'
+    parts=[root/f'{args.name}_journal_{suffix}'/'data.bin' for suffix in ('a','b')]
+    raw=b''.join(p.read_bytes() for p in parts)
+    report,overlay=analyze(raw,args.name)
+    header=(HERE/'work/white_screen_reads_journal0'/f'{args.name}_journal_header/data.bin').read_bytes()
+    assert raw[:len(header)]==header
+    report['overlay_inspection']=inspect_files(args.name,overlay)
+    out=Path(__file__).parent/f'{args.name}_report.json'
+    out.write_text(json.dumps(report,indent=2))
+    print(json.dumps(report,indent=2))
+
+if __name__=='__main__': main()

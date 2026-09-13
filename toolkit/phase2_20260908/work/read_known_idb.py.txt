@@ -1,0 +1,41 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/read_known_idb.py
+Role: historical_device_runner_or_stateful_scenario_review_before_any_use
+Original repair session must not be resumed from this public copy.
+
+"""Survey known IDB copies once on already loaded immutable reader. No DB."""
+from pathlib import Path
+import sys,json,struct,hashlib
+OLD=Path('<EXTERNAL_STAGE_03>')
+HERE=Path(__file__).resolve().parent
+sys.path.insert(0,str(OLD/'work'))
+from ram_console_session import RamConsole
+previous=json.loads((HERE/'idb_cold_attempt01/result.json').read_text())
+assert previous['error']=="RuntimeError('Header read instability; stop, no retries')"
+assert len(previous['blocks'])==1 and previous['blocks'][0]['block']==0
+# Block0 was already known to return context-dependent scratch bytes in prior
+# cold surveys. Do not repeat it; inspect the four known copies at new addresses.
+out=HERE/'known_idb_attempt01';out.mkdir(exist_ok=False)
+c=None;result=dict(nand_writes_enabled=False,db_commands=0,reset_commands=0,blocks=[])
+def read(name,sector,count):
+    assert (sector==0x7effff and count==1) or (sector in (0x1000,0x3000,0x5000,0x6000) and count==256)
+    p=out/(name+'.raw');c.command(f'RS {hex(sector)} {hex(count)} {p}')
+    raw=p.read_bytes();assert len(raw)==528*count
+    return raw
+def marker(name):
+    w=list(struct.unpack_from('<18I',read(name,0x7effff,1)))
+    assert w[:10]==[0x31424449,0x06000103,0,0,0,0,0,0,0x6000,0] and w[13]==1 and w[15:]==[1,0x5770,1],w
+    result[name]=w
+try:
+    c=RamConsole(out);c.select();marker('start_marker')
+    for block in (6,5,3,1):
+        raw=read(f'block{block:02d}',block*4096,256)
+        main=b''.join(raw[i:i+512] for i in range(0,len(raw),528))
+        row=dict(block=block,sha256=hashlib.sha256(main).hexdigest(),prefix=main[:16].hex())
+        result['blocks'].append(row);print(json.dumps(row),flush=True)
+    marker('final_marker');result['complete']=True
+except BaseException as exc:result['error']=repr(exc);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    with (out/'result.json').open('x') as f:json.dump(result,f,indent=2)

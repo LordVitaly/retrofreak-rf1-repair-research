@@ -1,0 +1,40 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/check_memset_contract.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Isolated original memset, no startup/peripherals/device access."""
+from pathlib import Path
+import sys
+ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'work/emulator_deps'))
+from unicorn import *
+from unicorn.arm_const import *
+data=(ROOT/'work/readonly_ram.FlashBoot.NOT_FOR_UPLOAD.bin').read_bytes()
+for cpu in (None,UC_CPU_ARM_CORTEX_A9):
+    u=Uc(UC_ARCH_ARM,UC_MODE_ARM,**({} if cpu is None else {'cpu':cpu}))
+    u.mem_map(0x60080000,0x20000);u.mem_write(0x60080000,data[0xa34:])
+    u.mem_map(0x603d0000,0x10000)
+    for n in (0x40,0x100,0xed0):
+        target=0x603d3980
+        u.mem_write(target,bytes([0x69])*(n+32))
+        for reg,val in ((UC_ARM_REG_R0,target),(UC_ARM_REG_R1,0),(UC_ARM_REG_R2,n),(UC_ARM_REG_SP,0x603df000),(UC_ARM_REG_LR,0x6009f000)):u.reg_write(reg,val)
+        u.emu_start(0x6008c42c,0x6009f000,count=100000)
+        b=bytes(u.mem_read(target,n+32))
+        print(cpu,n,b==bytes(n)+bytes([0x69])*32,b[n:].hex(),flush=True)
+    u.mem_map(0x603c0000,0x10000)
+    target=0x603c3a24;n=0x10000
+    u.mem_write(target,bytes([0x69])*(n+32))
+    for reg,val in ((UC_ARM_REG_R0,target),(UC_ARM_REG_R1,n),(UC_ARM_REG_SP,0x603df000),(UC_ARM_REG_LR,0x6009f000)):u.reg_write(reg,val)
+    u.emu_start(0x60098a53,0x6009f000,count=100000)
+    b=bytes(u.mem_read(target,n+32))
+    assert b==bytes(n)+bytes([0x69])*32
+    print('memclr65536 isolated PASS',cpu,flush=True)
+    u.mem_map(0x602c0000,0x10000)
+    target=0x602c55b4;n=3792
+    u.mem_write(target,bytes([0x69])*(n+32))
+    for reg,val in ((UC_ARM_REG_R0,target),(UC_ARM_REG_R1,0),(UC_ARM_REG_R2,n),(UC_ARM_REG_SP,0x603df000),(UC_ARM_REG_LR,0x6009f000)):u.reg_write(reg,val)
+    u.emu_start(0x6008c42c,0x6009f000,count=100000)
+    b=bytes(u.mem_read(target,n+32))
+    assert b==bytes(n)+bytes([0x69])*32
+    print('fullmap exact unaligned-to16 memset3792 isolated PASS',cpu,flush=True)

@@ -1,0 +1,70 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/audit_loader_logical_capability.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Offline-only dispatcher tracing and next-stage string inventory. No USB access."""
+import hashlib
+import json
+import re
+import struct
+from pathlib import Path
+from capstone import Cs, CS_ARCH_ARM, CS_MODE_ARM
+
+ROOT = Path(__file__).resolve().parents[1]
+SOURCE = Path(r'<HOST_PATH>')
+data = (SOURCE / 'rk30usbplug').read_bytes()
+dis = {i.address: i for i in Cs(CS_ARCH_ARM, CS_MODE_ARM).disasm(data[0x1850:0x18bc], 0x1850)}
+
+def trace(opcode):
+    pc, compare, steps = 0x1850, None, []
+    for _ in range(32):
+        if pc >= 0x18bc:
+            return {'opcode': hex(opcode), 'destination': hex(pc), 'trace': steps}
+        i = dis[pc]
+        steps.append({'offset': hex(pc), 'instruction': f'{i.mnemonic} {i.op_str}'})
+        next_pc = pc + 4
+        if i.mnemonic == 'cmp':
+            assert i.op_str.startswith('r0, #')
+            compare = int(i.op_str.split('#')[1], 0)
+        elif i.mnemonic == 'addlo':
+            assert i.op_str == 'pc, pc, r0, lsl #2'
+            if opcode < compare:
+                next_pc = pc + 8 + opcode * 4
+        elif i.mnemonic in ('b', 'beq', 'bne', 'bgt'):
+            take = {'b': True, 'beq': opcode == compare, 'bne': opcode != compare,
+                    'bgt': compare is not None and opcode > compare}[i.mnemonic]
+            if take:
+                next_pc = int(i.op_str.removeprefix('#'), 0)
+        else:
+            raise AssertionError(f'Unhandled instruction: {i.mnemonic}')
+        pc = next_pc
+    raise AssertionError('Unbounded dispatcher trace')
+
+traces = [trace(op) for op in range(256)]
+accepted = [x for x in traces if x['destination'] != '0x18bc']
+assert [int(x['opcode'], 16) for x in accepted] == list(range(7)) + [11, 12, 26, 27, 33, 34, 255]
+assert trace(0x14)['destination'] == trace(0x15)['destination'] == '0x18bc'
+assert struct.unpack_from('<II', data, 0xd984) == (0, 0)
+flash = (SOURCE / 'FlashBoot').read_bytes()
+strings = [{'offset': hex(m.start()), 'text': m.group().decode('ascii')}
+           for m in re.finditer(rb'[\x20-\x7e]{7,}', flash)
+           if re.search(rb'ftl|nand|usb|lba|read|write|flash|loader|boot|recovery', m.group(), re.I)]
+report = {
+    'scope': 'Static inspection only; no code executed on console and no NAND writes',
+    'usbplug_sha256': hashlib.sha256(data).hexdigest(),
+    'dispatcher_opcode_load_offset': '0x1848',
+    'accepted_opcodes': [x['opcode'] for x in accepted],
+    'read_lba_trace': trace(0x14), 'write_lba_trace': trace(0x15),
+    'physical_read_trace': trace(4), 'physical_write_trace': trace(5),
+    'nand_backend_table': '0xd96c',
+    'nand_callback_offsets_0x18_0x1c': [0, 0],
+    'protocol_source': 'https://raw.githubusercontent.com/rockchip-linux/rkdeveloptool/master/RKComm.h',
+    'conclusion': 'This USBplug dispatcher rejects READ_LBA and WRITE_LBA before dispatch to storage. This is not evidence that NAND FTL initialization failed.',
+    'flashboot_sha256': hashlib.sha256(flash).hexdigest(),
+    'flashboot_string_inventory_only_not_capability_proof': strings,
+}
+out = ROOT / 'outputs' / 'loader_logical_capability_static.json'
+with out.open('x', encoding='utf-8') as f:
+    json.dump(report, f, indent=2, ensure_ascii=False)
+print(json.dumps(report, indent=2, ensure_ascii=False))

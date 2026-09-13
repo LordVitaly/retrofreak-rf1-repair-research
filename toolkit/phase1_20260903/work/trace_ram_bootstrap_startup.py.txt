@@ -1,0 +1,56 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/trace_ram_bootstrap_startup.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Unified bootstrap -> FlashBoot until first unknown memory access. No USB."""
+import hashlib
+import argparse
+import json
+import sys
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1]
+p=argparse.ArgumentParser();p.add_argument('--map-sram',action='store_true');args=p.parse_args()
+sys.path.insert(0,str(ROOT/'work/emulator_deps'))
+from unicorn import Uc,UcError,UC_ARCH_ARM,UC_MODE_ARM,UC_HOOK_CODE,UC_HOOK_MEM_INVALID,UC_HOOK_MEM_WRITE
+from unicorn.arm_const import UC_CPU_ARM_CORTEX_A9,UC_ARM_REG_PC,UC_ARM_REG_SP
+blob=(ROOT/'work/ram_bootstrap.NOT_FOR_UPLOAD.bin').read_bytes()
+build=json.loads((ROOT/'outputs/ram_bootstrap_build.json').read_text())
+assert hashlib.sha256(blob).hexdigest()==build['binary_sha256']
+candidate=(ROOT/'work/FlashBoot.machine_guards_usb_only.UNPACKAGED_NOT_FOR_UPLOAD.bin').read_bytes()
+expected='<REDACTED:HASH_OR_BYTES>'
+assert hashlib.sha256(candidate).hexdigest()==expected
+u=Uc(UC_ARCH_ARM,UC_MODE_ARM,cpu=UC_CPU_ARM_CORTEX_A9)
+for base,size in [(0x60000000,0x20000),(0x60080000,0x20000),(0x60200000,0x600000),(0x61000000,0x20000),(0x61200000,0x10000),(0,0x1000)]:u.mem_map(base,size)
+if args.map_sram:u.mem_map(0x10080000,0x10000) # Linux rk3066a.dtsi SRAM range
+u.mem_write(0x60000000,blob)
+u.reg_write(UC_ARM_REG_SP,0xdead0000)
+events=[];invalid=[];state=dict(entries=0,output_verified=False,phase='bootstrap')
+def entry(uc,pc,size,ctx):
+    state['entries']+=1
+    if state['entries']==2:
+        out=bytes(uc.mem_read(0x60000000,len(candidate)))
+        assert out==candidate
+        state['output_verified']=True;state['phase']='flashboot'
+        events.append(dict(event='flashboot_entry',pc=hex(pc)))
+def unknown(uc,access,addr,size,value,ctx):
+    invalid.append(dict(access=access,address=hex(addr),size=size,value=hex(value),pc=hex(uc.reg_read(UC_ARM_REG_PC))))
+    return False
+def watch(uc,pc,size,ctx):
+    if state['phase']=='flashboot':events.append(dict(event='instruction',pc=hex(pc)))
+def guard(uc,access,addr,size,value,ctx):
+    # Bootstrap writes may only touch these ranges; no device address is mapped.
+    if state['phase']=='bootstrap' and not any(a<=addr and addr+size<=b for a,b in [(0x60000000,0x60000000+len(candidate)),(0x61000000,0x61000000+len(blob)),(0x61010000,0x61018008),(0x61200000,0x61210000)]):
+        raise AssertionError(('bootstrap write outside contract',hex(addr)))
+u.hook_add(UC_HOOK_CODE,entry,begin=0x60000000,end=0x60000000)
+u.hook_add(UC_HOOK_CODE,watch,begin=0x60000000,end=0x6000030c)
+u.hook_add(UC_HOOK_MEM_INVALID,unknown)
+u.hook_add(UC_HOOK_MEM_WRITE,guard)
+error=None
+try:u.emu_start(0x60000000,0,timeout=30000000,count=100000000)
+except UcError as exc:error=str(exc)
+assert state['output_verified'] and len(invalid)==1,(state,error,invalid)
+report=dict(binary_sha256=build['binary_sha256'],sram_mapped=args.map_sram,state=state,error=error,first_unknown_access=invalid[0],events=events,device_access=False,limitation='No MMIO responses invented. RAM is zero initialized; first unknown access is a diagnostic stop, not successful full startup.')
+name='ram_bootstrap_startup_sram_boundary.json' if args.map_sram else 'ram_bootstrap_startup_boundary.json'
+(ROOT/'outputs'/name).write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps(report,indent=2))

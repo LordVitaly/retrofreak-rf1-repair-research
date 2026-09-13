@@ -1,0 +1,17 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/normal_warm_reset_hardware_attempt01/result.json",
+  "interpretation": "First normal warm-reset experiment; no GUI obtained.",
+  "data": {
+    "phase": "RESET_REQUEST_SENT_AWAIT_SCREEN_OBSERVATION",
+    "reset_request_sent": true,
+    "normal_boot_verified": false,
+    "nand_writes_by_payload": 0,
+    "pmic_writes_by_payload": 0,
+    "payload_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "intro": "<REDACTED:RAW_LOG_OR_IDENTIFIER>",
+    "console_after_request": "<REDACTED:RAW_LOG_OR_IDENTIFIER>",
+    "reader_error": null,
+    "commands": "<REDACTED:RAW_LOG_OR_IDENTIFIER>"
+  }
+}

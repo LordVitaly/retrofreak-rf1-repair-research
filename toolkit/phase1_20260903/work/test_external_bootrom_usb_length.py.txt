@@ -1,0 +1,53 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_external_bootrom_usb_length.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Execute only external ROM USB length arithmetic. No USB/device access."""
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'work/emulator_deps'))
+from unicorn import Uc, UC_ARCH_ARM, UC_MODE_ARM
+from unicorn.arm_const import UC_ARM_REG_R4, UC_ARM_REG_R5, UC_ARM_REG_PC
+
+rom = bytes.fromhex((ROOT / 'work/RK3066_external_bootrom.hex').read_text())
+assert hashlib.sha256(rom).hexdigest() == '<REDACTED:HASH_OR_BYTES>'
+
+def check(payload):
+    u = Uc(UC_ARCH_ARM, UC_MODE_ARM)
+    u.mem_map(0, 0x3000)
+    u.mem_write(0, rom)
+    state = 0x10000
+    base = 0x60000000
+    u.mem_map(state, 0x1000)
+    u.mem_write(state + 12, base.to_bytes(4, 'little'))
+    total = payload + 2  # CRC; tested lengths avoid special 4094/4095 cases
+    for offset in range(0, total, 4096):
+        count = min(4096, total - offset)
+        u.mem_write(state + 8, count.to_bytes(2, 'little'))
+        u.reg_write(UC_ARM_REG_R4, state)
+        u.reg_write(UC_ARM_REG_R5, count)
+        # Start after packet copy, stop before CRC helper or completion handler.
+        stop = 0x1578 if count == 4096 else 0x14ec
+        u.emu_start(0x1488, stop, count=100)
+        assert u.reg_read(UC_ARM_REG_PC) == stop
+    accumulated = int.from_bytes(u.mem_read(state + 10, 2), 'little')
+    end = int.from_bytes(u.mem_read(state + 12, 4), 'little')
+    return dict(payload_bytes=payload, transferred_bytes=total,
+                accumulated_u16=accumulated, inferred_start=hex(end-accumulated),
+                expected_start=hex(base), start_matches=end-accumulated == base)
+
+cases = [check(n) for n in (56520, 110080, 110592)]
+assert cases[0]['start_matches']
+assert not cases[1]['start_matches'] and not cases[2]['start_matches']
+report = dict(source='https://gist.github.com/dw/9300925',
+              external_rom_sha256=hashlib.sha256(rom).hexdigest(),
+              limitation='External RK3066 ROM, not read from RF-1; packet-copy, CRC and decryption are not emulated.',
+              executed_range='0x1488 until 0x1578 or 0x14ec', cases=cases,
+              device_access=False)
+(ROOT / 'outputs/external_bootrom_usb_length_test.json').write_text(json.dumps(report, indent=2)+'\n')
+print(json.dumps(report, indent=2))

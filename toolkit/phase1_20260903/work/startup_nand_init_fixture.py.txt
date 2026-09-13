@@ -1,0 +1,89 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/startup_nand_init_fixture.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Bounded init path using existing saved IDB/FlashInfo as read-buffer oracles.
+No FTL or NAND media simulation; each original low-level read still executes.
+"""
+import struct,hashlib
+from pathlib import Path
+from unicorn import UC_HOOK_CODE
+from unicorn.arm_const import UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3,UC_ARM_REG_PC,UC_ARM_REG_LR,UC_ARM_REG_SP,UC_ARM_REG_R5
+from startup_nand_control_fixture import NANDControlContract
+class NANDInitContract(NANDControlContract):
+    def __init__(self,u,invalid_header=False,invalid_parameter=False,abstract_reads=False,bbt=False,bbt_error=False,remap=False,bootsetup=False,actualusb=False,ftlread=False):
+        super().__init__(u,6,ids=True,geometry=True,firstread=True)
+        root=Path(__file__).resolve().parents[1]
+        self.root=root;self.bbt=bbt;self.bbt_error=bbt_error;self.bbt_reads=[]
+        self.remap=remap
+        self.ftlread=ftlread
+        self.bootsetup=bootsetup
+        self.actualusb=actualusb;self.invalid_address_reads=[]
+        with (root/'work/nand_native_ecc40/NAND_00.RAW').open('rb') as f:
+            f.seek(5*256*8448);raw=f.read(8448)
+        self.header=b''.join(raw[i*528:i*528+512] for i in range(4))
+        assert self.header[:4]==bytes.fromhex('3b8cdcfc') and self.header[522:524]==b'RK'
+        p=(root/'work/idb_ecc24_parameter_attempt2/block05_page15.raw').read_bytes()
+        assert p==(root/'work/idb_ecc24_parameter_attempt2/block06_page15.raw').read_bytes()
+        self.parameter=p[:512];assert self.parameter[16:20]==b'DNAN'
+        if abstract_reads:
+            # Synthetic no-FlashInfo header for isolating fallback arithmetic:
+            # reserve1 and no saved-parameter pointer. Do not claim this is the
+            # header selected by hardware. Its resulting geometry must match
+            # the separately captured hardware fallback before A/B is accepted.
+            header=bytearray(self.header)
+            struct.pack_into('<H',header,512,1)
+            struct.pack_into('<H',header,512+0x60,0)
+            self.header=bytes(header)
+        self.invalid_header=invalid_header;self.invalid_parameter=invalid_parameter;self.buffer=bytes(2048);self.read_calls=[];self.abstract_reads=abstract_reads
+        self.oracle_hashes=[hashlib.sha256(x).hexdigest() for x in (self.header,self.parameter)]
+        u.hook_add(UC_HOOK_CODE,self.call,begin=0x600894c0,end=0x600894c0)
+    def call(self,u,pc,size,ctx):
+        sector=u.reg_read(UC_ARM_REG_R0);dest=u.reg_read(UC_ARM_REG_R1);count=u.reg_read(UC_ARM_REG_R3)
+        if self.bbt and (self.bbt_reads or 0x60085ff0<=u.reg_read(UC_ARM_REG_LR)<0x60086380):
+            spare=u.reg_read(UC_ARM_REG_R2)
+            if self.actualusb and sector>=8388608:
+                # An error input for the synthetic no-FlashInfo fixture, not a
+                # prediction of real NAND/controller behavior at this address.
+                assert sector==0xfffff000 and count==4 and u.reg_read(UC_ARM_REG_LR)==0x6008bdd0 and len(self.invalid_address_reads)<8,(hex(sector),count,hex(u.reg_read(UC_ARM_REG_LR)),self.bbt_reads[-5:], 'FTL', bytes(u.mem_read(0x602b3180,20)).hex(), 'SP',hex(u.reg_read(UC_ARM_REG_SP)), 'LOCALS',bytes(u.mem_read(u.reg_read(UC_ARM_REG_SP),8)).hex(),bytes(u.mem_read(u.reg_read(UC_ARM_REG_SP)+0x248,44)).hex())
+                self.invalid_address_reads.append((sector,count))
+                u.reg_write(UC_ARM_REG_R0,0xffffffff)
+                u.reg_write(UC_ARM_REG_PC,u.reg_read(UC_ARM_REG_LR));return
+            assert 0<count<=16 and 0<=sector<8388608 and sector+count<=8388608 and len(self.bbt_reads)<6000,(hex(u.reg_read(UC_ARM_REG_LR)),hex(sector),count,len(self.bbt_reads),hex(u.reg_read(UC_ARM_REG_R5)),bytes(u.mem_read(0x602b3180,20)).hex(),self.bbt_reads[-5:])
+            self.bbt_reads.append((sector,count))
+            if not self.bbt_error:
+                # Reuse existing dump-backed physical-read boundary, no controller/FTL model.
+                chunk,local=divmod(sector,0x40000);assert local+count<=0x40000
+                with (self.root/'work/nand_native_ecc40'/f'NAND_{chunk:02d}.RAW').open('rb') as f:
+                    f.seek(local*528);raw=f.read(count*528)
+                assert len(raw)==count*528
+                for address,data in ((dest,b''.join(raw[i:i+512] for i in range(0,len(raw),528))),
+                    (spare,b''.join(raw[i+512:i+528] for i in range(0,len(raw),528)))):
+                    if address:
+                        assert (self.ftlread and address==0x6101b000 and len(data)==512 and u.reg_read(UC_ARM_REG_LR)==0x60084758) or (self.actualusb and 0x6009a580<=address and address+len(data)<=0x600c0000) or (self.bootsetup and 0x602b3000<=address and address+len(data)<=0x603d426c) or (0x602b3000<=address and address+len(data)<=(0x60359000 if self.remap else 0x60352000)) or ((0x603c0000 if self.remap else 0x603d3000)<=address and address+len(data)<=0x603d426c),(hex(address),len(data),hex(u.reg_read(UC_ARM_REG_LR)))
+                        u.mem_write(address,data)
+            u.reg_write(UC_ARM_REG_R0,0xffffffff if self.bbt_error else 0)
+            u.reg_write(UC_ARM_REG_PC,u.reg_read(UC_ARM_REG_LR));return
+        assert count in (1,4) and len(self.read_calls)<120,(hex(u.reg_read(UC_ARM_REG_LR)),sector,hex(dest),count,len(self.read_calls))
+        self.read_calls.append((sector,dest,count))
+        self.buffer=bytes(2048) if self.invalid_header or (self.invalid_parameter and count==1) else (self.parameter+bytes(1536) if count==1 else self.header)
+        if self.abstract_reads:
+            # Capacity A/B tests use a read contract, not a model of alternating
+            # controller banks across repeated header/parameter reads. The
+            # original low-level first read already has separate hardware proof.
+            if dest:
+                assert (0x60359d34<=dest and dest+count*512<=0x6035a534) or (0x603d3000<=dest and dest+count*512<=0x603d426c)
+                u.mem_write(dest,self.buffer[:count*512])
+            u.reg_write(UC_ARM_REG_R0,0);u.reg_write(UC_ARM_REG_PC,u.reg_read(UC_ARM_REG_LR))
+    def verify(self):
+        if self.abstract_reads:
+            assert self.commands==[(i,cmd) for i in range(4) for cmd in (0xff,0x90)]
+            assert self.idpos==dict.fromkeys(range(4),6) and self.read_calls
+        else:super().verify()
+    def read(self,u,access,a,size,value,ctx):
+        off=a-0x10500000
+        if 0x1000<=off<0x1800:
+            assert size in (1,2,4) and off+size<=0x1800
+            u.mem_write(a,self.buffer[off-0x1000:off-0x1000+size]);return
+        super().read(u,access,a,size,value,ctx)

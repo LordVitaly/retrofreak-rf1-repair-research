@@ -1,0 +1,51 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/export_verified_boot_from_nand.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Export boot payload from unique physical NAND candidates; official image is verifier only."""
+import hashlib
+import json
+from pathlib import Path
+from verify_native_ecc_page import BOOT,extract
+ROOT=Path(__file__).parent
+records={r['file']:r for r in map(json.loads,(ROOT/'nand_native_ecc40/manifest.jsonl').read_text().splitlines()) if r['file'].startswith('NAND_')}
+rows=[]
+for file in (ROOT/'native_ecc40_index').glob('NAND_*.json'):
+    info=json.loads(file.read_text())
+    assert info['source_sha256']==records[info['source_file']]['sha256']
+    rows.extend(info['blocks'])
+pieces=[]
+provenance=[]
+verified=set()
+for logical in range(6,11):
+    candidates=[r for r in rows if r['page0_meta'][0]&0xff00==0xf200 and r['page0_meta'][2]==logical]
+    assert len(candidates)==1, 'Boot mapping must have one physical candidate per block'
+    block=candidates[0]['physical_block']
+    chunk,local=divmod(block,64)
+    name=f'NAND_{chunk:02d}.RAW'
+    path=ROOT/'nand_native_ecc40'/name
+    if name not in verified:
+        with path.open('rb') as f: assert hashlib.file_digest(f,'sha256').hexdigest()==records[name]['sha256']
+        verified.add(name)
+    with path.open('rb') as f:
+        f.seek(local*256*8448)
+        raw=f.read(256*8448)
+    main=b''.join(extract(raw[i:i+8448]) for i in range(0,len(raw),8448))
+    pieces.append(main)
+    provenance.append(dict(logical_block=logical,physical_block=block,source=str(path),source_sha256=records[name]['sha256']))
+reference=BOOT.read_bytes()
+# The payload length is the official boot image extent, never used to fill bytes.
+payload=b''.join(pieces)[:len(reference)]
+assert payload==reference, 'Full exported payload must match reference before publication'
+dest=ROOT.parent/'outputs/boot.from_nand.verified.img'
+if dest.exists(): assert dest.read_bytes()==payload
+else:
+    with dest.open('xb') as f: f.write(payload)
+report=dict(scope='Boot image payload only, physical mapping agrees with known candidates; not a repair or full active FTL proof',
+    output=str(dest),bytes=len(payload),sha256=hashlib.sha256(payload).hexdigest(),
+    reference=str(BOOT),exact_reference_match=True,blocks=provenance)
+sidecar=dest.with_suffix('.json')
+if not sidecar.exists():
+    with sidecar.open('x') as f: json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

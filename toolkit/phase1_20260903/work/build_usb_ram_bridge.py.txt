@@ -1,0 +1,138 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_usb_ram_bridge.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Build only. Original USB transport, bounded RAM callbacks, guarded NAND.
+
+No upload or device access. WS/RS become RAM operations ONLY on this candidate.
+"""
+import argparse,hashlib,json,struct,subprocess,zlib
+from pathlib import Path
+from audit_ram_loader_container import rc4,crc32
+ROOT=Path(__file__).resolve().parents[1]
+parser=argparse.ArgumentParser()
+parser.add_argument('--entry-checkpoint',action='store_true')
+parser.add_argument('--irq-handoff',action='store_true')
+args=parser.parse_args()
+assert not (args.entry_checkpoint and args.irq_handoff)
+prefix='usb_ram_bridge_checkpoint_modefix' if args.entry_checkpoint else 'usb_ram_bridge_disconnect'
+if args.irq_handoff:prefix='usb_ram_bridge_irq_handoff'
+known=(ROOT/'work/RetronLoader_RS_FIXED_BOUNDARY_RAM_ONLY.bin').read_bytes()
+assert hashlib.sha256(known).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+payload=(ROOT/'work/readonly_ram.FlashBoot.NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(payload).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+assert len(payload)==110080
+if args.entry_checkpoint:
+    assert payload[:8].hex()=='d3f021e3800000ea'
+    revised=bytearray(payload)
+    struct.pack_into('<I',revised,4,0xea000000|((0x60800c00-0x60000004-8)//4))
+    payload=bytes(revised)
+elfpath=ROOT/f'work/{prefix}.elf'
+cmd=[str(ROOT/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe'),'cc','-target','arm-freestanding-eabi',
+     '-mcpu=cortex_a9','-marm','-mfloat-abi=soft','-Oz','-ffreestanding','-fno-builtin',
+     '-fno-stack-protector','-ffunction-sections','-fdata-sections','-nostdlib','-g','work/usb_ram_bridge.c','work/usb_ram_bridge.S',
+     '-Wl,-T,work/'+('usb_ram_bridge_checkpoint.ld' if args.entry_checkpoint else 'usb_ram_bridge.ld'),'-o',str(elfpath)]
+if args.entry_checkpoint:cmd+=['-DRF_ENTRY_CHECKPOINT=1',f'-DEXPECTED_CRC={zlib.crc32(payload)}u']
+if args.irq_handoff:cmd+=['-DRF_IRQ_HANDOFF=1']
+subprocess.run(cmd,cwd=ROOT,check=True)
+elf=elfpath.read_bytes()
+shoff=struct.unpack_from('<I',elf,32)[0]
+shsize,shnum=struct.unpack_from('<HH',elf,46)
+sections=[struct.unpack_from('<10I',elf,shoff+n*shsize) for n in range(shnum)]
+symbols={}
+for s in sections:
+    if s[1]!=2: continue
+    st=sections[s[6]]; strings=elf[st[4]:st[4]+st[5]]
+    for o in range(s[4],s[4]+s[5],s[9]):
+        name,value,sz,info,other,index=struct.unpack_from('<IIIBBH',elf,o)
+        if name: symbols[strings[name:strings.find(b'\0',name)].decode()]=value
+phoff=struct.unpack_from('<I',elf,28)[0]
+phsize,phnum=struct.unpack_from('<HH',elf,42)
+segments=[struct.unpack_from('<8I',elf,phoff+n*phsize) for n in range(phnum)]
+segments=[s for s in segments if s[0]==1 and s[4]]
+end=max(s[2]+s[4] for s in segments)
+addon=bytearray(end-0x60800000)
+for typ,o,va,pa,fs,ms,flags,align in segments:
+    addon[va-0x60800000:va-0x60800000+fs]=elf[o:o+fs]
+assert 0<len(addon)<=4096
+if args.entry_checkpoint:assert symbols['bridge_entry_checkpoint']==0x60800c00
+header=struct.unpack_from('<H',known,4)[0]
+pos=header+57
+assert struct.unpack_from('<I',known,pos+1)[0]==2
+off,size=struct.unpack_from('<II',known,pos+45)
+usb=bytearray(rc4(known[off:off+size]))
+assert len(usb)==56520
+usb.extend(bytes(0xe000-len(usb)))
+usb.extend(addon)
+assert len(usb)<=61440
+usb.extend(bytes(61440-len(usb)))
+assert len(usb)==61440
+patches=[]
+def patch(at,new,why):
+    old=bytes(usb[at:at+len(new)])
+    usb[at:at+len(new)]=new
+    patches.append(dict(offset=hex(at),before=old.hex(),after=new.hex(),why=why))
+def branch(at,target,cond=14,link=False):
+    delta=target-(0x60000000+at+8)
+    assert delta%4==0 and -(1<<25)<=delta<(1<<25)
+    return struct.pack('<I',(cond<<28)|(0x0b000000 if link else 0x0a000000)|((delta//4)&0xffffff))
+for at,name in [(0x787c,'bridge_read'),(0x7718,'bridge_write'),(0x1654,'bridge_execute')]:
+    patch(at,branch(at,symbols[name]),name)
+assert usb[0x30:0x34]==bytes.fromhex('64009fe5')
+assert struct.unpack_from('<I',usb,0x9c)[0]==0x101027fc
+assert symbols['bridge_preinit']==0x60800000 and symbols['__addon_size']==len(addon)
+patch(0x30,branch(0x30,0x6000e000),'Relocate appended bridge to 0x60800000 before original USBplug BSS clearing')
+# Block physical erase/program, including their direct low-level entry points.
+for at in (0x3620,0x3fa4,0x7528,0x75ac,0x7614,0x7624):
+    patch(at,bytes.fromhex('0000e0e31eff2fe1'),'MVN r0,#0; BX lr: reject NAND erase/program')
+# Only identity, RAM reads/writes and guarded handoff are reachable from USB.
+dispatch=bytearray()
+allowed={0:0x18d0,1:0x18d8,4:0x18f0,5:0x18f8,0x1a:0x1908,0x1b:0x1928,0xff:0x1910}
+for op,dest in allowed.items():
+    dispatch.extend(struct.pack('<I',0xe3500000|op))
+    at=0x1850+len(dispatch)
+    dispatch.extend(branch(at,0x60000000+dest,cond=0))
+dispatch.extend(branch(0x1850+len(dispatch),0x600018bc))
+dispatch.extend(bytes.fromhex('00f020e3')*((0x18bc-0x1850-len(dispatch))//4))
+assert len(dispatch)==0x18bc-0x1850
+patch(0x1850,dispatch,'Allow only TD/RID/RS_RAM/WS_RAM/RFI/RCI/RD_guarded_handoff')
+container=bytearray(known[:-4]); newoff=len(container)
+container.extend(rc4(usb))
+struct.pack_into('<II',container,pos+45,newoff,len(usb))
+container.extend(struct.pack('<I',crc32(container)))
+assert rc4(container[newoff:-4])==usb
+for n in (0,2,3):
+    p=header+57*n
+    o,s=struct.unpack_from('<II',known,p+45)
+    assert container[p:p+57]==known[p:p+57] and container[o:o+s]==known[o:o+s]
+files={prefix+'.USBPLUG.OFFLINE_ONLY.bin':bytes(usb),
+       prefix+'.BOOT.OFFLINE_ONLY.bin':bytes(container),
+       prefix+'.guarded_payload.RAM_ONLY.raw':payload+bytes(209*528-len(payload))}
+for name,data in files.items():
+    with (ROOT/'work'/name).open('xb') as f:f.write(data)
+report=dict(device_access=False,entry472_bytes=len(usb),addon_bytes=len(addon),
+    symbols={k:hex(v) for k,v in symbols.items() if k.startswith('bridge_')},patches=patches,
+    files={k:dict(bytes=len(v),sha256=hashlib.sha256(v).hexdigest()) for k,v in files.items()},
+    protocol=dict(marker_sector='0x7effff',first_ram_sector='0x7f0000',record_bytes=528,records=215,
+                  WS_data_bytes_per_record=512,WS_max_host_file_bytes=8192,RS_readback_records=209,
+                  stage='0x61000000',bridge_code='0x60800000',relocated_handoff='0x62000000',launch_command='RD (opcode ff)',
+                  marker_ascii='RF1RAM03',handoff_disconnect_register='0x10180804',handoff_disconnect_set_bits=2),
+    scope='New RAM bridge only. USB startup and host WS framing remain unproved. No claim of exhaustive hardware write protection. Do not use WS with the normal NAND reader.',
+    remaining=['Execute callbacks/dispatcher/range-negative tests and verify handoff output offline',
+               'Fresh MaskROM; one DB; verify bridge marker before ANY WS',
+               'Upload only fixed guarded payload to RAM, full byte-for-byte RAM readback before RD',
+               'Guarded FlashBoot USB+FTL hardware startup remains unproved'])
+if args.entry_checkpoint:
+    report['protocol'].update(marker_ascii='RF1CKP02',payload_crc32=hex(zlib.crc32(payload)),
+        checkpoint_state='0x60801000',snapshot='0x61200000',snapshot_bytes=110268,
+        payload_checkpoint_pc='0x60000004',checkpoint_handler='0x60800c00')
+    report['protocol'].pop('handoff_disconnect_register');report['protocol'].pop('handoff_disconnect_set_bits')
+    report['scope']='ENTRY CHECKPOINT ONLY: payload differs at instruction 4, returns to RAM bridge before FlashBoot startup/NAND/USB init. No disconnect in this bounded diagnostic. Not a successful FlashBoot dry-run.'
+    report['remaining']=['Offline return/restore and guard tests','Fresh cold MaskROM hardware entry checkpoint','Real FlashBoot FTL/USB startup remains unproved']
+if args.irq_handoff:
+    report['protocol'].update(marker_ascii='RF1RAM04',irq_eoi_register='0x1013c110',
+        irq_eoi_value='0x30',irq_eoi_condition='entry CPSR mode == IRQ (0x12)')
+    report['scope']='Permanent guarded FlashBoot handoff: complete original USB IRQ before disconnect/copy. Payload unchanged. Full FlashBoot startup still requires hardware validation.'
+with (ROOT/f'outputs/{prefix}_build.json').open('x',encoding='utf-8') as f:json.dump(report,f,indent=2)
+print(json.dumps({k:v for k,v in report.items() if k not in ('symbols','patches')},indent=2))

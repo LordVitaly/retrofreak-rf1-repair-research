@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "Please cite this repository when reusing the research, documentation, or original tools."
+type: software
+title: "Retro Freak RF-1 recovery research"
+version: 1.0.0
+date-released: 2026-09-13
+authors:
+  - name: "LordVitaly and the RF-1 recovery research contributors"
+repository-code: "https://github.com/LordVitaly/retrofreak-rf1-repair-research"
+url: "https://github.com/LordVitaly/retrofreak-rf1-repair-research"
+abstract: "A documented recovery of one Retro Freak RF-1, covering NAND/FTL diagnosis, boot and filesystem repairs, stock USB restoration, evidence limits, and research tools."
+license: "MIT AND CC-BY-4.0"
+keywords:
+  - retrofreak
+  - rk3066
+  - nand
+  - repair
+  - digital-preservation

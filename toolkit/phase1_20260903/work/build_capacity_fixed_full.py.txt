@@ -1,0 +1,112 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_capacity_fixed_full.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""RF-1 observed 4GiB only. Minimal RAM-only full candidate; no device access.
+
+CRC compensation preserves the existing bridge's checksum contract. CRC is NOT
+authentication: host SHA256 and exact readback must pin this specific candidate.
+No diagnostic carriers/cuts are incorporated into the full FlashBoot image.
+"""
+import hashlib,json,struct,sys,zlib
+import subprocess
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1]
+current_bridge='--current-bridge' in sys.argv
+cache_off='--usb-cache-off' in sys.argv
+if cache_off:current_bridge=True
+sys.path.insert(0,str(ROOT/'work/emulator_deps'))
+from unicorn import Uc,UC_ARCH_ARM,UC_MODE_ARM,UC_HOOK_CODE,UC_HOOK_MEM_WRITE
+from unicorn.arm_const import UC_ARM_REG_R0,UC_ARM_REG_LR,UC_ARM_REG_PC
+
+source=(ROOT/'work/readonly_ram.FlashBoot.NOT_FOR_UPLOAD.bin').read_bytes()
+assert len(source)==110080
+assert hashlib.sha256(source).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+assert source[0xb408:0xb40c]==bytes.fromhex('0101a0e3')
+assert source[0x1e0:0x1e4]==bytes(4)
+data=bytearray(source)
+data[0xb408:0xb40c]=bytes.fromhex('0205a0e3')
+if cache_off:
+    elfpath=ROOT/'work/usb_cache_boundary.elf'
+    assert not elfpath.exists(),'Preserve existing build'
+    subprocess.run([str(ROOT/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe'),'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-nostdlib','work/usb_cache_boundary.S','-Wl,-T,work/usb_cache_boundary.ld','-o',str(elfpath)],cwd=ROOT,check=True)
+    elf=elfpath.read_bytes();phoff=struct.unpack_from('<I',elf,28)[0];sz,n=struct.unpack_from('<HH',elf,42)
+    chunks=[]
+    for i in range(n):
+        typ,off,va,pa,fs,ms,flags,align=struct.unpack_from('<8I',elf,phoff+i*sz)
+        if typ==1 and fs and flags&1:
+            assert va==0x6008660c and fs<=0x180
+            chunks.append(elf[off:off+fs])
+    assert len(chunks)==1
+    trampoline=chunks[0];data[0x7040:0x7040+len(trampoline)]=trampoline
+    assert source[0x18d18:0x18d1c]==struct.pack('<I',0xeb000000|(((0x60081ae4-0x600982e4-8)//4)&0xffffff))
+    data[0x18d18:0x18d1c]=struct.pack('<I',0xeb000000|(((0x6008660c-0x600982e4-8)//4)&0xffffff))
+
+def compensate(data,at,target):
+    data[at:at+4]=bytes(4)
+    base=zlib.crc32(data);basis={}
+    for bit in range(32):
+        trial=bytearray(data);trial[at+bit//8]^=1<<(bit%8)
+        v=zlib.crc32(trial)^base;mask=1<<bit
+        while v:
+            p=v.bit_length()-1
+            if p not in basis:basis[p]=(v,mask);break
+            v^=basis[p][0];mask^=basis[p][1]
+    assert len(basis)==32
+    v=target^base;solution=0
+    while v:
+        p=v.bit_length()-1;v^=basis[p][0];solution^=basis[p][1]
+    data[at:at+4]=struct.pack('<I',solution)
+    assert zlib.crc32(data)==target
+
+compensate(data,0x1e0,<REDACTED:ARTIFACT_CRC> if current_bridge else <REDACTED:ARTIFACT_CRC>)
+changed=[i for i,(a,b) in enumerate(zip(source,data)) if a!=b]
+assert all(0x1e0<=i<0x1e4 or 0xb408<=i<0xb40c or (cache_off and (0x7040<=i<0x7040+len(trampoline) or 0x18d18<=i<0x18d1c)) for i in changed)
+assert data[0x2000:0x2600]==source[0x2000:0x2600] # NO diagnostic helper
+assert data[0x18bf8:0x18bfc]==source[0x18bf8:0x18bfc] # existing USB-only route
+assert data[0x2c58:0x2d10]==source[0x2c58:0x2d10]
+for off in (0xbbc8,0xbc90):assert data[off:off+4]==bytes.fromhex('feffffea')
+
+def addr(off):return 0x60080000+off-0xa34
+def machine():
+    u=Uc(UC_ARCH_ARM,UC_MODE_ARM)
+    u.mem_map(0x60080000,0x20000)
+    u.mem_write(0x60080000,bytes(data[0xa34:]))
+    return u
+
+entries=(0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c)
+for off in entries:
+    assert data[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+    u=machine();u.reg_write(UC_ARM_REG_R0,0);u.reg_write(UC_ARM_REG_LR,0x6009f000)
+    writes=[];u.hook_add(UC_HOOK_MEM_WRITE,lambda *args:writes.append(args[2]))
+    u.emu_start(addr(off),0x6009f000,count=3)
+    assert u.reg_read(UC_ARM_REG_PC)==0x6009f000 and u.reg_read(UC_ARM_REG_R0)==0xffffffff and not writes
+routes={0:0x2d24,1:0x2d2c,3:0x2d3c,4:0x2d44,0x14:0x2d5c}
+for op in range(256):
+    u=machine();u.reg_write(UC_ARM_REG_R0,op)
+    def stop(uc,pc,size,ctx):
+        if not addr(0x2c58)<=pc<addr(0x2c58+44):uc.emu_stop()
+    u.hook_add(UC_HOOK_CODE,stop)
+    u.emu_start(addr(0x2c58),0,count=20)
+    assert u.reg_read(UC_ARM_REG_PC)==addr(routes.get(op,0x2d10))
+
+raw=bytes(data)+bytes(272)
+name='usb_ram_bridge_modefix.capacity4g.FULL_RAM_ONLY.raw' if current_bridge else 'usb_ram_bridge_irq_handoff.capacity4g.RAM_ONLY.raw'
+if cache_off:name='usb_ram_bridge_modefix.capacity4g.USB_CACHE_OFF_RAM_ONLY.raw'
+report=dict(device_access=False,payload=name,bytes=len(raw),sha256=hashlib.sha256(raw).hexdigest(),
+    main_sha256=hashlib.sha256(data).hexdigest(),source_sha256=hashlib.sha256(source).hexdigest(),
+    crc32=hex(zlib.crc32(data)),changed_byte_offsets=[hex(i) for i in changed],
+    patches=[dict(offset='0xb408',runtime='0x6008a9d4',before=source[0xb408:0xb40c].hex(),after=data[0xb408:0xb40c].hex()),
+             dict(offset='0x1e0',purpose='Existing reserved CRC compensation word',after=data[0x1e0:0x1e4].hex())],
+    eight_error_guards_executed_no_writes=True,two_confirm_stops_preserved=True,
+    all_256_flashboot_opcodes_checked=True,no_diagnostic_carriers_or_cuts=True,
+    limitations=['Not a universal geometry patch: observed RF-1 Micron 4GiB only',
+        'Full hardware USB/FTL initialization remains unproved',
+        'Existing guard coverage retained; not protection against arbitrary corruption or every unknown controller path',
+        'CRC is not authentication; exact SHA256 and hardware RAM readback required'])
+with (ROOT/'work'/name).open('xb') as f:f.write(raw)
+report['current_modefix_bridge']=current_bridge
+if cache_off:report.update(usb_cache_off=True,trampoline_bytes=len(trampoline),trampoline_runtime='6008660c',patch_scope='Only USB entry call redirects through cache clean/disable then original USB initializer; protected format entry7038 unchanged')
+with (ROOT/('outputs/usb_cache_off_build.json' if cache_off else 'outputs/capacity_fixed_current_bridge_build.json' if current_bridge else 'outputs/capacity_fixed_full_build.json')).open('x',encoding='utf-8') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

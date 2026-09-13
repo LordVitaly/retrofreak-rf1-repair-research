@@ -1,0 +1,1838 @@
+[
+  {
+    "path": "toolkit/README.md",
+    "kind": "documentation"
+  },
+  {
+    "path": "toolkit/offline/README.md",
+    "kind": "documentation"
+  },
+  {
+    "path": "toolkit/offline/rf1_boot_digest.py",
+    "kind": "executable_local_file_checker"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/analyze_native_chunk0.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/analyze_rs_8448_layout.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/audit_critical_ftl_overlays.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/audit_flashboot_bbt_gate.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/audit_flashboot_idb_geometry.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/audit_flashboot_padding.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/audit_idb_ecc24_error_budget.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/audit_idb_tail_and_device_codes.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/audit_interrupted_chunk13.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/audit_live_idb_flash_parameters.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/audit_loader_logical_capability.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/audit_native_bbt_and_saved_state.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/audit_native_l2p_candidates.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/audit_native_system_blocks.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/audit_native_system_superblock.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/audit_ram_loader_container.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/audit_readonly_command_stores.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/audit_reconnected_page.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/audit_vold_nand_evidence.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/backup_native_completed.ps1.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/bbt_read_trace.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_bbt_copy12_writer.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_bbt_ecc40_readonly.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_bbt_read_trace.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_capacity_fixed_full.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_direct_physical_reader.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_ftl_bridge_read.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_ftl_capture.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_ftl_fullmap_system_read.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_idb_copy6_guard.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_idb_ecc24_reader.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_normal_warm_reset.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_plain_usb_control.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_pmic_readonly.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_power_hold_snapshot.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_ram_bootstrap.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_ram_lzma_decode_test.ps1.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_readonly_ram_package.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_startup_slices.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_system_batch_manifest.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_system_ram_window.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_system_read_portion.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_system_writer189.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_system_writer_core.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_system_writer_dry_payload.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_system_writer_gated.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_test_flashboot_machine_guards.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_test_flashboot_readonly_errors.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_test_readonly_usb_allowlist.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_usb_ram_bridge.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/build_usb_stage_suite.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/check_devon_usb_return.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/check_flashboot_cache_call_edges.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/check_ftl_boundaries_after_idb.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/check_memset_contract.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/check_post_reset_marker.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/compare_idb_loader_copies.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/compare_live_idb_ecc24.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/compare_native_old_tables.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/console_completion.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/decode_reference_kallsyms.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/direct_winpty_console.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/disassemble_reference_kernel.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/disassemble_reference_nand.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/emulate_flashboot_bbt.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/emulate_flashboot_early_metadata.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/emulate_flashboot_logical_reads.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/emulate_flashboot_offline.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/emulate_flashboot_overlay.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/emulate_flashboot_relocation.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/emulate_flashboot_remap.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/emulate_flashboot_system_rewrite.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/export_verified_boot_from_nand.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/export_verified_nand_flashboot.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/extract_flashboot_for_static_audit.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/extract_nand_idb_loader_candidates.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/find_arm_literal_xrefs.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/find_loader_function_refs.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/find_recovery_oracle.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/ftl_bridge_read.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/ftl_bridge_read.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/idb_copy6_guard.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/idb_copy6_guard.c.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/idb_copy6_guard.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/idb_ecc24_targeted_read.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/identify_system_error_inode.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/index_native_completed.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/inspect_external_bootrom.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/inspect_flashboot_static.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/inspect_native_map_targets.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/inspect_native_saved_ftl.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/inspect_native_system_files.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/inspect_reference_kernel_strings.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/inspect_reference_nand_elf.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/inspect_reference_nand_modules.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/inspect_rs_aux_variants.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/inspect_rs_oracle_alignment.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/inspect_usbplug_static.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/install_system_ram_window.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/interpret_early_boot_reads.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/inventory_native_cache.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/inventory_native_ftl_candidates.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/locate_current_read_records.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/measure_flashboot_ram_payload.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/native_system_view.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/normal_warm_reset.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/pmic_devon.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/pmic_readonly.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/power_hold_snapshot.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/power_hold_snapshot.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/prepare_idb_restore_material.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/probe_startup_after_ws_timeout.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/prove_rs_boot_mapping.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/ram_artifact.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/ram_bootstrap.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/ram_bootstrap.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/ram_console_session.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/ram_lzma_decode_test.c.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/ram_lzma_decode_test.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/ram_stub_include/errno.h.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/ram_stub_include/string.h.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/read_bbt_physical_ecc40.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/read_boot_after_idb.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/read_copy6_after_cold_boot.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/read_device_identity.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/read_early_boot_compare.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/read_early_headers_short.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/read_idb_copy6_postwrite_audit.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/read_idb_guard_marker_after_preflight.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/read_idb_postwrite_variability.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/report_current_idb_ecc24.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/resume_device_probe.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_bbt_copy12_restore.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_first_system_write188.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_fixed_boundary_probe.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_ftl_bridge_read.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_ftl_capture.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_full_current_bridge.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_idb_copy6_restore.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_normal_warm_reset.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_pmic_readonly.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_post_idb_powerheld_boot.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_postdry_physical_control.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_power_hold_snapshot.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_readonly_ram_dryrun.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_second_system_write189.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_startup_slices.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_system_batches16.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_system_ram_window.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_system_read_portion187.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_system_writer_dry.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_usb_ram_bridge.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_usb_ram_bridge_checkpoint.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_usb_ram_bridge_checkpoint_modefix.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_usb_ram_bridge_irq_handoff.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/run_usb_stage_suite.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/search_boot_page_tails.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/search_idb_tail_replicas.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/simulate_system_payload_repair.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/startup_irq_slice_extra.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/startup_l2_fixture.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/startup_l2_slice_extra.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/startup_mmc_fixture.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/startup_mmu_slice_extra.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/startup_nand_control_fixture.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/startup_nand_init_fixture.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/startup_power_slice.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/startup_power_slice.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/startup_reloc_slice.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/startup_reloc_slice.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/startup_slice.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/startup_slice.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/startup_slice_test_harness.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/system_ram_window.c.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/system_ram_window.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/system_read_portion.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/system_writer_core.c.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/system_writer_core.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/system_writer_dry_handoff.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/system_writer_gate.c.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/system_writer_gate.h.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/system_writer_gated.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/system_writer_original.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_arm_lzma_decode.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_bbt_copy12_writer.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_bootstrap_to_main.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_codeword_stride.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_conpty_input_contract.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_external_bootrom_usb_length.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_flashboot_tail_access.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_flashboot_usb_only_gate.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_ftl_capture.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_full_current_bridge.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_idb_copy6_guard.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_pty_tail_delivery.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_ram_bootstrap.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_ram_bootstrap_cpu_gate.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_readonly_ram_delivery.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_readonly_service_errors.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_startup_power_slices.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_startup_reloc_slices.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_startup_slices.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_system_dry_original_ftl.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_system_gated_persistence.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_system_portion_persistence.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_system_ram_window.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_system_read_portion.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_system_tail_alignment.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_system_writer_core.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_system_writer_dry_handoff.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_system_writer_gates.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_usb_cache_boundary.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_usb_ram_bridge.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_usb_ram_bridge_checkpoint.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_usb_ram_bridge_checkpoint_modefix.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_usb_ram_bridge_irq_handoff.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_usb_stage_suite.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/test_usbplug_ram_dispatch.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/trace_ram_bootstrap_startup.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/usb_cache_boundary.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/usb_cache_boundary.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/usb_ram_bridge.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/usb_ram_bridge.c.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/usb_ram_bridge.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/usb_ram_bridge_checkpoint.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/usb_stage_restart.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/usb_stage_restart.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/validate_native_bin_directory.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/validate_rs_partial_layout.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/validate_saved_flashinfo_runtime.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/verify_after_dryrun01.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/verify_complete_native_dump.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/verify_flashboot_bbt_replay.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/verify_flashboot_full_remap.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/verify_native_ecc_page.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/verify_readonly_container.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase1_20260903/work/verify_system_rewrite_report.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/accept_actual_boot_map_baseline.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/adb_boot_diagnostic/build.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/analyze_cold.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/analyze_idb.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/bbt_check_sources/idb_copy6_guard.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/bbt_check_sources/idb_copy6_guard.c.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/bbt_check_sources/idb_copy6_guard.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/bbt_with_idb0_check_sources/idb_copy6_guard.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/bbt_with_idb0_check_sources/idb_copy6_guard.c.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/bbt_with_idb0_check_sources/idb_copy6_guard.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/block10/boot_manifest.h.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/block6/boot_manifest.h.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/block9/boot_manifest.h.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/boot_core.c.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/boot_gate.c.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/boot_gate.h.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/boot_protection.h.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/build.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/build_capture.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/derive_gate.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/finalize.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/ftl_bridge_read.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/handoff.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/system_writer_gated.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/system_writer_original.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/test_handoff.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_diagnostic_writer/test_offline.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_repair/build.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_repair/core.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_repair/finalize.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_repair/handoff.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_repair/handoff.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_repair/original.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_repair/synthetic/block22/block_manifest.h.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_repair/test_handoff.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_repair/test_offline.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_repair/writer.c.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_secondary/build.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_secondary/core.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_secondary/finalize.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_secondary/handoff.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_secondary/handoff.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_secondary/original.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_secondary/reader/build.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_secondary/reader/read_half.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_secondary/synthetic/block1028/block_manifest.h.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_secondary/test_handoff.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_secondary/test_offline.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_secondary/writer.c.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_validation_audit/audit.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_validation_audit/module_sysprot_audit.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_header_validation_audit/trace_sysprot.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_map_compare/build.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_physical_backup_tools/build.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_physical_backup_tools/read_half.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_relocated_active/build.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_relocated_active/core.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_relocated_active/finalize.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_relocated_active/handoff.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_relocated_active/handoff.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_relocated_active/original.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_relocated_active/reader/build.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_relocated_active/reader/read_half.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_relocated_active/synthetic/block74/block_manifest.h.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_relocated_active/test_handoff.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_relocated_active/test_offline.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_relocated_active/writer.c.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_visibility_repair/build.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_visibility_repair/core.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_visibility_repair/finalize.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_visibility_repair/handoff.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_visibility_repair/handoff.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_visibility_repair/original.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_visibility_repair/synthetic/block22/block_manifest.h.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_visibility_repair/synthetic/block25/block_manifest.h.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_visibility_repair/synthetic/block26/block_manifest.h.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_visibility_repair/test_handoff.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_visibility_repair/test_offline.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_visibility_repair/writer.c.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/boot_visibility_verify/build.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/bootstrap_boot_header.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/bootstrap_boot_visibility.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/bootstrap_cache_last.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/build_bbt_with_idb0_check.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/build_bbt_with_idb_check.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/build_copy0_writer.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/build_copy5_writer.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/build_hardened_bridge.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/build_recovery_package.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/build_status_reader.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/cache_last_attempt/finalize.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/cache_last_attempt/get_portable.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/cache_last_attempt/make_cache.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/cache_last_attempt/verify_live.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/cache_last_writer/block24/boot_manifest.h.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/cache_last_writer/block25/boot_manifest.h.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/cache_last_writer/block26/boot_manifest.h.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/cache_last_writer/boot_core.c.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/cache_last_writer/boot_gate.c.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/cache_last_writer/boot_gate.h.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/cache_last_writer/boot_protection.h.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/cache_last_writer/build.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/cache_last_writer/build_read.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/cache_last_writer/finalize.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/cache_last_writer/ftl_bridge_read.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/cache_last_writer/handoff.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/cache_last_writer/run.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/cache_last_writer/system_writer_gated.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/cache_last_writer/system_writer_original.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/cache_last_writer/test_handoff.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/cache_last_writer/test_offline.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/capture_cache_last_map.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/capture_live_adb.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/copy0_sources/idb_copy6_guard.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/copy0_sources/idb_copy6_guard.c.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/copy0_sources/idb_copy6_guard.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/copy5_sources/idb_copy6_guard.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/copy5_sources/idb_copy6_guard.c.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/copy5_sources/idb_copy6_guard.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/early_adb_failure_audit/test_timer.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/finalize_boot_header_repair.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/geometry_bbt_ftl_trial/build_and_verify.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/geometry_bbt_ftl_trial/trace.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/geometry_bbt_ftl_trial/trace.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/inspect_bbt_code.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/inspect_live_extfs.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/install_boot_header_window.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/install_boot_visibility_window.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/install_cache_last_window.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/install_white_screen_ram_window.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/journal_analysis/analyze.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/live_adb_after_cache/unmount_for_repair.sh.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/live_adb_cold_after_system/unmount_userdata.sh.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/live_system_audit/compare_live.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/nand_geometry_trial/build_and_verify.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/nand_init_read_trace/build_and_verify.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/nand_init_read_trace/trace.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/nand_init_read_trace/trace.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/original_boot_diag/build_and_verify.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/original_boot_diag/run_existing_capacity_test.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/prepare_bbt_run.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/prepare_bbt_with_idb0_check.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/prepare_bbt_with_idb_check.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/prepare_boot_header_coldcheck.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/prepare_boot_header_host.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/prepare_cold_check.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/prepare_copy0_writer.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/prepare_copy5_resume.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/prepare_copy5_writer.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/prepare_header_secondary_backup_host.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/prepare_header_secondary_host.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/prepare_idb_reader.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/prepare_relocated_backup_host.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/prepare_relocated_writer_host.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/probe_userdata_rw.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/read_bbt_cold.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/read_copy0_order_check.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/read_idb_cold.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/read_idb_status.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/read_known_idb.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/read_linux_system.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/read_status.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/read_status.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/reauth_after_actual_boot_map.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/repair_linux_system_four.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/repair_userdata_native.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/replay_zero_capacity.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/restore_bbt_after_copy0.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/restore_bbt_after_copy0_resume.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/restore_bbt_after_copy0_resume_v2.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/restore_bbt_after_copy0_resume_v3.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/restore_bbt_after_copy5.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/restore_copy0.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/restore_copy5.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/restore_copy5_resume.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/resume_ftl_geometry_trace.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/resume_nand_geometry_trial.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/resume_nand_init_trace.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/run_boot_diagnostic_write.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/run_boot_fresh_capture.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/run_boot_header_cold_backup.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/run_boot_header_repair.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/run_boot_physical_backup.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/run_boot_visibility_compare.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/run_boot_visibility_repair.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/run_header_map_recheck.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/run_header_secondary_backup.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/run_header_secondary_repair.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/run_original_boot_after_idb0.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/run_original_boot_diag.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/run_relocated_boot_backup.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/run_relocated_header_repair.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/run_white_screen_reads.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/stock_boot_restore/capture_native_backup.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/stock_boot_restore/final_read.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/stock_boot_restore/read_stage/01_bootstrap.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/stock_boot_restore/read_stage/02_install_window.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/stock_boot_restore/read_stage/03_capture_maps.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/stock_boot_restore/read_stage/prepare_sources.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/stock_boot_restore/run_stock_write.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/stock_boot_restore/verify_completion.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/stock_boot_restore/writer/build.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/stock_boot_restore/writer/common.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/stock_boot_restore/writer/core.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/stock_boot_restore/writer/finalize.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/stock_boot_restore/writer/handoff.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/stock_boot_restore/writer/handoff.ld.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/stock_boot_restore/writer/original.S.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/stock_boot_restore/writer/test_handoff.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/stock_boot_restore/writer/test_offline.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/stock_boot_restore/writer/writer.c.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/test_adaptive_read.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/test_bbt_with_idb0_check.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/test_bbt_with_idb_check.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/test_copy0_writer.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/test_copy5_writer.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/test_hardened_bridge.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/usb_host_probe_2026-09-09/host_after_disconnect.sh.txt",
+    "kind": "inert_historical_source_snapshot"
+  },
+  {
+    "path": "toolkit/phase2_20260908/work/white_screen_ftl_read/build.py.txt",
+    "kind": "inert_historical_source_snapshot"
+  }
+]

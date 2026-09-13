@@ -1,0 +1,100 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_bbt_read_trace.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Bounded two-callsite trace added to existing BBT return payload; offline only."""
+import hashlib,json,struct,subprocess,sys,zlib
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'work/emulator_deps'))
+from unicorn import Uc,UC_ARCH_ARM,UC_MODE_ARM,UC_HOOK_CODE,UC_HOOK_MEM_WRITE
+from unicorn.arm_const import *
+assert sys.argv[1:] in ([],['--remap-with-ram-count'])
+remap=sys.argv[1:]==['--remap-with-ram-count']
+source=(ROOT/('work/startup_slices_v24_remap/remap_return.raw' if remap else 'work/startup_slices_v23_bbt/bbt_return.raw')).read_bytes()
+assert hashlib.sha256(source).hexdigest()==('<REDACTED:HASH_OR_BYTES>' if remap else '<REDACTED:HASH_OR_BYTES>')
+out=ROOT/('work/bbt_ram_count_remap_v4' if remap else 'work/bbt_read_trace_v3_ram_count');out.mkdir(exist_ok=False)
+elf=out/'trace.elf'
+subprocess.run([str(ROOT/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe'),'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-nostdlib','work/bbt_read_trace.S','-Wl,-T,work/ftl_bridge_read.ld','-Wl,-e,trace_bbt','-o',str(elf)],check=True,cwd=ROOT)
+e=elf.read_bytes();shoff=struct.unpack_from('<I',e,32)[0];ss,sn,si=struct.unpack_from('<HHH',e,46)
+sections=[struct.unpack_from('<10I',e,shoff+i*ss) for i in range(sn)]
+names=e[sections[si][4]:sections[si][4]+sections[si][5]];symbols={}
+for s in sections:
+    name=names[s[0]:].split(b'\0',1)[0]
+    if name==b'.text':code=e[s[4]:s[4]+s[5]];assert s[3]==0x60007040
+    if s[1]==2:
+        st=sections[s[6]];strings=e[st[4]:st[4]+st[5]]
+        for off in range(s[4],s[4]+s[5],s[9]):
+            no,value,*_=struct.unpack_from('<IIIBBH',e,off)
+            symbols[strings[no:].split(b'\0',1)[0].decode()]=value
+assert len(code)<=0x180
+data=bytearray(source[:110080]);data[0x7040:0x7040+len(code)]=code
+for off,target in ((0x76b4,symbols['trace_bbt']),(0x6ae8,symbols['trace_read']),(0x6b88,symbols['trace_read'])):
+    pc=0x60080000+off-0xa34
+    old=struct.unpack_from('<I',source,off)[0]
+    delta=old&0xffffff;delta-=0x1000000 if delta&0x800000 else 0
+    assert old>>24==0xeb and pc+8+4*delta==(0x60085ff0 if off==0x76b4 else 0x600894c0)
+    struct.pack_into('<I',data,off,0xeb000000|(((target-pc-8)//4)&0xffffff))
+# Existing bridge compatibility CRC, with SHA256 as identity.
+data[0x1e0:0x1e4]=bytes(4);base=zlib.crc32(data);basis={}
+for bit in range(32):
+    trial=bytearray(data);trial[0x1e0+bit//8]^=1<<(bit%8);v=zlib.crc32(trial)^base;mask=1<<bit
+    while v:
+        p=v.bit_length()-1
+        if p not in basis:basis[p]=(v,mask);break
+        v^=basis[p][0];mask^=basis[p][1]
+v=<REDACTED:ARTIFACT_CRC>^base;solution=0
+while v:
+    p=v.bit_length()-1;v^=basis[p][0];solution^=basis[p][1]
+data[0x1e0:0x1e4]=struct.pack('<I',solution);assert zlib.crc32(data)==<REDACTED:ARTIFACT_CRC>
+allowed=((0x7040,0x7040+len(code)),(0x76b4,0x76b8),(0x6ae8,0x6aec),(0x6b88,0x6b8c),(0x1e0,0x1e4))
+assert all(any(a<=i<b for a,b in allowed) for i,(a,b) in enumerate(zip(source,data)) if a!=b)
+for off in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):assert data[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+for off in (0xbbc8,0xbc90):assert data[off:off+4]==bytes.fromhex('feffffea')
+# Test only the two new wrappers: original read/BBT stand-ins, stack fifth
+# argument, all callee-saved registers, 32-record cap, exact bounded writes.
+u=Uc(UC_ARCH_ARM,UC_MODE_ARM)
+u.mem_map(0x60000000,0x400000);u.mem_map(0x61000000,0x20000)
+u.mem_write(0x60007040,code);sp=0x601f0000;stop=0x601e0000
+R=(UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3)
+calls=[];active={'rc':0,'tag':0xf000}
+def hook(uc,pc,size,user):
+    if pc==0x60085ff0:
+        assert bytes(uc.mem_read(0x6101af10,16))==struct.pack('<4I',0x31544242,0,0,0)
+        uc.reg_write(R[0],0xffffffff)
+    elif pc==0x600894c0:
+        a=[uc.reg_read(r) for r in R]
+        assert a==[0xc000,0x60100000,0x60101000,active['count']]
+        assert struct.unpack('<I',uc.mem_read(uc.reg_read(UC_ARM_REG_SP),4))[0]==0x12345678
+        uc.mem_write(a[1],struct.pack('<I',0x005b005a))
+        for off,val in ((0,active['tag']),(16,0x438),(32,0xff70)):uc.mem_write(a[2]+off,struct.pack('<H',val))
+        calls.append(a);uc.reg_write(R[0],active['rc'])
+    else:return
+    uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR))
+def writes(uc,access,address,size,value,user):
+    assert sp-64<=address<sp or 0x6101af10<=address and address+size<=0x6101b330 or address==0x60101020 and size==2 and value==1896,hex(address)
+u.hook_add(UC_HOOK_CODE,hook);u.hook_add(UC_HOOK_MEM_WRITE,writes)
+saved=[(reg,0x13570000+i) for i,reg in enumerate((UC_ARM_REG_R4,UC_ARM_REG_R5,UC_ARM_REG_R6,UC_ARM_REG_R7,UC_ARM_REG_R8,UC_ARM_REG_R9,UC_ARM_REG_R10,UC_ARM_REG_R11))]
+def call(entry):
+    for reg,value in saved:u.reg_write(reg,value)
+    u.reg_write(UC_ARM_REG_SP,sp);u.reg_write(UC_ARM_REG_LR,stop)
+    u.emu_start(entry,stop,count=10000)
+    assert u.reg_read(UC_ARM_REG_SP)==sp and all(u.reg_read(r)==v for r,v in saved)
+call(symbols['trace_bbt']);assert u.reg_read(R[0])==0xffffffff
+for i in range(40):
+    active.update(rc=0xffffffff if i%2 else 0,tag=0xffff if i%2 else 0xf000,count=8 if i%2 else 1)
+    for r,v in zip(R,(0xc000,0x60100000,0x60101000,active['count'])):u.reg_write(r,v)
+    u.mem_write(sp,struct.pack('<I',0x12345678));call(symbols['trace_read']);assert u.reg_read(R[0])==active['rc']
+assert struct.unpack('<4I',u.mem_read(0x6101af10,16))==(0x31544242,40,20,20)
+assert all(struct.unpack('<I',u.mem_read(0x6101af10+16+i*24+20,4))[0]==(8 if i%2 else 1) for i in range(32))
+for rc,tag,count,changed in ((0,0xf000,8,True),(0xffffffff,0xf000,8,False),(0,0xffff,8,False),(0,0xf000,1,False)):
+    active.update(rc=rc,tag=tag,count=count)
+    for r,v in zip(R,(0xc000,0x60100000,0x60101000,count)):u.reg_write(r,v)
+    call(symbols['trace_read'])
+    assert struct.unpack('<H',u.mem_read(0x60101020,2))[0]==(1896 if changed else 0xff70)
+payload=bytes(data)+bytes(272)
+with (out/'trace.raw').open('xb') as f:f.write(payload)
+report=dict(all_pass=True,hardware_executed=False,sha256=hashlib.sha256(payload).hexdigest(),code_bytes=len(code),symbols={k:symbols[k] for k in ('trace_bbt','trace_read')},max_records=32,export_bytes=1056,modified_ranges=allowed,guards_unchanged=True,tests='Two wrappers only; 40 synthetic reads, statuses/tags, fifth stack arg, callee-saved registers, write bounds. Original BBT return helper reused unchanged.')
+with (out/'build.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

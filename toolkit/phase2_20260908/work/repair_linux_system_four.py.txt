@@ -1,0 +1,87 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/repair_linux_system_four.py
+Role: historical_device_runner_or_stateful_scenario_review_before_any_use
+Original repair session must not be resumed from this public copy.
+
+from pathlib import Path
+import subprocess,json,hashlib
+if __import__('sys').flags.optimize: raise RuntimeError('Assertions required')
+work=Path(__file__).resolve().parent
+out=work/'linux_system_four_repair_attempt01'
+out.mkdir(exist_ok=False)
+adb=r'<EXTERNAL_STAGE_02>/work/AndroidTool_Release_v2.43/AndroidTool_Release_v2.43/bin/adb.exe'
+prefix=[adb,'-s','<DEVICE_SERIAL_REDACTED>']
+sha=lambda b:hashlib.sha256(b).hexdigest()
+md5=lambda b:hashlib.md5(b).hexdigest()
+result={'all_pass':False,'write_attempts':[],'data_writes':False}
+def command(args,label,timeout=45):
+ p=subprocess.run(prefix+args,capture_output=True,timeout=timeout)
+ data=p.stdout+p.stderr
+ (out/(label+'.txt')).write_bytes(data)
+ assert p.returncode==0,(label,p.returncode,data)
+ return data
+def shell(cmd,label): return command(['shell',cmd],label)
+def unmounted(label):
+ mounts=shell('/sbin/busybox cat /proc/mounts',label)
+ assert b' /system ' not in mounts and b' /data ' not in mounts
+ assert b'tmpfs /mnt/ram tmpfs ' in mounts
+def pull(remote,local,label):
+ command(['pull',remote,str(local)],label)
+ return local.read_bytes()
+try:
+ cfg=json.loads((work/'live_system_audit/repair_candidates.json').read_text())
+ entries=cfg['data_repair_chunks']
+ assert [e['logical_ftl_block'] for e in entries]==[192,195,198,204]
+ source=Path(json.loads((work/'live_system_audit/live_compare_report.json').read_text())['source_path']).read_bytes()
+ assert len(source)==155185152 and sha(source)=='b9ca511124e6c3d9ee2a1e31220f6bf5a858f06d88f9003f5fd7f7e25cf5676a'
+ before=(work/'live_adb_after_cache/system_raw/system_linux.img').read_bytes()
+ assert sha(before)=='<HISTORICAL_HASH_REDACTED>'
+ test=bytearray(before)
+ for e in entries:
+  start=e['system_relative_byte_offset'];size=e['bytes']
+  assert size==2097152 and start==(e['logical_ftl_block']-186)*size
+  assert e['system_relative_4KiB_seek']*4096==start
+  data=Path(e['source_path']).read_bytes()
+  assert data==source[start:start+size] and sha(data)==e['source_sha256'] and md5(data)==e['source_md5']
+  assert sha(before[start:start+size])==e['old_live_sha256']
+  test[start:start+size]=data
+ assert test[4096:]==source[4096:]
+ unmounted('mounts_before')
+ shell('/sbin/busybox rm /mnt/ram/rf1-system-read.bin','remove_our_completed_ram_read')
+ shell('/sbin/busybox dd if=/dev/block/mtdblock8 of=/mnt/ram/rf1-head.bin bs=4096 count=1','read_head')
+ head=pull('/mnt/ram/rf1-head.bin',out/'head_before.bin','pull_head')
+ assert len(head)==4096 and head[:1024]==source[:1024] and head[2048:]==source[2048:4096]
+ expected=bytearray(source);expected[:4096]=head
+ result['expected_full_md5']=md5(expected)
+ for e in entries:
+  block=e['logical_ftl_block'];seek=e['system_relative_4KiB_seek']
+  unmounted(f'{block}_mounts')
+  command(['push',e['source_path'],'/mnt/ram/rf1-system-fix.bin'],f'{block}_push')
+  assert e['source_md5'].encode() in shell('/sbin/busybox md5sum /mnt/ram/rf1-system-fix.bin',f'{block}_source_md5')
+  check=shell(f'/sbin/busybox dd if=/dev/block/mtdblock8 of=/mnt/ram/rf1-verify.bin bs=4096 skip={seek} count=512',f'{block}_before_read')
+  assert b'512+0 records out' in check
+  old=pull('/mnt/ram/rf1-verify.bin',out/f'{block}_before.bin',f'{block}_before_pull')
+  assert sha(old)==e['old_live_sha256']
+  (out/f'{block}_WRITE_ATTEMPTED_NO_REPEAT.json').write_text(json.dumps(e,indent=2))
+  result['write_attempts'].append(block)
+  check=shell(f'/sbin/busybox dd if=/mnt/ram/rf1-system-fix.bin of=/dev/block/mtdblock8 bs=4096 seek={seek} count=512 conv=notrunc,fsync && /sbin/busybox sync && /sbin/busybox echo RF1_WRITE_DONE',f'{block}_write')
+  assert b'512+0 records out' in check and b'RF1_WRITE_DONE' in check
+  shell('/sbin/busybox sync && echo 3 > /proc/sys/vm/drop_caches','drop_cache_'+str(block))
+  check=shell(f'/sbin/busybox dd if=/dev/block/mtdblock8 of=/mnt/ram/rf1-verify.bin bs=4096 skip={seek} count=512',f'{block}_after_read')
+  assert b'512+0 records out' in check
+  readback=pull('/mnt/ram/rf1-verify.bin',out/f'{block}_after.bin',f'{block}_after_pull')
+  assert readback==Path(e['source_path']).read_bytes()
+  print(f'Block {block}: full 2097152-byte readback exact after sync and cache drop',flush=True)
+ unmounted('mounts_after')
+ shell('/sbin/busybox sync && echo 3 > /proc/sys/vm/drop_caches','final_drop_cache')
+ whole=shell('/sbin/busybox dd if=/dev/block/mtdblock8 bs=4096 count=37887 | /sbin/busybox md5sum','whole_system_md5')
+ assert b'37887+0 records out' in whole and result['expected_full_md5'].encode() in whole
+ result['whole_system_matches_official_except_preserved_superblock']=True
+ result['all_pass']=True
+except BaseException as e:
+ result['error']=repr(e)
+ raise
+finally:
+ (out/'result.json').write_text(json.dumps(result,indent=2))
+ print(json.dumps(result,indent=2),flush=True)

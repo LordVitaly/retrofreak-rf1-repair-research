@@ -1,0 +1,54 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_readonly_service_errors.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Read-only candidate: startup service-error handling, no peripheral model."""
+import hashlib
+import json
+import struct
+from emulate_flashboot_remap import RemapReplay
+from emulate_flashboot_offline import ROOT,FLASH,address,UC_ARM_REG_PC,UC_PROT_READ,UC_PROT_WRITE,UC_PROT_EXEC
+from unicorn import UC_HOOK_MEM_WRITE
+candidate=(ROOT/'work/FlashBoot.readonly_errors.COVERAGE_PENDING_NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(candidate).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+record=(ROOT/'work/idb_ecc24_parameter_attempt2/block05_page15.raw').read_bytes()[:512]
+entries=(0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c)
+class Replay(RemapReplay):
+    def __init__(self):
+        super().__init__(record)
+        self.write_entries.clear()
+        self.guard_addresses={address(o):o for o in entries}
+        self.hits=[]
+        self.uc.mem_write(0x60080000,candidate[0xa34:])
+        self.uc.mem_map(0x60000000,0x20000,UC_PROT_READ|UC_PROT_EXEC)
+        self.uc.mem_write(0x60000000,candidate)
+        self.uc.mem_write(0x60099df0,struct.pack('<I',address(0x1a79c)))
+        self.uc.mem_protect(0x6009a000,0x1000,UC_PROT_READ|UC_PROT_WRITE|UC_PROT_EXEC)
+        def check(uc,access,addr,size,value,ctx):
+            if not (0x6009a104<=addr and addr+size<=0x6009a110):
+                self.stopped=dict(reason='unexpected_data_write',address=hex(addr));uc.emu_stop()
+        self.uc.hook_add(UC_HOOK_MEM_WRITE,check,begin=0x6009a000,end=0x6009afff)
+    def code_hook(self,uc,pc,size,ctx):
+        if pc in self.guard_addresses:self.hits.append(hex(self.guard_addresses[pc]))
+        super().code_hook(uc,pc,size,ctx)
+cases=[]
+for slot in (None,0,1):
+    emu=Replay()
+    assert emu.call(0xa158,0x50f4)==0
+    emu.uc.mem_write(FLASH+0xa0,struct.pack('<H',12))
+    emu.call(0x74e0);emu.dump_mode=True
+    assert emu.call(0x6a24)==0
+    if slot is not None:
+        loc=0x603491b4+slot*512
+        magic=bytearray(emu.uc.mem_read(loc,4));magic[0]^=1
+        emu.uc.mem_write(loc,bytes(magic))
+    before=bytes(emu.uc.mem_read(0x603491b4,1536))
+    result=emu.call(0x13568,instruction_limit=1_000_000,timeout_us=10_000_000)
+    after=bytes(emu.uc.mem_read(0x603491b4,1536))
+    assert before==after
+    assert emu.hits==([] if slot is None else ['0x1934']),emu.hits
+    cases.append(dict(synthetic_corrupt_slot=slot,result=result,guard_hits=emu.hits,service_cache_unchanged=True,physical_reads=len(emu.reads)))
+report=dict(sha256=hashlib.sha256(candidate).hexdigest(),cases=cases,device_access=False,limitation='Tests 13568 only with real saved service cache, synthetic single-bit negative cases, host-selected backend and successful dump reads. No full startup or hardware guarantee.')
+(ROOT/'outputs/readonly_service_errors.json').write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps(report,indent=2))

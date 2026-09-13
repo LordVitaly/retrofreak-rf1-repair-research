@@ -1,0 +1,232 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/read_device_identity.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Fixed read-only NAND workflows; only the explicit one-page probe downloads RAM code."""
+import argparse
+import hashlib
+import json
+import os
+import shutil
+import threading
+import time
+from pathlib import Path
+from direct_winpty_console import DirectConsole
+
+TOOL = Path(r'<HOST_PATH>')
+
+
+def run(commands, log, probe=False, suite=False, dump=False, resume=False, attempt=1, tag='', address_probe=False, fixed_boundary=False):
+    if log.exists():
+        raise FileExistsError(log)
+    outputs = {}
+    if sum((probe, suite, dump, resume, address_probe)) > 1:
+        raise ValueError('Choose only one mode')
+    if fixed_boundary and not probe:
+        raise ValueError('Fixed-boundary variant is only available for the fresh MaskROM probe')
+    dump = dump or resume
+    if address_probe:
+        if commands:
+            raise ValueError('Address probe commands are fixed; no DB or writes')
+        destination = Path(__file__).parent / 'address_probe_20260906_01'
+        destination.mkdir(exist_ok=False)
+        commands = ['RFI']
+        for index, (sector, count) in enumerate(((0x16020, 4), (0x16020, 8),
+                (0x16020, 16), (0x16004, 4), (0x16008, 4),
+                (0x16000, 16), (0x16020, 4))):
+            raw = destination / f'{index:02d}_{sector:x}_{count:x}.raw'
+            command = f'RS {hex(sector)} {hex(count)} {raw.resolve()}'
+            commands.append(command)
+            outputs[command] = (raw, sector, count)
+    elif dump:
+        if commands:
+            raise ValueError('Dump commands are fixed internally')
+        from verify_native_ecc_page import BOOT, compare
+        root = Path(__file__).parent
+        for name, pages in [('boot', (0,1,2,3,12)), ('recovery', (0,3,25))]:
+            reference = (BOOT.parent/f'{name}.img').read_bytes()
+            for page in pages:
+                result = compare((root/f'native_ecc40_{name}_page{page}.raw').read_bytes(), reference[page*8192:(page+1)*8192])
+                if not result['exact_page_match']:
+                    raise ValueError('All eight oracle checks must pass before dump')
+        dumpdir = root/'nand_native_ecc40'
+        if shutil.disk_usage(root).free < 6*1024**3:
+            raise RuntimeError('Insufficient free space')
+        first_chunk = 0
+        if resume:
+            prior = [json.loads(s) for s in (dumpdir/'manifest.jsonl').read_text().splitlines()]
+            committed = [r for r in prior if r['file'].startswith('NAND_')]
+            for index, record in enumerate(committed):
+                assert record['file'] == f'NAND_{index:02d}.RAW'
+                assert record['sector'] == index*0x40000 and record['count'] == 0x40000
+                with (dumpdir/record['file']).open('rb') as stream:
+                    assert hashlib.file_digest(stream,'sha256').hexdigest() == record['sha256']
+            first_chunk = len(committed)
+        else:
+            dumpdir.mkdir(exist_ok=False)
+        control = dumpdir/(f'control_resume{attempt}_page2.raw' if resume else 'control_page2.raw')
+        if control.exists():
+            raise FileExistsError(control)
+        commands = ['RFI', f'RS 0x16020 0x10 {control.resolve()}']
+        outputs[commands[-1]] = (control, 0x16020, 16)
+        for index in range(first_chunk,32):
+            raw = dumpdir/f'NAND_{index:02d}.RAW'
+            if raw.exists():
+                raise FileExistsError(f'Uncommitted file must be preserved under a separate name first: {raw}')
+            sector = index*0x40000
+            command = f'RS {hex(sector)} 0x40000 {raw.resolve()}'
+            commands.append(command)
+            outputs[command] = (raw, sector, 0x40000)
+    elif suite:
+        if commands:
+            raise ValueError('Suite commands are fixed internally')
+        from verify_native_ecc_page import extract
+        baseline = Path(__file__).parent/'probe_native_ecc40_page2.raw'
+        if hashlib.sha256(extract(baseline.read_bytes())).hexdigest() != '<REDACTED:HASH_OR_BYTES>':
+            raise ValueError('Prior native-ECC probe must pass')
+        commands = ['RFI']
+        for name, base, pages in [('boot', 0x16000, (0,1,2,3,12)), ('recovery', 0x1e000, (0,3,25))]:
+            for page in pages:
+                raw = Path(__file__).parent/f'{tag}native_ecc40_{name}_page{page}.raw'
+                if raw.exists():
+                    raise FileExistsError(raw)
+                commands.append(f'RS {hex(base+page*16)} 0x10 {raw.resolve()}')
+    elif probe:
+        if commands:
+            raise ValueError('Probe commands are fixed internally')
+        loader = Path(__file__).parent/('RetronLoader_RS_FIXED_BOUNDARY_RAM_ONLY.bin' if fixed_boundary else 'RetronLoader_READ_NATIVE_ECC_RAM_ONLY.bin')
+        raw = Path(__file__).parent/f'{tag}probe_native_ecc40_page2.raw'
+        if raw.exists():
+            raise FileExistsError(raw)
+        expected_hash = '<REDACTED:HASH_OR_BYTES>' if fixed_boundary else '<REDACTED:HASH_OR_BYTES>'
+        if hashlib.sha256(loader.read_bytes()).hexdigest() != expected_hash:
+            raise ValueError('Loader hash mismatch')
+        commands = [f'DB {loader.resolve()}', 'RFI', f'RS 0x16020 0x10 {raw.resolve()}']
+    elif commands != ['RID', 'RFI']:
+        raise ValueError('Only the fixed identity inspection is supported')
+    env = dict(os.environ)
+    env['__COMPAT_LAYER'] = 'RunAsInvoker'
+    live = log.with_suffix('.live.txt').open('x', encoding='utf-8')
+    process = DirectConsole.spawn([str(TOOL)], cwd=str(TOOL.parent), env=env,
+                               dimensions=(40, 160), backend=1)
+    chunks = []
+    done = threading.Event()
+
+    def read():
+        try:
+            while process.isalive():
+                s = process.read(4096)
+                if not s:
+                    # winpty maps its '0011Ignore' heartbeat to an empty
+                    # string; actual EOF raises EOFError. Keep consuming.
+                    continue
+                chunks.append(s)
+                # Keep terminal traffic out of the parent stdout pipe; the
+                # complete live transcript is independently inspectable.
+                live.write(s)
+                live.flush()
+        except EOFError:
+            pass
+        finally:
+            done.set()
+
+    def wait(fragment, start=0):
+        deadline = time.monotonic()+(600 if dump else 45)
+        while time.monotonic() < deadline:
+            text = ''.join(chunks)
+            if fragment in text[start:]:
+                return len(text)
+            if not process.isalive():
+                break
+            if done.is_set():
+                raise RuntimeError('Output reader exited before expected response')
+            time.sleep(0.05)
+        raise RuntimeError('No expected response; no further commands sent')
+
+    threading.Thread(target=read, daemon=True).start()
+    try:
+        cursor = wait('Select input')
+        if 'DevNo=1' not in ''.join(chunks) or 'Found 1 rockusb' not in ''.join(chunks):
+            raise RuntimeError('Expected exactly one device')
+        if probe and 'Maskrom' not in ''.join(chunks):
+            raise RuntimeError('Expected Maskrom after user-confirmed hardware reconnection')
+        process.write('1\r\n')
+        cursor = wait('Rockusb>', cursor)
+        for command in commands:
+            print('BEGIN '+command,flush=True)
+            cursor = len(''.join(chunks))
+            process.write(command+'\r\n')
+            wait('Rockusb>', cursor)
+            response = ''.join(chunks)[cursor:]
+            if probe and command.startswith('DB ') and 'Download boot ok' not in response:
+                raise RuntimeError('RAM download did not report success; stopping')
+            if (probe or suite or dump or address_probe) and command == 'RFI' and not all(s in response for s in ('MICRON', '4096MB', 'ECC Bits: 40')):
+                raise RuntimeError('Unexpected NAND geometry; stopping')
+            if command in outputs:
+                raw, sector, count = outputs[command]
+                if '(100%)' not in response or not raw.exists() or raw.stat().st_size != count*528:
+                    raise RuntimeError('Read did not return the exact required file length; stopping')
+                with raw.open('rb') as source:
+                    digest = hashlib.file_digest(source, 'sha256').hexdigest()
+                record = dict(file=raw.name, sector=sector, count=count, bytes=raw.stat().st_size, sha256=digest)
+                manifest_dir = destination if address_probe else dumpdir
+                with (manifest_dir/'manifest.jsonl').open('a', encoding='utf-8') as stream:
+                    stream.write(json.dumps(record)+'\n')
+                if count == 16 and not address_probe:
+                    reference = BOOT.read_bytes()[16384:24576]
+                    if not compare(raw.read_bytes(), reference)['exact_page_match']:
+                        raise RuntimeError('Live control page failed; no full dump commands sent')
+                print('\nVERIFIED_CHUNK '+json.dumps(record), flush=True)
+        process.write('Q\r\n')
+        process.wait()
+    finally:
+        if process.isalive():
+            process.terminate(force=True)
+        done.wait(2)
+        live.close()
+        with log.open('x', encoding='utf-8') as stream:
+            stream.write(''.join(chunks))
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--ecc40-probe', action='store_true', help='After confirmed hardware MaskROM entry: fixed RAM DB and one-page read')
+    parser.add_argument('--ecc40-suite', action='store_true', help='Read eight fixed pages using the already running tested RAM loader; no DB')
+    parser.add_argument('--ecc40-dump', action='store_true', help='After eight-page validation: fixed read-only 32-chunk dump, no DB or reset')
+    parser.add_argument('--ecc40-resume', action='store_true', help='After prior reader has exited: verify committed prefix and continue without overwriting any files')
+    parser.add_argument('--resume-attempt',type=int,default=1)
+    parser.add_argument('--postcrash-check', action='store_true', help='Fresh MaskROM RAM-only probe and eight-page read, preserving original samples')
+    args = parser.parse_args()
+    if not 1<=args.resume_attempt<=100:
+        parser.error('Invalid resume-attempt')
+    if sum((args.ecc40_probe, args.ecc40_suite, args.ecc40_dump, args.ecc40_resume, args.postcrash_check)) > 1:
+        parser.error('Choose one mode')
+    if args.postcrash_check:
+        root = Path(__file__).parent
+        tag = 'postcrash1_'
+        run([], root/f'{tag}probe_transcript.txt', probe=True, tag=tag)
+        from verify_native_ecc_page import BOOT, compare
+        raw = root/f'{tag}probe_native_ecc40_page2.raw'
+        if not compare(raw.read_bytes(), BOOT.read_bytes()[16384:24576])['exact_page_match']:
+            raise RuntimeError('Postcrash probe failed; stopping')
+        run([], root/f'{tag}suite_transcript.txt', suite=True, tag=tag)
+        for name, pages in [('boot', (0,1,2,3,12)), ('recovery', (0,3,25))]:
+            reference = (BOOT.parent/f'{name}.img').read_bytes()
+            for page in pages:
+                current = (root/f'{tag}native_ecc40_{name}_page{page}.raw').read_bytes()
+                old = (root/f'native_ecc40_{name}_page{page}.raw').read_bytes()
+                result = compare(current, reference[page*8192:(page+1)*8192])
+                print(json.dumps(dict(name=name, page=page, raw_matches_precrash=current == old, **result)), flush=True)
+                if not result['exact_page_match']:
+                    raise RuntimeError('Postcrash suite mismatch; stopping')
+    elif args.ecc40_resume:
+        run([], Path(__file__).parent/f'native_ecc40_resume{args.resume_attempt}_transcript.txt', resume=True,attempt=args.resume_attempt)
+    elif args.ecc40_dump:
+        run([], Path(__file__).parent/'native_ecc40_dump_transcript.txt', dump=True)
+    elif args.ecc40_suite:
+        run([], Path(__file__).parent/'native_ecc40_suite_transcript.txt', suite=True)
+    elif args.ecc40_probe:
+        run([], Path(__file__).parent/'native_ecc40_page2_transcript.txt', probe=True)
+    else:
+        run(['RID', 'RFI'], Path(__file__).parent/'identity_before_ecc40_test.txt')

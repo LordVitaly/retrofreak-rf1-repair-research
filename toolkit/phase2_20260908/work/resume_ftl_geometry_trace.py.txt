@@ -1,0 +1,99 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/resume_ftl_geometry_trace.py
+Role: historical_device_runner_or_stateful_scenario_review_before_any_use
+Original repair session must not be resumed from this public copy.
+
+"""RAM-only original FTL stages with a one-board initial block-size correction."""
+from pathlib import Path
+import sys, os, json, struct, hashlib, zlib
+OLD=Path('<EXTERNAL_STAGE_03>')
+HERE=Path(__file__).resolve().parent
+sys.path.insert(0,str(OLD/'work'))
+from ram_console_session import RamConsole
+def sha(b):return hashlib.sha256(b).hexdigest()
+
+def main():
+    assert sys.argv[1:]==['--same-successful-geometry-trial-session']
+    prior=HERE/'nand_geometry_trial_attempt01'
+    previous=json.loads((prior/'result.json').read_text())
+    assert previous['complete'] and previous['exact_previous_runtime_verified']
+    assert previous['nand_init_return']==0 and previous['flash_info_calls'][0]['parser_return']==0
+    assert previous['flash_info_calls'][0]['sector']==0x5770
+    old=(prior/'ram_after.raw').read_bytes()
+    oldsource=(HERE/'nand_geometry_trial/trace.raw').read_bytes()
+    assert sha(oldsource)==previous['payload_sha256'] and old[:110080]==oldsource[:110080]
+    assert len(old)==110352 and struct.unpack_from('<2I',old,110080)==(0x44475453,0x60086c6c)
+    assert struct.unpack_from('<I',old,110304)[0]==0x00800000
+    marker=b'RF1CKP02'+struct.pack('<IIII',110080,0xad0dadee,1,0x60000004)+bytes(504)
+    assert (prior/'marker_after.raw').read_bytes()==marker
+    sourceproof=json.loads((HERE/'original_boot_diag/manifest.json').read_text())
+    assert sourceproof['all_pass'] and sourceproof['no_ram_count_substitution_executed']
+    cases=[('capacity','ftl_capacity_original.raw','<HISTORICAL_HASH_REDACTED>',0x60086b00),
+           ('bbt','bbt_trace_v2_original_capacity.raw','<HISTORICAL_HASH_REDACTED>',0x60086c84)]
+    payloads=[]
+    for name,sourcefile,digest,cut in cases:
+        source=(HERE/'original_boot_diag'/sourcefile).read_bytes()
+        raw=(HERE/'nand_geometry_trial'/(name+'.raw')).read_bytes()
+        assert sha(source)==digest and len(raw)==len(source)==110352
+        changed={i for i,(a,b) in enumerate(zip(source,raw)) if a!=b}
+        assert changed<={0x1e0,0x1e1,0x1e2,0x1e3,0xaf60} and 0xaf60 in changed
+        assert source[0xaf60:0xaf64]==bytes.fromhex('0003a0e1')
+        assert raw[0xaf60:0xaf64]==bytes.fromhex('8003a0e1')
+        assert raw[0xb408:0xb40c]==bytes.fromhex('0101a0e3')
+        assert raw[110080:]==bytes(272) and zlib.crc32(raw[:110080])==0xad0dadee
+        for at in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):
+            assert raw[at:at+8]==bytes.fromhex('0000e0e31eff2fe1')
+        for at in (0xbbc8,0xbc90):assert raw[at:at+4]==bytes.fromhex('feffffea')
+        payloads.append(raw)
+    out=HERE/'ftl_geometry_trace_attempt01';out.mkdir(exist_ok=False)
+    result=dict(complete=False,nand_writes_enabled=False,capacity_ram_fix=False,
+                initial_block_geometry_ram_fix=True,bbt_ram_fix=False,download_boot=False,cases=[])
+    c=None
+    def save(name,data):
+        with (out/name).open('x') as f:json.dump(data,f,indent=2);f.flush();os.fsync(f.fileno())
+    def read(name,sector,count):
+        assert (sector,count) in ((0x7effff,1),(0x7f0000,209),(0x7f00d1,2))
+        p=out/(name+'.raw');c.command(f'RS {hex(sector)} {hex(count)} {p}')
+        data=p.read_bytes();assert len(data)==count*528;return data
+    try:
+        c=RamConsole(out);c.select()
+        assert read('resume_marker',0x7effff,1)==marker
+        assert read('resume_ram',0x7f0000,209)==old
+        result['exact_previous_runtime_verified']=True
+        for (name,sourcefile,digest,cut),raw in zip(cases,payloads):
+            case=dict(name=name,payload_sha256=sha(raw));result['cases'].append(case)
+            for i,offset in enumerate(range(0,110080,8192)):
+                p=out/f'{name}_part{i:02d}.bin';p.write_bytes(raw[offset:min(offset+8192,110080)])
+                c.command(f'WS {hex(0x7f0000+offset//512)} {p}')
+            assert read(name+'_ram_before',0x7f0000,209)==raw
+            save(name+'_DISPATCHED_NO_RETRY.json',case)
+            c.command('RD')
+            assert read(name+'_marker',0x7effff,1)==marker
+            data=read(name+'_ram_after',0x7f0000,209)
+            assert data[:110080]==raw[:110080] and data[110348:]==bytes(4)
+            record=struct.unpack_from('<67I',data,110080)
+            assert record[:2]==(0x44475453,cut) and data[110204:110210].hex()=='2c44444ba900'
+            case.update(bridge_returned=True,record=[hex(v) for v in record],result_word=record[66],geometry_hex=data[110272:110344].hex())
+            if name=='capacity':
+                case['physical_blocks']=record[66]
+                print('Physical blocks after initial geometry correction: '+str(record[66]),flush=True)
+                save(name+'_result.json',case)
+                if record[66]!=2048:
+                    result['stopped_before_bbt']='Capacity does not match NAND';break
+            else:
+                trace=read('bbt_trace',0x7f00d1,2)
+                magic,total,errors,tags=struct.unpack_from('<4I',trace)
+                assert magic==0x31544242 and total<=12800 and errors<=total and tags<=total
+                cols=('sector','return_code','aux_tag','aux_version','main_first_word','count')
+                case['trace']=dict(total_reads=total,nonzero_returns=errors,f000_tags=tags,
+                    rows=[dict(zip(cols,struct.unpack_from('<6I',trace,16+i*24))) for i in range(min(total,32))],
+                    ftl_header_u16=list(struct.unpack_from('<16H',trace,800)))
+                save(name+'_result.json',case);print(json.dumps(case,indent=2),flush=True)
+        result['complete']=True
+    except BaseException as exc:result['error']=repr(exc);raise
+    finally:
+        if c:c.close();result['commands']=c.commands
+        save('result.json',result)
+
+if __name__=='__main__':main()

@@ -1,0 +1,170 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/usb_ram_bridge.S
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+.syntax unified
+.arm
+.section .text.preinit,"ax",%progbits
+.global bridge_preinit
+.type bridge_preinit,%function
+bridge_preinit:
+    /* Runs after the original USBplug CPU normalization, before its BSS clear.
+       The appended bytes lie in that BSS range, so keep executable code high. */
+    ldr r0, =0x6000e000
+    ldr r1, =0x60800000
+    ldr r2, =__addon_size
+4:
+    ldr r3, [r0], #4
+    str r3, [r1], #4
+    subs r2, r2, #4
+    bne 4b
+    dsb sy
+    mov r0, #0
+    mcr p15, 0, r0, c7, c5, 0
+    mcr p15, 0, r0, c7, c5, 6
+    dsb sy
+    isb sy
+#ifdef RF_ENTRY_CHECKPOINT
+    ldr r0, =0x60801000
+    mov r1, #0
+    str r1, [r0]
+    str r1, [r0, #4]
+    str r1, [r0, #8]
+#endif
+    /* Reproduce the single displaced original instruction at 0x30. */
+    ldr r0, =0x101027fc
+    ldr pc, =0x60000034
+    .ltorg
+.section .text.handoff,"ax",%progbits
+.global bridge_handoff
+.type bridge_handoff,%function
+bridge_handoff:
+#ifdef RF_ENTRY_CHECKPOINT
+    /* Save the exact caller before masking IRQ/FIQ. The diagnostic entry runs
+       only MSR + patched B, then restores the overwritten USBplug RAM. */
+    push {r4-r11, lr}
+    mrs r4, cpsr
+    str r4, [sp, #-4]!
+    ldr r0, =0x60801000
+    str sp, [r0, #8]
+    msr cpsr_c, #0xd3
+    ldr r0, =0x60000000
+    ldr r1, =0x61200000
+    ldr r2, =110268
+5:
+    ldr r3, [r0], #4
+    str r3, [r1], #4
+    subs r2, r2, #4
+    bne 5b
+    /* No disconnect: existing USB state must survive this bounded return.
+       This tests delivery/entry, NOT FlashBoot's later peripheral startup. */
+#else
+#ifdef RF_IRQ_HANDOFF
+    /* Original IRQ dispatcher 0x998 acknowledges USB IRQ 0x30, calls the USB
+       handler, then EOIs at 0x9c0. A permanent handoff never returns there.
+       Complete that exact IRQ before replacing its handler. No IAR read. */
+    mrs r2, cpsr
+    and r2, r2, #0x1f
+#endif
+    msr cpsr_c, #0xd3
+#ifdef RF_IRQ_HANDOFF
+    cmp r2, #0x12
+    ldreq r0, =0x1013c110
+    moveq r1, #0x30
+    streq r1, [r0]
+    dsb sy
+#endif
+    /* Restore the disconnect prefix of original USBplug reset 0x6d8.
+       Its reset body was replaced by our RAM handoff. Leave reconnection to
+       FlashBoot's original USB init (file 0x256c..0x2590). No NAND MMIO. */
+    ldr r0, =0x10180804
+    ldr r1, [r0]
+    orr r1, r1, #2
+    str r1, [r0]
+    dsb sy
+#endif
+    ldr r0, =bridge_relocated
+    ldr r1, =0x62000000
+    ldr r2, =bridge_relocated_end
+1:
+    cmp r0, r2
+    ldrlo r3, [r0], #4
+    strlo r3, [r1], #4
+    blo 1b
+    dsb sy
+    mov r0, #0
+    mcr p15, 0, r0, c7, c5, 0
+    mcr p15, 0, r0, c7, c5, 6
+    dsb sy
+    isb sy
+    ldr r0, =0x62000000
+    bx r0
+    .ltorg
+.balign 4
+.global bridge_relocated
+bridge_relocated:
+    ldr r0, =0x61000000
+    ldr r1, =0x60000000
+    ldr r2, =110080
+2:
+    ldr r3, [r0], #4
+    str r3, [r1], #4
+    subs r2, r2, #4
+    bne 2b
+    /* Explicit zero policy for the 188 bytes read beyond FlashBoot's file. */
+    mov r2, #188
+    mov r3, #0
+3:
+    str r3, [r1], #4
+    subs r2, r2, #4
+    bne 3b
+    dsb sy
+    mov r0, #0
+    mcr p15, 0, r0, c7, c5, 0
+    mcr p15, 0, r0, c7, c5, 6
+    dsb sy
+    isb sy
+    ldr r0, =0x60000000
+    bx r0
+    .ltorg
+.balign 4
+.global bridge_relocated_end
+bridge_relocated_end:
+#ifdef RF_ENTRY_CHECKPOINT
+.section .rfcheckpoint,"ax",%progbits
+.global bridge_entry_checkpoint
+.type bridge_entry_checkpoint,%function
+bridge_entry_checkpoint:
+    /* Only reached by the patched instruction at payload PC 0x60000004. */
+    ldr r0, =0x61200000
+    ldr r1, =0x60000000
+    ldr r2, =110268
+6:
+    ldr r3, [r0], #4
+    str r3, [r1], #4
+    subs r2, r2, #4
+    bne 6b
+    dsb sy
+    mov r0, #0
+    mcr p15, 0, r0, c7, c5, 0
+    mcr p15, 0, r0, c7, c5, 6
+    dsb sy
+    isb sy
+    ldr r0, =0x60801000
+    mov r1, #1
+    str r1, [r0]
+    /* SP/LR are banked by mode. Switch back with interrupts masked BEFORE
+       restoring the caller's frame; restoring SP in SVC then switching to IRQ
+       leaves IRQ's SP pointing at the still-pushed frame. */
+    ldr r1, [r0, #8]
+    ldr r12, [r1]
+    orr r2, r12, #0xc0
+    msr cpsr_c, r2
+    mov sp, r1
+    ldr r12, [sp], #4
+    pop {r4-r11, lr}
+    msr cpsr_c, r12
+    bx lr
+    .ltorg
+#endif

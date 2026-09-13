@@ -1,0 +1,84 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_test_flashboot_readonly_errors.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Scoped read-only candidate and error-path tests. NOT certified/uploadable.
+
+No device API. Entry guards alone cannot establish absence of all write paths.
+"""
+import hashlib
+import json
+import struct
+from emulate_flashboot_remap import RemapReplay
+from emulate_flashboot_offline import ROOT, FLASH, REGS, address
+from unicorn import Uc, UC_ARCH_ARM, UC_MODE_ARM, UC_HOOK_MEM_WRITE, UC_PROT_READ, UC_PROT_EXEC
+from unicorn.arm_const import UC_ARM_REG_SP, UC_ARM_REG_LR, UC_ARM_REG_PC, UC_ARM_REG_R0
+
+source=(ROOT/'work/FlashBoot.packet512.STATIC_ONLY.bin').read_bytes()
+assert hashlib.sha256(source).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+entries={0x1934:'backend service-write dispatch',0x3b0c:'FTL physical write wrapper',0x5b60:'NAND service-write cache',0x7038:'format path',0x7dcc:'logical writer',0xba10:'physical program',0xbc1c:'physical erase',0xbd5c:'physical copy'}
+stub=bytes.fromhex('0000e0e31eff2fe1') # MVN r0,#0; BX lr (ARM)
+candidate=bytearray(source)
+patches=[]
+for off,label in entries.items():
+    candidate[off:off+8]=stub
+    patches.append(dict(offset=hex(off),purpose=label,before=source[off:off+8].hex(),after=stub.hex()))
+assert source[0x18bf8:0x18bfc]==bytes.fromhex('080094e5')
+candidate[0x18bf8:0x18bfc]=bytes.fromhex('410000ea') # existing USB-only gate
+allowed={o+i for o in entries for i in range(8)}|set(range(0x18bf8,0x18bfc))
+assert all(i in allowed for i,(a,b) in enumerate(zip(source,candidate)) if a!=b)
+tests=[]
+for off in entries:
+    for value in (0,0xffffffff,0x12345678):
+        u=Uc(UC_ARCH_ARM,UC_MODE_ARM)
+        u.mem_map(0x60080000,0x20000,UC_PROT_READ|UC_PROT_EXEC)
+        u.mem_write(0x60080000,bytes(candidate[0xa34:]))
+        for reg in REGS:u.reg_write(reg,value)
+        u.reg_write(UC_ARM_REG_SP,0xdead0000) # deliberately unmapped
+        stop=0x6007f000
+        u.reg_write(UC_ARM_REG_LR,stop)
+        writes=[]
+        u.hook_add(UC_HOOK_MEM_WRITE,lambda uc,a,p,s,v,c:writes.append((p,s,v)))
+        u.emu_start(address(off),stop,count=3)
+        assert u.reg_read(UC_ARM_REG_PC)==stop and u.reg_read(UC_ARM_REG_R0)==0xffffffff
+        assert u.reg_read(UC_ARM_REG_SP)==0xdead0000 and not writes
+        assert all(u.reg_read(reg)==value for reg in REGS[1:])
+        tests.append(dict(entry=hex(off),argument=value,error_return='0xffffffff',guest_writes=0))
+
+class ErrorReplay(RemapReplay):
+    def __init__(self,record):
+        super().__init__(record)
+        self.write_entries.clear() # actual patched instructions, not host return stubs
+        self.hits=[]
+        self.guard_addresses={address(o) for o in entries}
+        self.uc.mem_write(0x60080000,bytes(candidate[0xa34:]))
+    def code_hook(self,uc,pc,size,unused):
+        if pc in self.guard_addresses:self.hits.append(hex(pc-0x60080000+0xa34))
+        super().code_hook(uc,pc,size,unused)
+
+record=(ROOT/'work/idb_ecc24_parameter_attempt2/block05_page15.raw').read_bytes()[:512]
+emu=ErrorReplay(record)
+assert emu.call(0xa158,0x50f4)==0
+emu.uc.mem_write(FLASH+0xa0,struct.pack('<H',12))
+emu.call(0x74e0)
+emu.dump_mode=True
+assert emu.call(0x6a24)==0
+print('PASS 24 direct error-return tests; starting dump-backed FTL read checks',flush=True)
+assert emu.call(0x6050,1,instruction_limit=10_000_000,timeout_us=60_000_000)==0
+assert not emu.hits,emu.hits
+for reg,value in zip(REGS[1:],(6*4096,16,0x60600000)):emu.uc.reg_write(reg,value)
+assert emu.call(0x50d4,0)==0
+with (ROOT/'outputs/boot.from_nand.verified.img').open('rb') as f:control=f.read(8192)
+assert bytes(emu.uc.mem_read(0x60600000,8192))==control
+for reg,value in zip(REGS[1:],(188*4096,1,0x60600000)):emu.uc.reg_write(reg,value)
+missing=dict(result=None,error=None)
+try:missing['result']=emu.call(0x50d4,0)
+except (RuntimeError,AssertionError) as exc:missing['error']=str(exc)
+missing['guard_hits']=emu.hits
+assert emu.hits,missing
+name='FlashBoot.readonly_errors.COVERAGE_PENDING_NOT_FOR_UPLOAD.bin'
+with (ROOT/'work'/name).open('xb') as f:f.write(candidate)
+report=dict(candidate=name,sha256=hashlib.sha256(candidate).hexdigest(),patches=patches,direct_tests=tests,full_ftl_map=True,boot_control_exact=True,missing_map_read=missing,device_access=False,coverage_complete=False,remaining=['Audit alternative/controller-command program/erase paths and entry bypasses','Audit USB dispatch paths capable of RAM code replacement or alternate storage writes','Check startup service-write error handling','Package and verify RAM-only transfer before hardware use'])
+with (ROOT/'outputs/flashboot_readonly_errors.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2),flush=True)

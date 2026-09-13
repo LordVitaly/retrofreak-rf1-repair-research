@@ -1,0 +1,19 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/bbt_copy12_writer_v2/offline_test.json",
+  "interpretation": "Offline restrictions on the compiled writer; not physical NAND behavior.",
+  "data": {
+    "all_pass": true,
+    "hardware_executed": false,
+    "writer_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "tests": [
+      "exact one erase and one ECC40 8192-main/256-aux program; repeats rejected",
+      "erase/program errors sticky; no retry",
+      "outside copy12, wrong page/count/data/control and ungated entries denied",
+      "all256 dispatch paths; destructive autodetect/erase fallback disabled"
+    ],
+    "preinit_exact": true,
+    "source_main_and_aux_exact": true,
+    "limits": "Compiled guards/native call arguments proved; native NAND/BCH physical correctness inherited, not emulated. Hardware preflight and erase/program/readback still required."
+  }
+}

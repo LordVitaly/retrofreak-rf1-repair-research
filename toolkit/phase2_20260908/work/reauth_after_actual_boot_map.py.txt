@@ -1,0 +1,38 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/reauth_after_actual_boot_map.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Authenticate completed read-only capture; no RD, WS, or NAND operation."""
+from pathlib import Path
+import hashlib,json,os,struct,sys
+if sys.flags.optimize:raise RuntimeError('Assertions required')
+assert sys.argv[1:]==['--verified-existing-session']
+p=Path(__file__).resolve().parent
+prior=p/'boot_header_map_recheck_attempt01'
+result=json.loads((prior/'result.json').read_text())
+assert result['resume_reauthenticated'] and not result['all_pass'] and result['header22_write_not_repeated']
+raw=(prior/'capture_mode1/ram_after.raw').read_bytes()
+assert hashlib.sha256(raw).hexdigest()=='<HISTORICAL_HASH_REDACTED>'
+status=(prior/'capture_mode1/status.raw').read_bytes()
+assert status[:8]==b'RF1READ1' and struct.unpack_from('<4I',status,8)==(0x6020,1,0,0xa8000)
+assert raw[:110080]==(p/'boot_map_compare/capture_mode1.raw').read_bytes()[:110080]
+assert struct.unpack_from('<2I',raw,110080)==(0x44475453,0x600982e4)
+sys.path.insert(0,'<EXTERNAL_STAGE_03>/work')
+from ram_console_session import RamConsole
+out=p/'boot_actual_map_reauth_attempt01';out.mkdir(exist_ok=False)
+c=None;r={'all_pass':False,'no_execution':True,'nand_writes':False}
+try:
+ c=RamConsole(out);c.select()
+ checks=[('marker',0x7effff,1,b'RF1CKP02'+struct.pack('<IIII',110080,0xad0dadee,1,0x60000004)+bytes(504)),('window',0x7efffe,1,b'RF1WIN01'+struct.pack('<IIII',0x800000,4096,0x63000000,16)+bytes(504)),('ram',0x7f0000,209,raw),('status',0x7f00d1,2,status)]
+ for name,lba,count,expected in checks:
+  path=out/(name+'.raw');c.command(f'RS {hex(lba)} {hex(count)} {path}');assert path.read_bytes()==expected
+ state=p/'white_screen_read_state.json';tmp=state.with_suffix('.tmp')
+ with tmp.open('w') as f:
+  json.dump(dict(valid=True,ram_path=str(out/'ram.raw'),ram_sha256=hashlib.sha256(raw).hexdigest(),last_case='reauth_actual_mode1_map',batch='boot_actual_map_reauth'),f,indent=2);f.flush();os.fsync(f.fileno())
+ os.replace(tmp,state);r['all_pass']=True
+finally:
+ if c:c.close();r['commands']=c.commands
+ with (out/'result.json').open('x') as f:json.dump(r,f,indent=2)
+ print(json.dumps(r))

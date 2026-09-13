@@ -1,0 +1,26 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/verify_after_dryrun01.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Verify saved real-hardware control reads after restoring known RAM loader."""
+import argparse,json
+from pathlib import Path
+from verify_native_ecc_page import BOOT,compare
+ROOT=Path(__file__).resolve().parents[1]
+p=argparse.ArgumentParser();p.add_argument('--plain-control',action='store_true');args=p.parse_args()
+tag='plain_control' if args.plain_control else 'after_dryrun01'
+rows=[]
+for name,pages in [('boot',(0,1,2,3,12)),('recovery',(0,3,25))]:
+    official=(BOOT.parent/f'{name}.img').read_bytes()
+    for page in pages:
+        current=(ROOT/f'work/{tag}_native_ecc40_{name}_page{page}.raw').read_bytes()
+        old=(ROOT/f'work/native_ecc40_{name}_page{page}.raw').read_bytes()
+        result=compare(current,official[page*8192:(page+1)*8192])
+        if not args.plain_control:assert result['exact_page_match'] and current==old,(name,page,result)
+        rows.append(dict(partition=name,page=page,raw_matches_before=current==old,**result))
+all_exact=all(r['raw_matches_before'] and r['exact_page_match'] for r in rows)
+report=dict(known_ram_loader_restored=not args.plain_control,control_pages=rows,all_eight_exact=all_exact,nand_write_commands_sent=False,scope='Eight selected physical pages only. Does not prove the entire NAND or all metadata unchanged. Original FlashBoot dry-run still failed; this restores the known physical read path.')
+if args.plain_control:report['scope']='Plain USBplug61440 control on real hardware. USB identity responds but read contents must be judged from comparisons below; successful command status is not sufficient. No attribution of mismatches to NAND modification versus read/transport error.'
+(ROOT/f'outputs/{tag}_control_verification.json').write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps(report,indent=2))

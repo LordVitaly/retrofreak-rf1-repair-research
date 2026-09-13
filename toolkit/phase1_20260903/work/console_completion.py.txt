@@ -1,0 +1,18 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/console_completion.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""A terminal prompt redraw alone is not command completion."""
+import re
+ANSI=re.compile(r'\x1b\[[0-?]*[ -/]*[@-~]')
+
+def completed_response(text, start, success_token):
+    text=ANSI.sub('',text[start:])
+    result_at = text.find(success_token)
+    if result_at < 0:
+        return None
+    prompt_at = text.find('Rockusb>', result_at + len(success_token))
+    if prompt_at < 0:
+        return None
+    return text[:prompt_at + len('Rockusb>')]

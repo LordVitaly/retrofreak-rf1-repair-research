@@ -1,0 +1,53 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/pmic_devon_hardware_attempt01/result.json",
+  "interpretation": "First temporary DEV_ON change from 0 to 4.",
+  "data": {
+    "all_pass": true,
+    "nand_writes": 0,
+    "pmic_value_writes": 1,
+    "phase": "DEV_ON_SET_READBACK_PASS_AWAIT_USB_UNPLUG_REPLUG",
+    "payload_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "devon_authorized": true,
+    "intro": "<REDACTED:RAW_LOG_OR_IDENTIFIER>",
+    "status": 0,
+    "completed_reads": 3,
+    "registers": [
+      {
+        "register": "0x3f",
+        "status": 0,
+        "value": "0x0",
+        "i2c_ipd": "0x1b"
+      },
+      {
+        "register": "0x3f",
+        "status": 0,
+        "value": "0x4",
+        "i2c_ipd": "0x5"
+      },
+      {
+        "register": "0x3f",
+        "status": 0,
+        "value": "0x4",
+        "i2c_ipd": "0x1b"
+      }
+    ],
+    "bus_before": [
+      "0x0",
+      "0x6",
+      "0x60006"
+    ],
+    "bus_after": [
+      "0x0",
+      "0x6",
+      "0x60006"
+    ],
+    "current_stage_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "usb_return_verified": true,
+    "marker_status": 1,
+    "devctrl_before": 0,
+    "devctrl_after": 4,
+    "devon_enabled": true,
+    "commands": "<REDACTED:RAW_LOG_OR_IDENTIFIER>"
+  }
+}

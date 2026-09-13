@@ -1,0 +1,43 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/extract_nand_idb_loader_candidates.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Extract independent IDB loader candidates from local snapshots only."""
+import hashlib
+import json
+import struct
+from pathlib import Path
+from audit_ram_loader_container import rc4
+root=Path(__file__).resolve().parents[1]
+sources={'ecc40':root/'work/nand_native_ecc40/NAND_00.RAW',
+         'old':Path(r'<HOST_PATH>')}
+reference=(root/'work/FlashBoot.packet512.STATIC_ONLY.bin').read_bytes()
+results=[]
+for label,path in sources.items():
+    with path.open('rb') as f:
+        for block in (1,3,5,6,16):
+            f.seek(block*256*8448)
+            raw=f.read(256*8448)
+            header=rc4(raw[:512])
+            if header[:4]!=bytes.fromhex('55aaf00f'):
+                results.append(dict(source=label,block=block,valid_header_magic=False))
+                continue
+            disable=struct.unpack_from('<I',header,8)[0]
+            init_offset=struct.unpack_from('<H',header,12)[0]
+            init_size,total=struct.unpack_from('<HH',header,506)
+            assert disable==0 and 0<init_offset<32 and 0<init_size<total<4096
+            start=init_offset+init_size
+            payload=b''.join(rc4(raw[i*528:i*528+512]) for i in range(start,init_offset+total))
+            name=f'IDB_{label}_block{block:02d}_FlashBoot.CANDIDATE.bin'
+            with (root/'work'/name).open('xb') as out: out.write(payload)
+            results.append(dict(source=label,block=block,valid_header_magic=True,
+                                init_offset=init_offset,init_size=init_size,init_boot_size=total,
+                                start_sector_within_block=start,size=len(payload),
+                                sha256=hashlib.sha256(payload).hexdigest(),prefix=payload[:16].hex(),
+                                official_size=len(reference),
+                                mismatched_bytes_vs_official_prefix=sum(a!=b for a,b in zip(payload,reference)),
+                                candidate_file=name,
+                                warning='Independent candidate only; ECC status and full integrity not yet proven'))
+with (root/'outputs/nand_idb_loader_candidates.json').open('x',encoding='utf-8') as f:json.dump(results,f,indent=2)
+print(json.dumps(results,indent=2))

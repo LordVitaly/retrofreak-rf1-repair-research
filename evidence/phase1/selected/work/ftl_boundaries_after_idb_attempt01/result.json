@@ -1,0 +1,25 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/ftl_boundaries_after_idb_attempt01/result.json",
+  "interpretation": "BBT returned -1; host incorrectly expected counter 2 rather than completed flag 1.",
+  "data": {
+    "all_pass": false,
+    "nand_writes_enabled": false,
+    "db_commands": 0,
+    "cases": [
+      {
+        "name": "bbt_return",
+        "sha256": "<REDACTED:HASH_OR_BYTES>",
+        "ram_exact": true,
+        "record": {
+          "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+          "original_items": 67
+        },
+        "return_code": "0xffffffff",
+        "geometry": "<REDACTED:HASH_OR_BYTES>"
+      }
+    ],
+    "error": "AssertionError()",
+    "commands": "<REDACTED:RAW_LOG_OR_IDENTIFIER>"
+  }
+}

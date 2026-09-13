@@ -1,0 +1,63 @@
+Publication validation — 2026-09-12
+Condensed local output; workspace paths and Git's NUL-separated listing omitted.
+No device operations or archival repair-code execution were performed.
+
+$ python -B scripts/check_repository.py
+PASS: files=613, json_files=89, python_files=10, markdown_files=37, relative_links_checked=83, archival_snapshots=456, preserved_snapshots_checked=456
+PASS: 611 checksummed files; no device/network operations performed
+Scope: publication checks and syntax; archival hardware programs are not executed or certified safe.
+
+$ python -B -m unittest discover -s tests -v
+test_help (test_checker_cli.DigestCliTests.test_help) ... ok
+test_missing_file (test_checker_cli.DigestCliTests.test_missing_file) ... ok
+test_pass_mismatch_unsupported_and_no_input_change (test_checker_cli.DigestCliTests.test_pass_mismatch_unsupported_and_no_input_change) ... ok
+test_existing_file_not_overwritten (test_package_downloads.DownloadTests.test_existing_file_not_overwritten) ... ok
+test_existing_verified_file_skips_network (test_package_downloads.DownloadTests.test_existing_verified_file_skips_network) ... ok
+test_https_only (test_package_downloads.DownloadTests.test_https_only) ... ok
+test_invalid_hash_or_size (test_package_downloads.DownloadTests.test_invalid_hash_or_size) ... ok
+test_invalid_or_duplicate_package (test_package_downloads.DownloadTests.test_invalid_or_duplicate_package) ... ok
+test_mismatch_removes_new_file (test_package_downloads.DownloadTests.test_mismatch_removes_new_file) ... ok
+test_oversized_download_stops_and_removes_file (test_package_downloads.DownloadTests.test_oversized_download_stops_and_removes_file) ... ok
+test_valid_download_verifies (test_package_downloads.DownloadTests.test_valid_download_verifies) ... ok
+test_valid_spec (test_package_downloads.DownloadTests.test_valid_spec) ... ok
+test_changed_content (test_repository_integrity.IntegrityTests.test_changed_content) ... ok
+test_duplicate_json_keys_rejected (test_repository_integrity.IntegrityTests.test_duplicate_json_keys_rejected) ... ok
+test_duplicate_manifest_entry_rejected (test_repository_integrity.IntegrityTests.test_duplicate_manifest_entry_rejected) ... ok
+test_git_and_python_cache_are_ignored (test_repository_integrity.IntegrityTests.test_git_and_python_cache_are_ignored) ... ok
+test_missing_file (test_repository_integrity.IntegrityTests.test_missing_file) ... ok
+test_non_finite_json_rejected (test_repository_integrity.IntegrityTests.test_non_finite_json_rejected) ... ok
+test_refresh_is_deterministic (test_repository_integrity.IntegrityTests.test_refresh_is_deterministic) ... ok
+test_symlink_is_rejected (test_repository_integrity.IntegrityTests.test_symlink_is_rejected) ... ok
+test_traversal_and_windows_paths (test_repository_integrity.IntegrityTests.test_traversal_and_windows_paths) ... ok
+test_two_manifests_must_agree (test_repository_integrity.IntegrityTests.test_two_manifests_must_agree) ... ok
+test_unlisted_file_is_not_ignored (test_repository_integrity.IntegrityTests.test_unlisted_file_is_not_ignored) ... ok
+test_valid_fixture (test_repository_integrity.IntegrityTests.test_valid_fixture) ... ok
+test_changed_hashed_header (test_rf1_boot_digest.DigestTests.test_changed_hashed_header) ... ok
+test_changed_kernel_and_ramdisk (test_rf1_boot_digest.DigestTests.test_changed_kernel_and_ramdisk) ... ok
+test_changed_stored_id (test_rf1_boot_digest.DigestTests.test_changed_stored_id) ... ok
+test_invalid_magic (test_rf1_boot_digest.DigestTests.test_invalid_magic) ... ok
+test_partition_tail_is_not_hashed (test_rf1_boot_digest.DigestTests.test_partition_tail_is_not_hashed) ... ok
+test_positive_unchanged (test_rf1_boot_digest.DigestTests.test_positive_unchanged) ... ok
+test_truncated (test_rf1_boot_digest.DigestTests.test_truncated) ... ok
+test_unsupported_header (test_rf1_boot_digest.DigestTests.test_unsupported_header) ... ok
+
+----------------------------------------------------------------------
+Ran 32 tests in 3.927s
+
+OK
+
+$ python -B scripts/verify_manifest.py
+PASS: 611 files match both manifests; no unlisted publication files
+
+Additional independent checks:
+PASS: supplied English archive ZIP CRC and SHA-256.
+PASS: both sanitized source archives ZIP CRC.
+PASS: 456/456 historical source snapshots unchanged from English input.
+PASS: 37 restored early records differ only in translated interpretation fields.
+PASS: workflow YAML parsed; permissions read-only and external actions SHA-pinned.
+PASS: all publication files staged by Git; no archived work/outputs paths ignored.
+PASS: fresh local Git checkout with core.autocrlf=true retained manifest bytes.
+
+Hosted GitHub Actions was not executed. No claim of hardware revalidation,
+external-installer antivirus scanning, guaranteed privacy detection or a new
+repository-wide license is made.

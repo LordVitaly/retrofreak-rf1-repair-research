@@ -1,0 +1,108 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/stock_boot_restore/verify_completion.py
+Role: completed_stock_return_or_temporary_USB_probe_historical_source
+No binaries or specimen auxiliary headers are included. Do not resume this old hardware session.
+
+"""Offline-only checks of actual stock-return results; never opens USB."""
+from pathlib import Path
+import hashlib
+import json
+import struct
+import sys
+
+BASE = Path(__file__).resolve().parent
+PLAN_SHA = '<HISTORICAL_HASH_REDACTED>'
+MANIFEST_SHA = '<HISTORICAL_HASH_REDACTED>'
+STOCK_SHA = '416c84c67be71e89d63530c1902112ebbe54845aca3e377a79506ce5c90b090d'
+BLOCK = 2097152
+
+def sha(data):
+    return hashlib.sha256(data).hexdigest()
+
+def read_json(path):
+    return json.loads(path.read_text())
+
+def write_new(path, data):
+    with path.open('x', encoding='utf-8') as handle:
+        json.dump(data, handle, indent=2)
+
+def main():
+    assert not sys.flags.optimize
+    assert sys.argv[1:] in (['seal-writes'], ['final'])
+    assert sha((BASE / 'plan.json').read_bytes()) == PLAN_SHA
+    assert sha((BASE / 'writer/manifest.json').read_bytes()) == MANIFEST_SHA
+    plan = read_json(BASE / 'plan.json')
+    manifest = read_json(BASE / 'writer/manifest.json')
+    target = Path(plan['target_boot']['path']).read_bytes()
+    current = Path(plan['current_boot']['path']).read_bytes()
+    assert sha(target) == plan['target_boot']['sha256']
+    assert sha(current) == plan['current_boot']['sha256']
+    assert target[8781824:] == current[8781824:]
+    writes = []
+    for physical in (77, 78, 74):
+        folder = BASE / 'writes' / f'block{physical}'
+        result = read_json(folder / 'result.json')
+        attempt = read_json(folder / 'WRITE_ATTEMPTED_DO_NOT_REPEAT.json')
+        assert result['all_pass'] and result['write_launches'] == 1
+        assert result['manifest_sha256'] == attempt['manifest_sha256'] == MANIFEST_SHA
+        assert result['plan_sha256'] == attempt['plan_sha256'] == PLAN_SHA
+        assert result['physical_block'] == attempt['physical_block'] == physical
+        assert result['maps_unchanged'] and result['both_modes_readback_exact']
+        assert result['immediate_main_and_native_aux_exact'] and result['dry_pass']
+        for kind in ('dry', 'write'):
+            gate = read_json(folder / kind / 'gate_result.json')
+            variant = manifest['variants'][f'{physical}_{kind}']
+            assert gate['actual_status'] == variant['expected_status_u32']
+            assert gate['actual_guard'] == variant['expected_guard_u32']
+        logical = result['logical_block']
+        expected = target[(logical-6)*BLOCK:(logical-5)*BLOCK]
+        for mode in (0, 1):
+            assert (folder / f'reopen_mode{mode}/data.bin').read_bytes() == expected
+            assert result['map_checks'][str(mode)]['map_changes'] == []
+        writes.append({'physical': physical, 'logical': logical,
+                       'result_sha256': sha((folder / 'result.json').read_bytes()),
+                       'verified_main_sha256': sha(expected)})
+    report = dict(all_pass=True, plan_sha256=PLAN_SHA, manifest_sha256=MANIFEST_SHA,
+                  writes=writes, device_access=False)
+    if sys.argv[1] == 'seal-writes':
+        write_new(BASE / 'writes_complete.json', report)
+    else:
+        assert read_json(BASE / 'writes_complete.json')['all_pass']
+        results = read_json(BASE / 'final_read_stock/result.json')
+        assert results['complete'] and not results['nand_writes_enabled']
+        assert len(results['cases']) == 10
+        report['mode_verification'] = []
+        for mode in (0, 1):
+            image = b''.join((BASE / 'final_read_stock' / f'm{mode}_block{block}' / 'data.bin').read_bytes()
+                             for block in range(6, 11))
+            assert len(image) == 5*BLOCK and image == target[:5*BLOCK]
+            assert sha(image[:8781824]) == STOCK_SHA
+            assert image[BLOCK:3*BLOCK] == current[BLOCK:3*BLOCK]
+            assert image[:8] == b'ANDROID!'
+            kernel, ramdisk, second, page = [struct.unpack_from('<I', image, at)[0] for at in (8, 16, 24, 36)]
+            assert page >= 512 and page & (page-1) == 0
+            digest = hashlib.sha1()
+            start = page
+            for size in (kernel, ramdisk, second):
+                assert start+size <= 8781824
+                digest.update(image[start:start+size])
+                digest.update(struct.pack('<I', size))
+                start += (size+page-1)//page*page
+            digest.update(image[32:576])
+            assert digest.digest()+bytes(12) == image[576:608]
+            report['mode_verification'].append(dict(mode=mode, full_read_bytes=len(image),
+                full_read_sha256=sha(image), official_prefix_bytes=8781824,
+                official_prefix_sha256=STOCK_SHA, vendor_id_valid=True,
+                unchanged_middle_blocks_exact=True, preserved_tail_within_read_exact=True))
+        report.update(stock_boot_restored_and_readback_verified=True,
+                      changed_physical_blocks=[77,78,74], native_pages_programmed=768,
+                      native_immediate_main_and_aux_verified=True,
+                      complete_FTL_maps_unchanged_in_both_modes=True,
+                      power_cycle_verification_pending=True,
+                      adapter_host_after_power_cycle_pending=True)
+        write_new(BASE / 'final_stock_verification.json', report)
+    print(json.dumps(report, indent=2))
+
+if __name__ == '__main__':
+    main()

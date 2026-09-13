@@ -1,0 +1,25 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/startup_reloc_slice.ld
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+ENTRY(_start)
+_start = slice_before;
+SECTIONS {
+ . = 0x60000020;
+ .before : { KEEP(*(.before)) }
+ ASSERT(. <= 0x60000100, "Before stub exceeds reserved slot")
+ . = 0x60000100;
+ .after : { KEEP(*(.after)) }
+ ASSERT(. <= 0x600001c0, "After stub exceeds reserved slot")
+ . = 0x600001c0;
+ .helpers : { KEEP(*(.helpers)) }
+ .data : { *(.data*) }
+ .bss (NOLOAD) : { *(.bss*) *(COMMON) }
+ ASSERT(SIZEOF(.data) == 0 && SIZEOF(.bss) == 0, "No implicit data state")
+ ASSERT(. <= 0x600001e0, "Helpers overlap CRC compensation")
+ . = DEFINED(rf_extra_base) ? rf_extra_base : 0x60008000;
+ .extra : { KEEP(*(.extra)) }
+ ASSERT(SIZEOF(.extra) <= 0x600, "Diagnostic helper exceeds bounded replacement slot")
+ /DISCARD/ : { *(.ARM.exidx*) *(.ARM.extab*) *(.comment*) }
+}

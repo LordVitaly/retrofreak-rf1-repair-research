@@ -1,0 +1,34 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/verify_complete_native_dump.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Read-only final verification of32 contiguous chunks and independent backup copies."""
+import hashlib
+import json
+from pathlib import Path
+ROOT=Path(__file__).parent
+SOURCE=ROOT/'nand_native_ecc40'
+BACKUP=Path(r'<HOST_PATH>')
+records=[r for r in map(json.loads,(SOURCE/'manifest.jsonl').read_text().splitlines()) if r['file'].startswith('NAND_')]
+assert len(records)==32, 'Snapshot incomplete'
+total=0
+for index,record in enumerate(records):
+    assert record['file']==f'NAND_{index:02d}.RAW'
+    assert record['sector']==index*0x40000 and record['count']==0x40000
+    assert record['bytes']==138412032
+    for parent in (SOURCE,BACKUP):
+        file=parent/record['file']
+        assert file.stat().st_size==record['bytes']
+        with file.open('rb') as f: assert hashlib.file_digest(f,'sha256').hexdigest()==record['sha256']
+    total+=record['bytes']
+    print('VERIFIED SOURCE+BACKUP',record['file'],flush=True)
+assert total==4429185024
+report=dict(scope='Complete physical RS snapshot with nativeECC40 read configuration; file integrity, not proof of every page ECC success',
+    source=str(SOURCE),backup=str(BACKUP),chunks=32,records=8388608,raw_bytes=total,
+    decoded_main_capacity_bytes=4294967296,source_and_backup_sha256_verified=True,
+    known_read_instability='physical block312/page0 differs by38 main bits between two earlier reads; both preserved',
+    manifest_records=records)
+output=ROOT.parent/'outputs/native_dump_complete_verification.json'
+with output.open('x') as f: json.dump(report,f,indent=2)
+print('COMPLETE',total,'raw bytes',flush=True)

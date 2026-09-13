@@ -1,0 +1,15 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/system_writer_gated.ld
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+ENTRY(system_write_portion)
+SECTIONS {
+ . = 0x61800000;
+ .text : { KEEP(*(.text.system_write_portion)) KEEP(*(.text.gate_*)) KEEP(*(.text.original_*)) *(.text*) *(.rodata*) }
+ .data : { *(.data*) }
+ .bss : { *(.bss*) *(COMMON) }
+ ASSERT(SIZEOF(.text)<=0x1300,"Fits reserved USB-only carrier")
+ ASSERT(SIZEOF(.data)==0 && SIZEOF(.bss)==0,"No hidden mutable state")
+ /DISCARD/ : { *(.ARM.exidx*) *(.ARM.extab*) *(.comment*) }
+}

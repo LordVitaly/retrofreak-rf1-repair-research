@@ -1,0 +1,17 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/live_adb_cold_after_system/unmount_userdata.sh
+Role: historical_device_runner_or_stateful_scenario_review_before_any_use
+Original repair session must not be resumed from this public copy.
+
+#!/sbin/busybox sh
+set -eu
+cd /
+for svc in console ctrl-daemon dbus debuggerd displayd drm installd keystore media netd readahead servicemanager surfaceflinger vold zygote; do
+    /system/bin/setprop ctl.stop "$svc"
+done
+/sbin/busybox sleep 2
+/sbin/busybox umount /data
+if /sbin/busybox grep -q ' /data ' /proc/mounts; then exit 1; fi
+/sbin/busybox cat /proc/mounts
+/sbin/busybox echo RF1_DATA_UNMOUNTED

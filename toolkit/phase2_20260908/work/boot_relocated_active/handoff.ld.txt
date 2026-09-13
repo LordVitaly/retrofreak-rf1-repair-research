@@ -1,0 +1,16 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/boot_relocated_active/handoff.ld
+Role: case_specific_payload_source_not_complete_standalone_firmware
+Original repair session must not be resumed from this public copy.
+
+ENTRY(ftl_bridge_read)
+SECTIONS {
+ . = 0x60007040;
+ .text : { *(.text*) *(.rodata*) }
+ ASSERT(SIZEOF(.text) <= 0x180, "Inside protected format body")
+ .data : { *(.data*) }
+ .bss : { *(.bss*) }
+ ASSERT(SIZEOF(.data) == 0 && SIZEOF(.bss) == 0, "No implicit data")
+ /DISCARD/ : { *(.ARM.exidx*) *(.ARM.extab*) *(.comment*) }
+}

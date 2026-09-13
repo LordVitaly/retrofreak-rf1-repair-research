@@ -1,0 +1,27 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/analyze_idb.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+from pathlib import Path
+import sys,json,struct,hashlib
+OLD=Path('<EXTERNAL_STAGE_03>');HERE=Path(__file__).resolve().parent
+sys.path.insert(0,str(OLD/'work'))
+from audit_ram_loader_container import rc4
+source=(OLD/'work/idb_restore_material_v1/copy6.BOOT_ORDER_MAIN512.NOT_FOR_UPLOAD.bin').read_bytes()
+result=[]
+for block in (1,3,5,6):
+    raw=(HERE/f'known_idb_attempt01/block{block:02d}.raw').read_bytes()
+    m=b''.join(raw[i:i+512] for i in range(0,len(raw),528))
+    h0=rc4(m[:512]);h1=m[512:1024]
+    info=m[244*512:245*512]
+    diffs=[i for i,(a,b) in enumerate(zip(m,source)) if a!=b]
+    row=dict(block=block,first_header_decrypted=h0[:64].hex(),second_header_prefix=h1[:32].hex(),second_header_decrypted_prefix=rc4(h1)[:32].hex(),
+        differences_vs_restored_source=len(diffs),first_differences=diffs[:16],last_differences=diffs[-16:],code_region_differences=sum(i<130048 for i in diffs),
+        header0_exact_source=m[:512]==source[:512],header1_exact_source=h1==source[512:1024],flashinfo_exact_source=info==source[244*512:245*512],
+        flashinfo_magic=hex(struct.unpack_from('<I',info,16)[0]),flashinfo_capacity=struct.unpack_from('<I',info,0x38)[0],
+        flashinfo_pointer_plain=struct.unpack_from('<H',h1,0x60)[0],flashinfo_pointer_rc4=struct.unpack_from('<H',rc4(h1),0x60)[0])
+    result.append(row)
+print(json.dumps(result,indent=2))
+(HERE/'idb_analysis.json').write_text(json.dumps(result,indent=2))

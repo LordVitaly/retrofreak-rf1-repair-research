@@ -1,0 +1,30 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/audit_reconnected_page.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+from pathlib import Path
+import hashlib
+oldroot=Path(r'<HOST_PATH>')
+new=Path(__file__).parent.joinpath('probe_official_page_full.raw').read_bytes()
+old=oldroot.joinpath('probe_page_full.raw').read_bytes()
+boot=Path(r'<HOST_PATH>').read_bytes()[0x4000:0x6000]
+for name,data in [('old',old),('new',new)]:
+    print(name,len(data),hashlib.sha256(data).hexdigest())
+print('changed_bytes',sum(a!=b for a,b in zip(old,new)))
+main=b''.join(new[i:i+512] for i in range(0,len(new),528))
+for step in range(8):
+    runs=[]
+    for pos in range(step*1024,(step+1)*1024-15,4):
+        needle=boot[pos:pos+16]
+        hits=[]; start=0
+        while True:
+            hit=main.find(needle,start)
+            if hit<0: break
+            hits.append(hit); start=hit+1
+        if len(hits)==1:
+            delta=hits[0]-pos
+            if runs and runs[-1][2]==delta and runs[-1][1]==pos-4:
+                runs[-1][1]=pos
+            else: runs.append([pos,pos,delta])
+    print('step',step,'unique_16byte_anchor_runs',runs)

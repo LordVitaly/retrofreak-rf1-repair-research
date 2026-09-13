@@ -1,0 +1,80 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/probe_startup_after_ws_timeout.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""One read-only liveness/RAM check after timeout. No DB, WS, RD or retries."""
+import argparse,hashlib,json,os,struct,subprocess,threading,time
+from pathlib import Path
+from direct_winpty_console import DirectConsole
+from read_device_identity import TOOL
+from console_completion import completed_response
+ROOT=Path(__file__).resolve().parents[1]
+parser=argparse.ArgumentParser();parser.add_argument('--resume-after-pause',action='store_true');parser.add_argument('--nand-entry-timeout',action='store_true');args=parser.parse_args()
+assert 'Android_Console_Tool.exe' not in subprocess.run(['tasklist','/FI','IMAGENAME eq Android_Console_Tool.exe','/FO','CSV','/NH'],capture_output=True,text=True,check=True).stdout
+out=ROOT/('work/startup_nand_entry_timeout_readonly_probe01' if args.nand_entry_timeout else 'work/startup_resume_readonly_probe01' if args.resume_after_pause else 'work/startup_stack_ws_timeout_readonly_probe01');out.mkdir(exist_ok=False)
+env=dict(os.environ);env['__COMPAT_LAYER']='RunAsInvoker'
+proc=DirectConsole.spawn([str(TOOL)],cwd=str(TOOL.parent),env=env,dimensions=(40,160),backend=1)
+chunks=[];done=threading.Event();stream=(out/'transcript.txt').open('x',encoding='utf-8');result={'commands':[]}
+def read():
+    try:
+        while proc.isalive():
+            t=proc.read(4096)
+            if t:chunks.append(t);stream.write(t);stream.flush()
+    except EOFError:pass
+    finally:done.set()
+threading.Thread(target=read,daemon=True).start()
+def wait(token,start=0,command=False):
+    end=time.monotonic()+20
+    while time.monotonic()<end:
+        t=''.join(chunks)
+        if command:
+            v=completed_response(t,start,token)
+            if v is not None:return v
+        elif token in t[start:]:return t[start:]
+        if done.is_set():break
+        time.sleep(.05)
+    raise RuntimeError('Read-only response timeout; no retries')
+def rs(sector,count,path):
+    cmd=f'RS {sector} {count} {path}';result['commands'].append(cmd)
+    start=len(''.join(chunks));proc.write(cmd+'\r\n');wait('Read Sector to file (100%)',start,True)
+try:
+    intro=wait('Select input');assert 'Found 1 rockusb' in intro and 'DevNo=1' in intro
+    if args.resume_after_pause and 'Maskrom' in intro:
+        result['mode']='Maskrom';result['RAM_bridge_present']=False
+        print(json.dumps(result,indent=2),flush=True)
+        raise SystemExit(0)
+    start=len(''.join(chunks));proc.write('1\r\n');wait('Rockusb>',start)
+    marker=out/'marker.raw';rs('0x7effff','0x1',marker)
+    assert marker.read_bytes()==b'RF1CKP02'+struct.pack('<IIII',110080,<REDACTED:ARTIFACT_CRC>,1,0x60000004)+bytes(504)
+    result['marker_exact']=True
+    snapshot=out/'stage.raw';rs('0x7f0000','0xd1',snapshot)
+    data=snapshot.read_bytes();assert len(data)==110352
+    if args.nand_entry_timeout:
+        old=(ROOT/'work/startup_nand_entry_hardware_attempt01/previous_stage.raw').read_bytes()
+        raw=(ROOT/'work/startup_slices_v15_nand_entry/moved_helper_control.raw').read_bytes()
+        assert hashlib.sha256(old).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+        assert hashlib.sha256(raw).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+        matches=[n for n in (0,8192,16384) if data==raw[:n]+old[n:]]
+        result.update(stage_sha256=hashlib.sha256(data).hexdigest(),exact_prefix_matches=matches,RAM_readback_complete=True)
+        assert matches,'RAM does not match either submitted prefix; no resume'
+        print(json.dumps(result,indent=2),flush=True);raise SystemExit(0)
+    if args.resume_after_pause:
+        result.update(mode='Existing bridge',stage_sha256=hashlib.sha256(data).hexdigest())
+        result['previous_end_of_day_exact']=result['stage_sha256']=='<REDACTED:HASH_OR_BYTES>'
+        assert result['previous_end_of_day_exact'],'Unexpected RAM state'
+        print(json.dumps(result,indent=2),flush=True)
+        raise SystemExit(0)
+    raw=(ROOT/'work/startup_slices_v4/at_low_entry.raw').read_bytes()
+    result.update(stage_sha256=hashlib.sha256(data).hexdigest(),
+        first_12_chunks_exact=data[:12*8192]==raw[:12*8192],
+        chunk_12_exact=data[12*8192:13*8192]==raw[12*8192:13*8192],
+        full_payload_exact=data==raw)
+    print(json.dumps(result,indent=2),flush=True)
+except SystemExit:raise
+except BaseException as e:result['error']=repr(e);raise
+finally:
+    if proc.isalive():proc.terminate(force=True)
+    done.wait(2)
+    if done.is_set():stream.close()
+    with (out/'result.json').open('x',encoding='utf-8') as f:json.dump(result,f,indent=2)

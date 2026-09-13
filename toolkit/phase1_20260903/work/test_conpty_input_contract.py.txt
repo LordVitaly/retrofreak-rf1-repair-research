@@ -1,0 +1,25 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_conpty_input_contract.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Host-only: observe native backend return value AND exact delivered input."""
+import sys,time
+from pathlib import Path
+from direct_winpty_console import DirectConsole
+if '--child' in sys.argv:
+    print('READY',flush=True)
+    value=input()
+    print('ACCEPTED:'+value,flush=True)
+    input()
+else:
+    p=DirectConsole.spawn([sys.executable,'-u',str(Path(__file__).resolve()),'--child'],backend=0)
+    try:
+        out='';end=time.monotonic()+5
+        while 'READY' not in out and time.monotonic()<end:out+=p.read()
+        assert 'READY' in out
+        n=p.write('RF1_HOST_ONLY_TEST\r\n');out='';end=time.monotonic()+5
+        while 'ACCEPTED:RF1_HOST_ONLY_TEST' not in out and time.monotonic()<end:out+=p.read()
+        print('write_return',n,'output',repr(out),flush=True)
+        assert 'ACCEPTED:RF1_HOST_ONLY_TEST' in out
+    finally:p.terminate()

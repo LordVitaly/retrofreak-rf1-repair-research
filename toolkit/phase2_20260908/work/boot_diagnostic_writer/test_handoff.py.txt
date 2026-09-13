@@ -1,0 +1,44 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/boot_diagnostic_writer/test_handoff.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Execute only actual install/return helper, replacing the core call by a hook."""
+import json,struct,sys
+from pathlib import Path
+OUT=Path(__file__).resolve().parent
+sys.path.insert(0,'<EXTERNAL_STAGE_03>/work/emulator_deps')
+from unicorn import Uc,UC_ARCH_ARM,UC_MODE_ARM,UC_HOOK_CODE
+from unicorn.arm_const import UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3,UC_ARM_REG_R4,UC_ARM_REG_SP,UC_ARM_REG_LR,UC_ARM_REG_PC
+M=json.loads((OUT/'manifest.json').read_text());results=[]
+for key,spec in M['variants'].items():
+ block=int(key.split('_')[0]);variant=key.split('_')[1]
+ raw=Path(spec['payload']).read_bytes();core=(OUT/f'block{block}/{variant}.core.bin').read_bytes()
+ elf=(OUT/f'block{block}/{variant}.elf').read_bytes()
+ assert struct.unpack_from('<I',elf,0x18)[0]==int(spec['symbols']['system_write_portion'],16)==0x61800000
+ assert 0x2800+len(core)<=0x3b00
+ u=Uc(UC_ARCH_ARM,UC_MODE_ARM)
+ for p,n in ((0x60000000,0x20000),(0x61800000,0x2000),(0x61700000,0x5000),(0x60200000,0x600000),(0x6101a000,0x3000),(0x63000000,0x200000)):u.mem_map(p,n)
+ u.mem_write(0x60000000,raw);u.mem_write(0x61700000,b'X'*32)
+ u.reg_write(UC_ARM_REG_SP,0x603df000);u.reg_write(UC_ARM_REG_LR,0x607ffffc)
+ u.emu_start(0x60000004,0x60000020,count=50000)
+ assert u.reg_read(UC_ARM_REG_PC)==0x60000020
+ assert bytes(u.mem_read(0x61800000,len(core)))==core and bytes(u.mem_read(0x61700000,32))==bytes(32)
+ assert u.reg_read(UC_ARM_REG_SP)==0x603df000
+ state=struct.pack('<8I',0,0,0x31504752,spec['lba'],spec['lba']+4096,17,16,1)
+ bitmap=bytes(range(256));journal=bytes((i*13+7)&255 for i in range(8192));mapping=bytes((i*17+9)&255 for i in range(3792))
+ calls=[]
+ def callback(uc,pc,size,ctx):
+  args=[uc.reg_read(r) for r in (UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3)]
+  assert args==[0,spec['lba'],4096,0x63000000] and uc.reg_read(UC_ARM_REG_SP)==0x603deff8
+  calls.append(args);uc.mem_write(0x61700000,state);uc.mem_write(0x61700100,bitmap);uc.mem_write(0x61702000,journal);uc.mem_write(0x602b3f00,mapping)
+  uc.reg_write(UC_ARM_REG_R0,0x76543210);uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR))
+ u.hook_add(UC_HOOK_CODE,callback,begin=0x61800000,end=0x61800000)
+ u.reg_write(UC_ARM_REG_R4,0x1234abcd);u.reg_write(UC_ARM_REG_LR,0x607ffffc)
+ u.emu_start(int(spec['handoff_symbols']['writer_after'],16),0x60000100,count=100000)
+ assert u.reg_read(UC_ARM_REG_PC)==0x60000100 and u.reg_read(UC_ARM_REG_SP)==0x603df000 and u.reg_read(UC_ARM_REG_R4)==0x1234abcd and len(calls)==1
+ for address,data in ((0x63000000,state),(0x63000100,bitmap),(0x63001000,journal),(0x63003000,mapping),(0x6101af2c,struct.pack('<I',0x76543210))):assert bytes(u.mem_read(address,len(data)))==data
+ results.append(dict(variant=key,elf_entry_and_first_core_function=True,carrier_fits=True,before_install_exact=True,fixed_core_arguments=True,export_all_four_regions_exact=True,return_status_word_exact=True,registers_stack_return_preserved=True))
+report=dict(all_pass=True,device_access=False,actual_ARM_helper=True,variants=results)
+(OUT/'handoff_proof.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report,indent=2))

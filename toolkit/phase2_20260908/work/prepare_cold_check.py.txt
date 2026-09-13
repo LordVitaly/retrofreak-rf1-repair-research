@@ -1,0 +1,29 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/prepare_cold_check.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+from pathlib import Path
+import sys, hashlib
+
+OLD = Path('<EXTERNAL_STAGE_03>')
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(OLD/'work'))
+sys.path.insert(0, str(OLD/'work/emulator_deps'))
+# Reconstruct the reader and rerun its ARM denial checks offline, without
+# executing the builder's file-writing tail or any USB code.
+build = (OLD/'work/build_bbt_ecc40_readonly.py').read_text()
+build = build.split("out=ROOT/'work/bbt_ecc40_readonly_v1'")[0]
+scope = {'__file__': str(OLD/'work/build_bbt_ecc40_readonly.py')}
+exec(compile(build, 'audited_reader_reconstruction', 'exec'), scope)
+assert bytes(scope['container']) == (OLD/'work/bbt_ecc40_readonly_v1/reader.bin').read_bytes()
+print('Offline reader reconstruction and eight ARM write-denial checks PASS')
+source = (OLD/'work/read_bbt_physical_ecc40.py').read_text()
+source = source.replace('from ram_console_session import RamConsole',
+    'sys.path.insert(0, '+repr(str(OLD/'work'))+')\nfrom ram_console_session import RamConsole')
+source = source.replace('ROOT=Path(__file__).resolve().parents[1]', 'ROOT=Path('+repr(str(OLD))+')')
+source = source.replace("out=ROOT/'work/bbt_physical_ecc40_attempt01'", "out=Path("+repr(str(HERE/'bbt_cold_attempt01'))+")")
+with (HERE/'read_bbt_cold.py').open('x') as f:
+    f.write(source)
+print('Saved bounded cold-read script; no device access yet')

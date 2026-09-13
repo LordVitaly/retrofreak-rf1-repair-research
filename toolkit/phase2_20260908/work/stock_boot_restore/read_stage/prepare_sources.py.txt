@@ -1,0 +1,78 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/stock_boot_restore/read_stage/prepare_sources.py
+Role: completed_stock_return_or_temporary_USB_probe_historical_source
+No binaries or specimen auxiliary headers are included. Do not resume this old hardware session.
+
+"""Offline creation of this new read-stage host set; never imports/runs runners."""
+from pathlib import Path
+import ast
+import hashlib
+import json
+
+BASE=Path(__file__).resolve().parent
+WORK=BASE.parents[1]
+sha=lambda b:hashlib.sha256(b).hexdigest()
+edits=[]
+
+def change(text, old, new, role):
+    assert text.count(old)==1,(role,text.count(old))
+    edits.append(role)
+    return text.replace(old,new)
+
+origin=WORK/'bootstrap_boot_header.py'
+text=origin.read_text()
+edits=[]
+text=change(text,"HERE=Path(__file__).resolve().parent", "HERE=Path(__file__).resolve().parents[2];BASE=Path(__file__).resolve().parent",'Use work for unchanged inputs and read_stage for new outputs')
+text=change(text,"out=HERE/'boot_header_original_attempt01'", "out=BASE/'originals'",'Isolate bootstrap output')
+text=change(text,"    result['complete']=True", "    assert len(result['cases'])==2 and result['cases'][0]['physical_blocks']==2048\n    assert result['cases'][1]['result_word']==0\n    assert result['cases'][1]['trace']['ftl_header_u16'][7:10]==[2048,1896,1896]\n    result['complete']=True\n    result['all_pass']=True",'Require original capacity, BBT success and both logical counts before success')
+entries=[]
+def write(name, content, source, roles):
+    ast.parse(content)
+    path=BASE/name
+    assert not path.exists(),name
+    path.write_text(content,encoding='utf-8')
+    entries.append(dict(path=name,source=str(source.relative_to(WORK)),source_sha256=sha(source.read_bytes()),sha256=sha(path.read_bytes()),allowed_edits=roles))
+write('01_bootstrap.py',text,origin,edits[:])
+
+origin=WORK/'install_boot_header_window.py';text=origin.read_text();edits=[]
+text=change(text,"HERE=Path(__file__).resolve().parent", "HERE=Path(__file__).resolve().parents[2];BASE=Path(__file__).resolve().parent",'Use work inputs and isolated output base')
+text=change(text,"prior=HERE/'boot_header_original_attempt01'", "prior=BASE/'originals'",'Consume only this new bootstrap session')
+text=change(text,"assert json.loads((prior/'result.json').read_text())['complete']", "assert json.loads((prior/'result.json').read_text())['all_pass']\nassert json.loads((prior/'capacity_result.json').read_text())['physical_blocks']==2048\nassert json.loads((prior/'bbt_result.json').read_text())['trace']['ftl_header_u16'][7:10]==[2048,1896,1896]",'Require successful original-capacity BBT diagnostics')
+text=change(text,"out=HERE/'boot_header_window_attempt01'", "out=BASE/'window'",'Isolate window outputs')
+text=change(text,"statefile=HERE/'white_screen_read_state.json'", "statefile=BASE/'ram_read_state.json'",'Use private new session state')
+text=change(text,"last_case='boot_header_fresh_window',batch='boot_header_window'", "last_case='stock_boot_restore_fresh_window',batch='stock_boot_restore_window'",'Name current new session')
+write('02_install_window.py',text,origin,edits[:])
+
+origin=WORK/'run_boot_visibility_compare.py';text=origin.read_text();edits=[]
+text=change(text,"HERE=Path(__file__).resolve().parent", "HERE=Path(__file__).resolve().parents[2]\nBASE=Path(__file__).resolve().parent",'Use work inputs and isolated output base')
+text=change(text,"initial=HERE/'boot_visibility_window_attempt01'", "initial=BASE/'window'",'Consume only new window session')
+text=change(text,"manifest=json.loads((HERE/'boot_map_compare/manifest.json').read_text());assert manifest['all_pass']", "manifest_bytes=(HERE/'boot_map_compare/manifest.json').read_bytes()\nassert sha(manifest_bytes)=='<HISTORICAL_HASH_REDACTED>'\nmanifest=json.loads(manifest_bytes);assert manifest['all_pass']\ncurrent=(HERE/'stock_boot_restore/fresh_boot_linux.img').read_bytes()\nstock=(HERE/'stock_boot_restore/stock_with_fresh_tail.img').read_bytes()\nassert len(current)==len(stock)==16777216\nassert sha(current)=='<HISTORICAL_HASH_REDACTED>'\nassert sha(current[:8781824])=='3e9556dc6195a7d6616685f9d58a439c23fe55dbe760ba9254f4d233ba79df0f'\nassert sha(stock)=='<HISTORICAL_HASH_REDACTED>'\nassert sha(stock[:8781824])=='416c84c67be71e89d63530c1902112ebbe54845aca3e377a79506ce5c90b090d'\nassert current[8781824:]==stock[8781824:]\nassert current[:8]==stock[:8]==b'ANDROID!'",'Pin existing map payload manifest and fresh Linux/stock-with-preserved-tail inputs before device access')
+text=change(text,"out=HERE/'boot_visibility_compare_attempt01'", "out=BASE/'maps'",'Isolate map/header captures')
+text=change(text,"statefile=HERE/'white_screen_read_state.json';result=dict(all_pass=False,nand_writes_enabled=False,cases=[]);c=None", "statefile=BASE/'ram_read_state.json'\nstate=json.loads(statefile.read_text());assert state['valid']\nassert Path(state['ram_path']).resolve()==(initial/'final_stage.raw').resolve()\nassert state['ram_sha256']==sha(previous)\nresult=dict(all_pass=False,nand_writes_enabled=False,current_boot_sha256=sha(current),stock_boot_sha256=sha(stock),cases=[]);c=None",'Use and authenticate isolated new session state')
+old="""            original=(HERE/'boot_current_backup/boot_exact_current.img').read_bytes()[:8192]
+            diagnostic=(HERE/'adb_boot_diagnostic/boot_early_adb.DIAGNOSTIC_CANDIDATE.img').read_bytes()[:8192]
+            case.update(matches_original=bytes(data)==original,matches_diagnostic=bytes(data)==diagnostic,magic=bytes(data[:8]).decode(errors='replace'),ramdisk_size=struct.unpack_from('<I',data,16)[0])"""
+new="""            case.update(matches_current=bytes(data)==current[:8192],matches_stock=bytes(data)==stock[:8192],magic=bytes(data[:8]).decode(errors='replace'),ramdisk_size=struct.unpack_from('<I',data,16)[0])
+            assert case['matches_current'],('Fresh mode header differs from verified current Linux boot',name)"""
+text=change(text,old,new,'Require both mode headers equal the fresh current Linux header; stock comparison is informational')
+text=change(text,"mapping=list(struct.unpack_from('<1896H',data,0xf00));case.update", "mapping=list(struct.unpack_from('<1896H',data,0xf00));assert all(0<=value<2048 for value in mapping);assert all(mapping[n]>0 for n in (6,7,8,9,10));case.update",'Check complete map range and populated boot entries before accepting')
+text=change(text,"batch='boot_visibility_compare'", "batch='stock_boot_restore_maps'",'Name new map session')
+text=change(text,"    result['all_pass']=True", "    headers=[case for case in result['cases'] if case['name'].startswith('boot_header')]\n    assert len(headers)==2 and {case['mode'] for case in headers}=={0,1}\n    assert all(case['matches_current'] for case in headers)\n    result['both_mode_headers_match_current']=True\n    result['all_pass']=True",'Do not mark whole read stage complete unless both current headers match')
+write('03_capture_maps.py',text,origin,edits[:])
+
+for entry in entries:
+    content=(BASE/entry['path']).read_text()
+    assert 'white_screen_read_state.json' not in content
+    assert 'boot_header_original_attempt01' not in content
+    assert 'boot_header_window_attempt01' not in content
+    assert 'boot_visibility_compare_attempt01' not in content
+    assert 'HERE=Path(__file__).resolve().parents[2]' in content
+report={'preparation_only':True,'device_access':False,'runners_imported_or_executed':False,'syntax_checks_pass':True,
+        'preserved_original_files':True,'private_output_root':'stock_boot_restore/read_stage',
+        'private_state':'stock_boot_restore/read_stage/ram_read_state.json',
+        'files':entries,'existing_inputs_unchanged':True,
+        'execution_order':['01_bootstrap.py --fresh-maskrom-confirmed','02_install_window.py --same-original-bbt-pass-session','03_capture_maps.py --fresh-window-installed'],
+        'next_gate':'Both mode headers exact to current Linux boot, then use fresh maps to choose native physical backup targets. No writer included.'}
+(BASE/'preparation_report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
+print(json.dumps({'preparation_only':True,'syntax_checks_pass':True,'files':[e['path'] for e in entries]}))

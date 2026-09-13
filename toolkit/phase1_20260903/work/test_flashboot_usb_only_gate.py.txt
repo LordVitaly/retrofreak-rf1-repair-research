@@ -1,0 +1,64 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_flashboot_usb_only_gate.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Patch and execute main's post-init control flow only. Subcalls are stubs."""
+import hashlib
+import itertools
+import json
+import struct
+from emulate_flashboot_offline import ROOT,Uc,UC_ARCH_ARM,UC_MODE_ARM,address
+from unicorn import UC_HOOK_CODE
+from unicorn.arm_const import UC_ARM_REG_R0,UC_ARM_REG_R4,UC_ARM_REG_R5,UC_ARM_REG_R6,UC_ARM_REG_R7,UC_ARM_REG_R8,UC_ARM_REG_R9,UC_ARM_REG_R10,UC_ARM_REG_SP,UC_ARM_REG_LR,UC_ARM_REG_PC
+
+source=(ROOT/'work/FlashBoot.machine_guards.UNPACKAGED_NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(source).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+site,target=0x18bf8,0x18d04
+assert source[site:site+4]==bytes.fromhex('080094e5')
+patched=bytearray(source)
+patched[site:site+4]=struct.pack('<I',0xea000000|(((target-site-8)//4)&0xffffff))
+assert patched[site:site+4]==bytes.fromhex('410000ea')
+assert all(site<=i<site+4 for i,(a,b) in enumerate(zip(source,patched)) if a!=b)
+assert all(patched[o:o+4]==bytes.fromhex('feffffea') for o in (0x3b0c,0xba10,0xbc1c,0xbd5c,0x7038))
+
+def run(binary,first,second,bootflag,mode,force_usb):
+    u=Uc(UC_ARCH_ARM,UC_MODE_ARM)
+    u.mem_map(0,0x1000) # observe low-vector branch in the unpatched control
+    u.mem_map(0x60080000,0x20000)
+    u.mem_write(0x60080000,bytes(binary[0xa34:]))
+    u.mem_map(0x60200000,0x600000)
+    # Recreate the scalar state immediately before parameter parsing.
+    for reg,val in [(UC_ARM_REG_R4,0x6009a1f8),(UC_ARM_REG_R5,1),(UC_ARM_REG_R6,0),(UC_ARM_REG_R7,mode),(UC_ARM_REG_R8,0x60700800),(UC_ARM_REG_R9,0x6009a580),(UC_ARM_REG_R10,0x6009a1a4),(UC_ARM_REG_SP,0x60700000)]: u.reg_write(reg,val)
+    u.mem_write(0x6009a200,struct.pack('<I',bootflag))
+    u.mem_write(0x6009a208,struct.pack('<I',0))
+    calls=[]; visited=[]; stop=[]
+    stubs={0x161c0:first,0x16228:second,0x162c4:0,0x163ec:0,0x193e4:0,0x18e7c:0,0xd30:0,0x18e94:0,0x19486:0,0x1830:1,0xb18:0,0x168cc:0}
+    forbidden={0x174e4,0x183c0}
+    def hook(uc,pc,size,ctx):
+        off=pc-0x60080000+0xa34
+        if off==0x18d18:
+            stop.append('usb_init'); uc.emu_stop(); return
+        if off in forbidden or pc==0x4d8:
+            stop.append('system_path'); uc.emu_stop(); return
+        if off in stubs:
+            calls.append(hex(off)); uc.reg_write(UC_ARM_REG_R0,stubs[off]); uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR)); return
+        if (0x18b58<=off<=0x18d18) or (0x18788<=off<=0x187b0):
+            visited.append(off); return
+        raise AssertionError(('unexpected code',hex(pc),hex(off)))
+    u.hook_add(UC_HOOK_CODE,hook)
+    u.emu_start(address(0x18b58),0,count=10000)
+    assert stop,('no terminal',first,second,bootflag,mode)
+    if force_usb:
+        assert stop==['usb_init']
+        assert not any(0x18c60<=o<=0x18d00 for o in visited)
+    return dict(parameter_result=first,backup_result=second,bootflag=bootflag,mode=mode,stop=stop[0],calls=calls,patched_branch_reached=site in visited)
+
+cases=[run(patched,a,b,c,d,True) for a,b,c,d in itertools.product((0,1),repeat=4)]
+control=run(source,0,0,0,0,False)
+assert control['stop']=='system_path'
+name='FlashBoot.machine_guards_usb_only.UNPACKAGED_NOT_FOR_UPLOAD.bin'
+(ROOT/'work'/name).write_bytes(patched)
+report=dict(candidate=name,sha256=hashlib.sha256(patched).hexdigest(),patch=dict(offset=hex(site),before=source[site:site+4].hex(),after=patched[site:site+4].hex(),target=hex(target)),cases=cases,unpatched_control=control,device_access=False,limitation='Only main from 18B58 to USB-init call, with explicit subcall return stubs. Does NOT prove earlier initialization, parameter writes, USB dependencies, NAND guard coverage or actual USB startup.')
+(ROOT/'outputs/flashboot_usb_only_control_flow.json').write_text(json.dumps(report,indent=2)+'\n')
+print('PASS 16 patched cases and unpatched system-path control',report['sha256'])

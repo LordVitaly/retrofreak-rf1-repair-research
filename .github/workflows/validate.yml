@@ -1,0 +1,27 @@
+name: Validate research archive
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.11'
+      - name: Check files, indexes, links and publication boundaries
+        run: python -B scripts/check_repository.py
+      - name: Run synthetic tests only
+        run: python -B -m unittest discover -s tests -v
+      - name: Verify release checksums
+        run: python -B scripts/verify_manifest.py

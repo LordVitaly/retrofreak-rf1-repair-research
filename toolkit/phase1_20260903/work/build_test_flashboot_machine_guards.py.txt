@@ -1,0 +1,82 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_test_flashboot_machine_guards.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Build UNPACKAGED diagnostic bytes and test machine-code self-loop guards.
+
+Not a USB loader container. No device access. Coverage is the five audited
+function entries, not a proof that all possible hardware write paths are covered.
+"""
+import hashlib
+import json
+import struct
+from emulate_flashboot_remap import RemapReplay
+from emulate_flashboot_offline import ROOT,FLASH,REGS,address,UC_ARM_REG_PC
+
+ENTRIES=(0x3b0c,0xba10,0xbc1c,0xbd5c,0x7038)
+SELF_BRANCH=bytes.fromhex('feffffea')
+original=(ROOT/'work/FlashBoot.packet512.STATIC_ONLY.bin').read_bytes()
+assert hashlib.sha256(original).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+candidate=bytearray(original)
+patches=[]
+for offset in ENTRIES:
+    patches.append(dict(file_offset=hex(offset),runtime_address=hex(address(offset)),
+                        before=original[offset:offset+4].hex(),after=SELF_BRANCH.hex()))
+    candidate[offset:offset+4]=SELF_BRANCH
+assert all(i in {o+j for o in ENTRIES for j in range(4)} for i,(a,b) in enumerate(zip(original,candidate)) if a!=b)
+
+class MachineGuardReplay(RemapReplay):
+    def __init__(self,record):
+        super().__init__(record)
+        self.write_entries.clear() # Disable prior Python entry interception.
+        self.visits={address(o):0 for o in ENTRIES}
+        self.uc.mem_write(0x60080000,bytes(candidate[0xa34:]))
+    def code_hook(self,uc,pc,size,unused):
+        if pc in self.visits:
+            self.visits[pc]+=1
+            # Observe only AFTER seven executions of the actual branch opcode.
+            if self.visits[pc]==8:
+                self.stopped=dict(reason='machine_self_loop_observed',pc=hex(pc),visits=8,args=[uc.reg_read(r) for r in REGS])
+                uc.emu_stop()
+        super().code_hook(uc,pc,size,unused)
+
+def main():
+    record=(ROOT/'work/idb_ecc24_parameter_attempt2/block05_page15.raw').read_bytes()[:512]
+    tests=[]
+    for offset in ENTRIES:
+        emu=MachineGuardReplay(record)
+        try:emu.call(offset,instruction_limit=100)
+        except RuntimeError:
+            assert emu.stopped and emu.stopped['reason']=='machine_self_loop_observed'
+            assert emu.uc.reg_read(UC_ARM_REG_PC)==address(offset)
+            tests.append(dict(entry=hex(offset),stop=emu.stopped))
+        else:raise AssertionError('Guard returned instead of halting')
+    emu=MachineGuardReplay(record)
+    assert emu.call(0xa158,0x50f4)==0
+    emu.uc.mem_write(FLASH+0xa0,struct.pack('<H',12))
+    emu.call(0x74e0);emu.dump_mode=True
+    assert emu.call(0x6a24)==0
+    assert emu.call(0x6050,1,instruction_limit=10_000_000,timeout_us=30_000_000)==0
+    for reg,value in zip(REGS[1:],(6*4096,16,0x60600000)):emu.uc.reg_write(reg,value)
+    assert emu.call(0x50d4,0)==0
+    with (ROOT/'outputs/boot.from_nand.verified.img').open('rb') as f:expected=f.read(8192)
+    assert bytes(emu.uc.mem_read(0x60600000,8192))==expected
+    for reg,value in zip(REGS[1:],(188*4096,1,0x60600000)):emu.uc.reg_write(reg,value)
+    try:emu.call(0x50d4,0)
+    except RuntimeError:
+        assert emu.stopped and emu.stopped['reason']=='machine_self_loop_observed'
+        assert emu.stopped['pc']==hex(address(0x3b0c))
+    else:raise AssertionError('Missing mapping did not halt')
+    name='FlashBoot.machine_guards.UNPACKAGED_NOT_FOR_UPLOAD.bin'
+    with (ROOT/'work'/name).open('xb') as f:f.write(candidate)
+    report=dict(scope='Machine guard tests on host only; unproven hardware coverage, no upload',
+                candidate=name,candidate_sha256=hashlib.sha256(candidate).hexdigest(),patches=patches,
+                direct_entry_tests=tests,full_map_replay_pass=True,boot_control_exact=True,
+                missing_map_read_stop=emu.stopped,python_write_entry_interception_disabled=True,
+                hardware_consequence='A hit loops forever: device would stop responding, not return false success. Physical reset may be required.',
+                remaining=['All hardware write paths coverage','USB container/transfer format','BootROM startup compatibility','Hardware validation'])
+    with (ROOT/'outputs/flashboot_machine_guards_test.json').open('x') as f:json.dump(report,f,indent=2)
+    print(json.dumps(report,indent=2))
+
+if __name__=='__main__':main()

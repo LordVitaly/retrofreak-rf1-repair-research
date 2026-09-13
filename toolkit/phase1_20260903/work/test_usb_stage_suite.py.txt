@@ -1,0 +1,58 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_usb_stage_suite.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Exact restart memory/branch proof; no USB or NAND hardware emulation."""
+import hashlib,json,struct
+import startup_slice_test_harness as h
+from unicorn import UC_HOOK_CODE
+from startup_l2_fixture import L2Contract
+from unicorn.arm_const import *
+build=json.loads((h.ROOT/'outputs/usb_stage_suite_v2_build.json').read_text());results=[]
+for case in build['cases']:
+    raw=(h.ROOT/case['file']).read_bytes();assert hashlib.sha256(raw).hexdigest()==case['sha256']
+    u=h.machine();u.mem_map(0,0x1000);u.mem_map(0x61300000,0x1000);u.mem_map(0x10180000,0x1000)
+    original=bytes(u.mem_read(0x60000000,110268));addon=bytes(u.mem_read(0x60800000,3184));vectors=bytes([0x73])*0x724
+    u.mem_write(0,vectors);u.mem_write(0x61200000,original);u.mem_write(0x60000000,raw)
+    u.emu_start(0x60000020,0x6000020c,count=10000)
+    assert bytes(u.mem_read(0x61300000,0x724))==vectors
+    u.mem_write(0,bytes([0x91])*0x724);u.mem_write(0x60080000,raw[0xa34:110080]);u.mem_write(0x61000000,raw)
+    u.mem_write(0x10180014,struct.pack('<II',0x1000,0x80000))
+    delay_calls=[]
+    def delay(uc,pc,size,ctx):
+        assert uc.reg_read(UC_ARM_REG_R0)==200000
+        assert struct.unpack('<I',uc.mem_read(0x10180804,4))[0]==2
+        delay_calls.append(pc);uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR))
+    u.hook_add(UC_HOOK_CODE,delay,begin=0x60080440,end=0x60080440)
+    l2=L2Contract(u);l2.regs[0x100]=1;l2.regs[0x104]=0x76050001
+    u.mem_write(0x60040000,struct.pack('<4096I',*[i<<20|0xc0a for i in range(4096)]))
+    for reg,val in (((15,0,0,2,0,0,0),0x60040000),((15,0,0,3,0,0,0),0x55555555),((15,0,0,1,0,0,0),0xc5107d),((15,0,0,0,0,2,0),1)):
+        u.reg_write(UC_ARM_REG_CP_REG,(*reg,val))
+    u.reg_write(UC_ARM_REG_CPSR,0xd3);u.reg_write(UC_ARM_REG_SP,0x603d3a3c)
+    u.reg_write(UC_ARM_REG_CPSR,0xd2 if 'irq' in case['name'] or 'return' in case['name'] else 0x53)
+    h.SP=0x603d2f00 if u.reg_read(UC_ARM_REG_CPSR)&0x1f==0x12 else 0x603d3a3c
+    try:rc,writes=h.call(u,0x61007040,ranges=((0,0x724),(0x60000000,0x6001b000),(0x603d2000,0x603d5000),(0x6101ae00,0x6101ae14),(0x10138000,0x10139000),(0x10180804,0x10180808)),stop=0x60000000,budget=1000000)
+    except Exception:
+        print('STOP',case['name'],hex(u.reg_read(UC_ARM_REG_PC)),hex(u.reg_read(UC_ARM_REG_CPSR)),hex(u.reg_read(UC_ARM_REG_SP)),flush=True);raise
+    expected=bytearray(original);expected[0xe000:0xe000+3184]=addon
+    assert bytes(u.mem_read(0x60000000,len(expected)))==bytes(expected)
+    assert bytes(u.mem_read(0,0x724))==vectors and bytes(u.mem_read(0x60800000,3184))==addon
+    assert bytes(u.mem_read(0x61000000,110080))==raw[:110080]
+    assert struct.unpack('<5I',u.mem_read(0x6101ae00,20))==(0x55534652,int(case['cut'],16),1,0x1000,0x80000)
+    assert not u.reg_read(UC_ARM_REG_CP_REG,(15,0,0,1,0,0,0))&0x1005 and l2.regs[0x100]==0
+    assert delay_calls==[0x60080440]
+    for addr in (0x10102000,0x20008000):u.mem_map(addr,0x1000)
+    u.mem_write(0x101027fc,struct.pack('<I',0x56313031))
+    # Existing USBplug entry/preinit/vector-copy/stack setup only. Its peripheral
+    # startup is already hardware-proven on cold DB, warm restart needs control.
+    u.ctl_remove_cache(0x60000000,0x6001b000)
+    u.emu_start(0x60000000,0x6000c584,count=100000)
+    assert u.reg_read(UC_ARM_REG_PC)==0x6000c584,(hex(u.reg_read(UC_ARM_REG_PC)),hex(u.reg_read(UC_ARM_REG_R0)),hex(u.reg_read(UC_ARM_REG_R1)),hex(u.reg_read(UC_ARM_REG_R2)))
+    assert bytes(u.mem_read(0x60800000,3184))==addon
+    assert bytes(u.mem_read(0x61000000,110080))==raw[:110080]
+    assert struct.unpack('<5I',u.mem_read(0x6101ae00,20))[0]==0x55534652
+    results.append(dict(name=case['name'],sha256=case['sha256'],pass_test=True,original_bridge_restored=True,addon_restored=True,record_survives_preinit=True))
+result=dict(all_pass=True,cases=results,limitations=['No full startup/peripheral emulation; stage code is original guarded FlashBoot','Warm USBplug restart must first pass hardware control; otherwise stop suite','Original read-only guards and opcode allowlist remain byte-exact'])
+with (h.ROOT/'outputs/usb_stage_suite_v2_offline.json').open('x') as f:json.dump(result,f,indent=2)
+print(json.dumps(result,indent=2))

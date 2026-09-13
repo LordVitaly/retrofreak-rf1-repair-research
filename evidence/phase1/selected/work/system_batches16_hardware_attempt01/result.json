@@ -1,0 +1,204 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/system_batches16_hardware_attempt01/result.json",
+  "interpretation": "Host stopped at read completion after writing; not authorization to repeat the write.",
+  "data": {
+    "all_pass": false,
+    "authorization": "Remaining system in 16MiB batches after full-range check, two readbacks/reopen per batch, first error STOP",
+    "batch_mib": 16,
+    "batches": [
+      [
+        186,
+        187,
+        190,
+        191,
+        192,
+        193,
+        194,
+        195
+      ],
+      [
+        196,
+        197,
+        198,
+        199,
+        200,
+        201,
+        202,
+        203
+      ],
+      [
+        204,
+        205,
+        206,
+        207,
+        208,
+        209,
+        210,
+        211
+      ],
+      [
+        212,
+        213,
+        214,
+        215,
+        216,
+        217,
+        218,
+        219
+      ],
+      [
+        220,
+        221,
+        222,
+        223,
+        224,
+        225,
+        226,
+        227
+      ],
+      [
+        228,
+        229,
+        230,
+        231,
+        232,
+        233,
+        234,
+        235
+      ],
+      [
+        236,
+        237,
+        238,
+        239,
+        240,
+        241,
+        242,
+        243
+      ],
+      [
+        244,
+        245,
+        246,
+        247,
+        248,
+        249,
+        250,
+        251
+      ],
+      [
+        252,
+        253,
+        254,
+        255,
+        256,
+        257,
+        258,
+        259
+      ]
+    ],
+    "range_binding_pass": true,
+    "already_written": [
+      188,
+      189
+    ],
+    "write_attempts": [
+      186,
+      187,
+      190,
+      191,
+      192,
+      193,
+      194,
+      195
+    ],
+    "completed_batches": [],
+    "executions": [
+      {
+        "label": "tail_before",
+        "logical": null,
+        "sha256": "<REDACTED:HASH_OR_BYTES>",
+        "after_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "elapsed_seconds": 2.2190000000009604,
+        "status_hex": "<REDACTED:HASH_OR_BYTES>"
+      },
+      {
+        "label": "write186",
+        "logical": 186,
+        "sha256": "<REDACTED:HASH_OR_BYTES>",
+        "after_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "elapsed_seconds": 3.438000000001921,
+        "status_hex": "<REDACTED:HASH_OR_BYTES>"
+      },
+      {
+        "label": "write187",
+        "logical": 187,
+        "sha256": "<REDACTED:HASH_OR_BYTES>",
+        "after_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "elapsed_seconds": 3.5310000000026776,
+        "status_hex": "<REDACTED:HASH_OR_BYTES>"
+      },
+      {
+        "label": "write190",
+        "logical": 190,
+        "sha256": "<REDACTED:HASH_OR_BYTES>",
+        "after_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "elapsed_seconds": 3.4690000000009604,
+        "status_hex": "<REDACTED:HASH_OR_BYTES>"
+      },
+      {
+        "label": "write191",
+        "logical": 191,
+        "sha256": "<REDACTED:HASH_OR_BYTES>",
+        "after_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "elapsed_seconds": 3.5469999999986612,
+        "status_hex": "<REDACTED:HASH_OR_BYTES>"
+      },
+      {
+        "label": "write192",
+        "logical": 192,
+        "sha256": "<REDACTED:HASH_OR_BYTES>",
+        "after_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "elapsed_seconds": 3.5,
+        "status_hex": "<REDACTED:HASH_OR_BYTES>"
+      },
+      {
+        "label": "write193",
+        "logical": 193,
+        "sha256": "<REDACTED:HASH_OR_BYTES>",
+        "after_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "elapsed_seconds": 3.5,
+        "status_hex": "<REDACTED:HASH_OR_BYTES>"
+      },
+      {
+        "label": "write194",
+        "logical": 194,
+        "sha256": "<REDACTED:HASH_OR_BYTES>",
+        "after_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "elapsed_seconds": 3.5,
+        "status_hex": "<REDACTED:HASH_OR_BYTES>"
+      },
+      {
+        "label": "write195",
+        "logical": 195,
+        "sha256": "<REDACTED:HASH_OR_BYTES>",
+        "after_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "elapsed_seconds": 3.5,
+        "status_hex": "<REDACTED:HASH_OR_BYTES>"
+      },
+      {
+        "label": "readback1_186",
+        "logical": null,
+        "sha256": "<REDACTED:HASH_OR_BYTES>",
+        "after_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "elapsed_seconds": 2.389999999999418,
+        "status_hex": "<REDACTED:HASH_OR_BYTES>"
+      }
+    ],
+    "phase": "readback1_186",
+    "current_stage_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "preserved_tail_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "error": "RuntimeError('Missing completion; no retry')"
+  }
+}

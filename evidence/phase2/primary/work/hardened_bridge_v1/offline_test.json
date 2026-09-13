@@ -1,0 +1,59 @@
+{
+  "device_access": false,
+  "build_sha256": "<HISTORICAL_HASH_REDACTED>",
+  "marker_exact": true,
+  "full_110352_byte_RAM_roundtrip": true,
+  "WS_512_plus_16_unwrapped": true,
+  "range_negative_tests": 22,
+  "seven_NAND_entry_guards_reject_without_writes": true,
+  "all_256_opcodes_checked": true,
+  "three_corrupted_payloads_refused": true,
+  "guarded_payload_changed_only_at_entry_branch": true,
+  "bridge_survives_cleared_low_append_area": true,
+  "checkpoint_roundtrip_passed": true,
+  "no_peripheral_access_during_checkpoint": true,
+  "return_cases": [
+    {
+      "cpsr_control": "0x13",
+      "sp": "0x60422268",
+      "payload_entry_observed": true,
+      "all_110268_overwritten_bytes_restored": true,
+      "adjacent_canary_intact": true,
+      "registers_restored": true,
+      "marker_after_return_exact": true
+    },
+    {
+      "cpsr_control": "0xd3",
+      "sp": "0x607ff000",
+      "payload_entry_observed": true,
+      "all_110268_overwritten_bytes_restored": true,
+      "adjacent_canary_intact": true,
+      "registers_restored": true,
+      "marker_after_return_exact": true
+    },
+    {
+      "cpsr_control": "0x12",
+      "sp": "0x60022268",
+      "payload_entry_observed": true,
+      "all_110268_overwritten_bytes_restored": true,
+      "adjacent_canary_intact": true,
+      "registers_restored": true,
+      "marker_after_return_exact": true
+    },
+    {
+      "cpsr_control": "0xd2",
+      "sp": "0x60022268",
+      "payload_entry_observed": true,
+      "all_110268_overwritten_bytes_restored": true,
+      "adjacent_canary_intact": true,
+      "registers_restored": true,
+      "marker_after_return_exact": true
+    }
+  ],
+  "limits": [
+    "Flat-memory CPU test, not cache/DMA timing proof",
+    "Original USB runtime return not yet hardware-tested",
+    "Stops/returns at payload instruction 4, does NOT run FlashBoot init or FTL",
+    "Software guards are not a hardware write-protect pin"
+  ]
+}

@@ -1,0 +1,36 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/prepare_copy5_writer.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Adapt already exercised one-block writer to IDB5. PC files only."""
+from pathlib import Path
+import re,sys
+OLD=Path('<EXTERNAL_STAGE_03>');HERE=Path(__file__).resolve().parent
+sys.path.insert(0,str(OLD/'work'))
+stage=HERE/'copy5_sources';stage.mkdir(exist_ok=False)
+def retarget(text):
+    return re.sub(r'0x(?:5000|6000|6100|7000)(?=u?\b)',lambda m:{'0x5000':'0x4000','0x6000':'0x5000','0x6100':'0x5100','0x7000':'0x6000'}[m[0]],text)
+for name in ('idb_copy6_guard.c','idb_copy6_guard.S','idb_copy6_guard.ld'):
+    s=(OLD/'work'/name).read_text()
+    if not name.endswith('.ld'):s=retarget(s).replace('0x06000103','0x05000101')
+    (stage/name).write_text(s)
+build=(OLD/'work/build_idb_copy6_guard.py').read_text()
+build=build.replace("ROOT=Path(__file__).resolve().parents[1]",'ROOT=Path('+repr(str(OLD))+')')
+build=build.replace("out=ROOT/'work/idb_copy6_guard_v10'",'out=Path('+repr(str(HERE/'copy5_writer_v1'))+')')
+for name in ('idb_copy6_guard.c','idb_copy6_guard.S'):
+    build=build.replace(repr('work/'+name),repr(str(stage/name)))
+build=build.replace("'-Wl,-T,work/idb_copy6_guard.ld'",repr('-Wl,--script='+str(stage/'idb_copy6_guard.ld'))+",'-Wl,-e,idb_preinit'")
+build=build.replace('physical_block=6','physical_block=5').replace("['0x6000','0x6100']","['0x5000','0x5100']")
+build=build.replace('COPY 6 ONCE','COPY 5 ONCE').replace('erase_copy6_once','erase_copy5_once')
+# The target source image is intentionally still the verified original-board
+# copy6 source: fresh copy5 headers and all earlier code exactly match it.
+(HERE/'build_copy5_writer.py').write_text('import sys\nsys.path.insert(0,'+repr(str(OLD/'work'))+')\n'+build)
+test=(OLD/'work/test_idb_copy6_guard.py').read_text()
+test=test.replace('ROOT=Path(__file__).resolve().parents[1]','ROOT=Path('+repr(str(OLD))+')')
+oldline="out=ROOT/('work/idb_copy6_guard_v10' if fallback else 'work/idb_copy6_guard_v9' if saved_info else 'work/idb_copy6_guard_v7')"
+test=test.replace(oldline,'out=Path('+repr(str(HERE/'copy5_writer_v1'))+')')
+test=retarget(test).replace('0x06000103','0x05000101').replace('erase_copy6_once','erase_copy5_once')
+(HERE/'test_copy5_writer.py').write_text(test)
+print('Prepared copied source, builder and bounded ARM tests; old files unchanged')

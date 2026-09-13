@@ -1,0 +1,96 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_readonly_ram_package.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Offline RAM container packaging, with extra command-confirm fail stops.
+
+Never uploads. NOT_FOR_UPLOAD until remaining review and transfer checks finish.
+"""
+import argparse,hashlib,json,lzma,struct,subprocess,zlib
+from pathlib import Path
+from audit_ram_loader_container import BASE,rc4,crc32
+ROOT=Path(__file__).resolve().parents[1]
+p=argparse.ArgumentParser();p.add_argument('--usbplug-control',action='store_true');p.add_argument('--native-cpu-entry',action='store_true');args=p.parse_args()
+assert not args.native_cpu_entry or args.usbplug_control
+source=(ROOT/'work/FlashBoot.readonly_usb_allowlist.COVERAGE_PENDING_NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(source).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+guarded=bytearray(source)
+for off,expected in [(0xbbc8,'084080e5'),(0xbc90,'089080e5')]:
+    assert source[off:off+4].hex()==expected,(hex(off),source[off:off+4].hex())
+    guarded[off:off+4]=bytes.fromhex('feffffea')
+prefix='work/readonly_ram'
+report_name='readonly_ram_package.json'
+if args.usbplug_control:
+    known=(ROOT/'work/RetronLoader_READ_NATIVE_ECC_RAM_ONLY.bin').read_bytes()
+    assert hashlib.sha256(known).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+    h=struct.unpack_from('<H',known,4)[0]
+    usb=[]
+    for i in range(4):
+        pos=h+i*57
+        if struct.unpack_from('<I',known,pos+1)[0]==2:
+            off,size=struct.unpack_from('<II',known,pos+45)
+            usb.append(rc4(known[off:off+size]))
+    assert len(usb)==1 and len(usb[0])==56520
+    guarded=bytearray(usb[0]+bytes(110080-len(usb[0])))
+    prefix='work/usbplug_control_ram'
+    report_name='usbplug_control_ram_package.json'
+    if args.native_cpu_entry:
+        assert usb[0][0x1c:0x30]==bytes.fromhex('<REDACTED:HASH_OR_BYTES>')
+        prefix='work/usbplug_native_entry_ram'
+        report_name='usbplug_native_entry_ram_package.json'
+(ROOT/(prefix+'.FlashBoot.NOT_FOR_UPLOAD.bin')).write_bytes(guarded)
+compressed=lzma.compress(bytes(guarded),format=lzma.FORMAT_ALONE)
+payload=prefix+'.lzma.bin'
+(ROOT/payload).write_bytes(compressed)
+elfpath=prefix+'.elf'
+cmd=[str(ROOT/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe'),'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-mfloat-abi=soft','-Oz','-ffreestanding','-fno-builtin','-fno-stack-protector','-ffunction-sections','-fdata-sections','-nostdlib','-DRF_DECODER_ENTRY=rf_decode','-Iwork/ram_stub_include','-Iwork/lzma_sdk_2603/C','work/ram_bootstrap.S','work/ram_lzma_decode_test.c','work/lzma_sdk_2603/C/LzmaDec.c','-Wl,-T,work/ram_bootstrap.ld','-Wl,--gc-sections','-g',f'-DRF_EXPECTED_CRC={zlib.crc32(guarded)}',f'-DRF_PAYLOAD_SIZE={len(compressed)}',f'-DRF_PAYLOAD_FILE="{payload}"','-o',elfpath]
+if args.native_cpu_entry:cmd.append('-DRF_NATIVE_CPU_ENTRY=1')
+subprocess.run(cmd,cwd=ROOT,check=True)
+elf=(ROOT/elfpath).read_bytes()
+entry,phoff=struct.unpack_from('<II',elf,24)
+phsize,phnum=struct.unpack_from('<HH',elf,42)
+segments=[struct.unpack_from('<8I',elf,phoff+n*phsize) for n in range(phnum)]
+segments=[s for s in segments if s[0]==1 and s[4]]
+assert entry==0x61000000
+end=max(s[2]+s[4] for s in segments)
+blob=bytearray(end-entry)
+for _,off,va,pa,fs,ms,flags,align in segments:blob[va-entry:va-entry+fs]=elf[off:off+fs]
+assert len(blob)%4==0 and len(blob)<65534
+(ROOT/(prefix+'.bootstrap.NOT_FOR_UPLOAD.bin')).write_bytes(blob)
+aligned=bytes(blob)+bytes((-len(blob))%2048)
+if args.usbplug_control:
+    assert len(blob)<=61440
+    aligned=bytes(blob)+bytes(61440-len(blob))
+assert len(aligned)+2<65536
+original=(BASE/'components/RetronLoader.bin').read_bytes()
+assert hashlib.sha256(original).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+assert crc32(original[:-4])==struct.unpack_from('<I',original,len(original)-4)[0]
+header=struct.unpack_from('<H',original,4)[0]
+records=[]
+for i in range(4):
+    pos=header+i*57
+    kind=struct.unpack_from('<I',original,pos+1)[0]
+    offset,size,delay=struct.unpack_from('<III',original,pos+45)
+    records.append((pos,kind,offset,size,delay))
+target=[r for r in records if r[1]==2]
+assert len(target)==1
+pos,kind,oldoff,oldsize,delay=target[0]
+container=bytearray(original[:-4]);newoff=len(container)
+container.extend(rc4(aligned))
+struct.pack_into('<II',container,pos+45,newoff,len(aligned))
+container.extend(struct.pack('<I',crc32(container)))
+assert rc4(container[newoff:newoff+len(aligned)])==aligned
+for p,k,o,s,t in records:
+    if k!=2:
+        assert container[p:p+57]==original[p:p+57]
+        assert container[o:o+s]==original[o:o+s]
+name=prefix+'.BOOT.NOT_FOR_UPLOAD.bin'
+(ROOT/name).write_bytes(container)
+report=dict(container=name,container_sha256=hashlib.sha256(container).hexdigest(),bootstrap_sha256=hashlib.sha256(blob).hexdigest(),flashboot_sha256=hashlib.sha256(guarded).hexdigest(),bootstrap_bytes=len(blob),entry472_bytes=len(aligned),compressed_bytes=len(compressed),entry472_offset=newoff,original_entry472_preserved_unused=True,entry471_and_loader_records_unchanged=True,container_crc_valid=crc32(container[:-4])==struct.unpack_from('<I',container,len(container)-4)[0],device_access=False,remaining=['Execute decompression to verify exact new FlashBoot output','Review controller command coverage beyond two added confirm stops','Select/document runtime tail padding before hardware test','Fresh MaskROM before actual DB; NEVER use UL/UF/EF'])
+if args.usbplug_control:
+    report['payload_kind']='Previously hardware-verified native-ECC USBplug, padded to unchanged decoder output size. NOT the write-disabled FlashBoot.'
+    report['remaining']=['Verify decoder output against known USBplug','Fresh MaskROM and controlled hardware DB, followed only by RFI/RS control reads']
+    report['native_cpu_entry']=args.native_cpu_entry
+(ROOT/'outputs'/report_name).write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps(report,indent=2))

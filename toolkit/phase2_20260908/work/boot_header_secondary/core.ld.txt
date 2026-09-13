@@ -1,0 +1,16 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/boot_header_secondary/core.ld
+Role: historical_unexecuted_superseded_boot1028
+Original repair session must not be resumed from this public copy.
+
+ENTRY(boot_physical_write)
+SECTIONS {
+ . = 0x61800000;
+ .text : { KEEP(*(.text.boot_physical_write)) KEEP(*(.text.gate_*)) KEEP(*(.text.original_*)) *(.text*) *(.rodata*) }
+ .data : { *(.data*) }
+ .bss : { *(.bss*) *(COMMON) }
+ ASSERT(SIZEOF(.text)<=0x1300,"Fits reserved USB-only carrier")
+ ASSERT(SIZEOF(.data)==0 && SIZEOF(.bss)==0,"No hidden mutable state")
+ /DISCARD/ : { *(.ARM.exidx*) *(.ARM.extab*) *(.comment*) }
+}

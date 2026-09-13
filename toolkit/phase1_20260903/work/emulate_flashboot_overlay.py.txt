@@ -1,0 +1,162 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/emulate_flashboot_overlay.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Experimental in-RAM NAND model, no backing-file writes or hardware access.
+
+Models erase and main bytes plus caller-supplied auxiliary bytes at low-level
+boundaries. Does NOT model ECC generation, NAND controller timing or wear.
+Unknown copy/format operations remain fatal. Not a flashable artifact.
+"""
+import hashlib
+import argparse
+import json
+import struct
+from emulate_flashboot_remap import RemapReplay
+from emulate_flashboot_offline import ROOT,FLASH,REGS,address,UC_ARM_REG_R0,UC_ARM_REG_PC,UC_ARM_REG_LR
+
+class OverlayReplay(RemapReplay):
+    def __init__(self,record):
+        super().__init__(record)
+        self.erased=set()
+        self.pages={}
+        self.operations=[]
+        self.enabled=False
+        self.allow_zero_length_copy=False
+        self.zero_length_copy_calls=0
+    def read_raw(self,sector,count):
+        if not self.enabled: return super().read_raw(sector,count)
+        # One backing read per request; do not reopen the same chunk per sector.
+        base=None
+        out=bytearray()
+        for current in range(sector,sector+count):
+            page,lane=divmod(current,16)
+            if page in self.pages: out.extend(self.pages[page][lane*528:(lane+1)*528])
+            elif current//4096 in self.erased: out.extend(b'\xff'*528)
+            else:
+                if base is None:base=super().read_raw(sector,count)
+                offset=(current-sector)*528
+                out.extend(base[offset:offset+528])
+        return bytes(out)
+    def return_zero(self):
+        self.uc.reg_write(UC_ARM_REG_R0,0)
+        self.uc.reg_write(UC_ARM_REG_PC,self.uc.reg_read(UC_ARM_REG_LR))
+    def code_hook(self,uc,pc,size,unused):
+        if self.enabled and self.allow_zero_length_copy and pc==address(0xbd5c) and uc.reg_read(REGS[2])==0:
+            # BD94..BD98 branches directly to C004 when count==0, returning
+            # its actual -1 without any copy/controller operation. Execute it.
+            self.zero_length_copy_calls+=1
+            return
+        if self.enabled and pc==address(0xbc1c):
+            sector,outptr,_,_=[uc.reg_read(r) for r in REGS]
+            assert sector%4096==0 and 12*4096<=sector<8388608
+            block=sector//4096
+            self.erased.add(block)
+            for page in list(self.pages):
+                if page//256==block: del self.pages[page]
+            if outptr: uc.mem_write(outptr,struct.pack('<I',sector))
+            self.operations.append(dict(kind='simulated_erase',physical_block=block))
+            self.return_zero()
+            return
+        if self.enabled and pc==address(0xba10):
+            sector,main,spare,flag=[uc.reg_read(r) for r in REGS]
+            assert sector%16==0 and 12*4096<=sector<8388608
+            payload=bytes(uc.mem_read(main,8192)) if main else b'\xff'*8192
+            auxiliary=bytes(uc.mem_read(spare,256)) if spare else b'\xff'*256
+            raw=b''.join(payload[i*512:(i+1)*512]+auxiliary[i*16:(i+1)*16] for i in range(16))
+            old=self.read_raw(sector,16)
+            # Main-data programming may only clear bits; ECC/aux semantics unmodelled.
+            oldmain=b''.join(old[i:i+512] for i in range(0,8448,528))
+            assert all((a&b)==b for a,b in zip(oldmain,payload)),f'non-erased main write at {sector}'
+            self.pages[sector//16]=raw
+            self.operations.append(dict(kind='simulated_program',physical_sector=sector,flag=flag,
+                                        main_present=bool(main),first_tag=hex(int.from_bytes(auxiliary[:2],'little')),
+                                        main_sha256=hashlib.sha256(payload).hexdigest()))
+            self.return_zero()
+            return
+        super().code_hook(uc,pc,size,unused)
+
+def main():
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--write-test',action='store_true')
+    parser.add_argument('--restart-test',action='store_true')
+    args=parser.parse_args()
+    if args.restart_test: args.write_test=True
+    record=(ROOT/'work/idb_ecc24_parameter_attempt2/block05_page15.raw').read_bytes()[:512]
+    emu=OverlayReplay(record)
+    assert emu.call(0xa158,0x50f4)==0
+    emu.uc.mem_write(FLASH+0xa0,struct.pack('<H',12))
+    emu.call(0x74e0)
+    emu.dump_mode=True
+    assert emu.call(0x6a24)==0
+    assert emu.call(0x6050,1,instruction_limit=10_000_000,timeout_us=30_000_000)==0
+    # Permit only the known high-level wrapper to execute; low-level writes stay
+    # intercepted and never execute controller code. Unknown writers still stop.
+    emu.write_entries.remove(address(0x3b0c))
+    emu.enabled=True
+    output=0x60600000
+    for reg,value in zip(REGS[1:],(188*4096,1,output)):emu.uc.reg_write(reg,value)
+    result=None
+    error=None
+    try:result=emu.call(0x50d4,0)
+    except (RuntimeError,AssertionError) as exc:error=str(exc)
+    report=dict(scope='Experimental RAM overlay: missing-map READ, not system repair or ECC emulation',
+                result=result,error=error,stop=emu.stopped,operations=emu.operations,
+                returned_sector_all_ff=bytes(emu.uc.mem_read(output,512))==b'\xff'*512,
+                erased_blocks=sorted(emu.erased),programmed_pages=sorted(emu.pages),
+                source_files_modified=False)
+    if args.write_test:
+        official=ROOT.parent.parent/'2026-09-01/retro-freak-retrofreak-systemupdate-0-2/work/rkfw_contents/components/system.img'
+        assert result==0 and error is None
+        with official.open('rb') as f:
+            f.seek(2*2097152)
+            expected=f.read(8192)
+        assert len(expected)==8192
+        emu.uc.mem_write(output,expected)
+        for reg,value in zip(REGS[1:],(188*4096,16,output)):emu.uc.reg_write(reg,value)
+        write_result=None
+        write_error=None
+        try:write_result=emu.call(0x7dcc,0)
+        except (RuntimeError,AssertionError) as exc:write_error=str(exc)
+        write_test=dict(write_result=write_result,error=write_error,stop=emu.stopped)
+        if write_result==0 and write_error is None:
+            emu.uc.mem_write(output,b'\xa5'*8192)
+            for reg,value in zip(REGS[1:],(188*4096,16,output)):emu.uc.reg_write(reg,value)
+            try:
+                write_test['readback_result']=emu.call(0x50d4,0)
+                write_test['readback_exact']=bytes(emu.uc.mem_read(output,8192))==expected
+            except (RuntimeError,AssertionError) as exc:write_test['readback_error']=str(exc)
+        report['single_official_page_write']=write_test
+        report['operations']=emu.operations
+        report['erased_blocks']=sorted(emu.erased)
+        report['programmed_pages']=sorted(emu.pages)
+        if args.restart_test and write_test.get('readback_exact'):
+            restarted=OverlayReplay(record)
+            # Only simulated NAND survives. No CPU/RAM/FTL state is copied.
+            restarted.pages=dict(emu.pages)
+            restarted.erased=set(emu.erased)
+            restart_report=dict(ram_state_copied=False)
+            try:
+                assert restarted.call(0xa158,0x50f4)==0
+                restarted.uc.mem_write(FLASH+0xa0,struct.pack('<H',12))
+                restarted.call(0x74e0)
+                restarted.dump_mode=True
+                restarted.enabled=True
+                restarted.write_entries.remove(address(0x3b0c))
+                restart_report['bbt_result']=restarted.call(0x6a24)
+                restart_report['remap_result']=restarted.call(0x6050,1,instruction_limit=10_000_000,timeout_us=30_000_000)
+                for reg,value in zip(REGS[1:],(188*4096,16,output)):restarted.uc.reg_write(reg,value)
+                restart_report['read_result']=restarted.call(0x50d4,0)
+                restart_report['readback_exact']=bytes(restarted.uc.mem_read(output,8192))==expected
+            except (RuntimeError,AssertionError) as exc:
+                restart_report['error']=str(exc)
+            restart_report['stop']=restarted.stopped
+            restart_report['recovery_operations']=restarted.operations
+            report['simulated_restart']=restart_report
+    filename='flashboot_overlay_single_write.json' if args.write_test else 'flashboot_overlay_missing_read.json'
+    if args.restart_test:filename='flashboot_overlay_single_write_restart.json'
+    with (ROOT/'outputs'/filename).open('x') as f:json.dump(report,f,indent=2)
+    print(json.dumps(report,indent=2))
+
+if __name__=='__main__':main()

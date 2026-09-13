@@ -1,0 +1,134 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/startup_reloc_slice.S
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+.syntax unified
+.arm
+#ifdef RF_ACTUAL_USB
+/* Include the original read cache at 6009a580. Keep this larger snapshot
+   separate from 6132xxxx snapshots; no new startup code or peripheral model. */
+.set image_snapshot, 0x61600000
+.set image_snapshot_size, 0x40000
+#else
+.set image_snapshot, 0x61301000
+.set image_snapshot_size, 0x1a488
+#endif
+.section .before,"ax",%progbits
+.global slice_before
+slice_before:
+    ldr r4, =0x6101ae00
+#ifdef RF_STACK_SLICE
+    str sp, [r4, #32]
+    msr cpsr_c, #0xd7
+    str sp, [r4, #36]
+    msr cpsr_c, #0xd3
+#endif
+    mrc p15, 0, r0, c1, c0, 0
+    str r0, [r4, #8]
+    ldr r1, =0x10080000
+    ldr r0, [r1]
+    str r0, [r4, #20]
+    /* Pin the already observed hardware state; no new PMU/remap transitions. */
+    ldr r1, =0x20004008
+    ldr r0, [r1]
+    str r0, [r4, #24]
+#ifdef RF_CLOCK_SLICE
+    bics r0, r0, #0xe /* Fresh bridge may have PMU=0; known prefix powers cores down. */
+#else
+    cmp r0, #0xe
+#endif
+    bne refused
+#ifndef RF_MAIN_SLICE
+    ldr r1, =0x101027fc
+    ldr r0, [r1]
+    ldr r1, =0x56313031
+    cmp r0, r1
+    bne refused
+#endif
+    ldr r1, =0x20008150
+    ldr r0, [r1]
+    str r0, [r4, #28]
+    tst r0, #0x1000
+    beq refused
+    mov r0, #0
+    ldr r1, =0x61300000
+    ldr r2, =0x724
+    bl copy_words
+    ldr r0, =0x60080000
+    ldr r1, =image_snapshot
+    ldr r2, =image_snapshot_size
+    bl copy_words
+#ifdef RF_MAIN_SLICE
+    ldr r0, =0x603d3000
+    ldr r1, =0x61320000
+    mov r2, #0x2000
+    bl copy_words
+#endif
+#ifdef RF_IRQ_SLICE
+    b irq_before_helper
+#else
+    ldr pc, =0x6000020c
+#endif
+refused:
+    mov r0, #0
+    str r0, [r4, #4]
+    ldr r0, =RF_STAGE_TAG
+    str r0, [r4]
+    dsb sy
+    ldr pc, =0x60800c00
+    .ltorg
+.section .after,"ax",%progbits
+.global slice_after
+slice_after:
+#ifdef RF_IRQ_SLICE
+    b irq_after_helper
+#else
+    ldr r4, =0x6101ae00
+#endif
+    ldr r0, =RF_CUT_PC
+    str r0, [r4, #4]
+    mrc p15, 0, r0, c1, c0, 0
+    str r0, [r4, #12]
+    ldr r0, =0x61300000
+    mov r1, #0
+    ldr r2, =0x724
+    bl copy_words
+    ldr r0, =image_snapshot
+    ldr r1, =0x60080000
+    ldr r2, =image_snapshot_size
+    bl copy_words
+#ifdef RF_MAIN_SLICE
+    ldr r0, =0x61320000
+    ldr r1, =0x603d3000
+    mov r2, #0x2000
+    bl copy_words
+#endif
+    ldr r1, =0x10080000
+    ldr r0, [r1]
+    str r0, [r4, #16] /* SRAM after vector restore, not prefix value */
+    ldr r0, [r4, #20]
+    str r0, [r1]
+    ldr r0, [r4, #8]
+    mcr p15, 0, r0, c1, c0, 0
+#ifdef RF_STACK_SLICE
+    msr cpsr_c, #0xd7
+    ldr sp, [r4, #36]
+    msr cpsr_c, #0xd3
+    ldr sp, [r4, #32]
+#endif
+    dsb sy
+    isb sy
+    ldr r0, =RF_STAGE_TAG
+    str r0, [r4]
+    dsb sy
+    ldr pc, =0x60800c00
+    .ltorg
+.section .helpers,"ax",%progbits
+.global copy_words
+copy_words:
+    ldr r3, [r0], #4
+    str r3, [r1], #4
+    subs r2, r2, #4
+    bne copy_words
+    bx lr

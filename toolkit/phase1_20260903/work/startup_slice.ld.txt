@@ -1,0 +1,19 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/startup_slice.ld
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+ENTRY(_start)
+_start = slice_before;
+SECTIONS {
+ . = 0x60000100;
+ .before : { KEEP(*(.before)) }
+ ASSERT(. <= 0x60000140, "Before stub exceeds reserved slot")
+ . = 0x60000140;
+ .after : { KEEP(*(.after)) }
+ .data : { *(.data*) }
+ .bss (NOLOAD) : { *(.bss*) *(COMMON) }
+ ASSERT(SIZEOF(.data) == 0 && SIZEOF(.bss) == 0, "No implicit data state")
+ ASSERT(. <= 0x600001e0, "After stub overlaps CRC compensation")
+ /DISCARD/ : { *(.ARM.exidx*) *(.ARM.extab*) *(.comment*) }
+}

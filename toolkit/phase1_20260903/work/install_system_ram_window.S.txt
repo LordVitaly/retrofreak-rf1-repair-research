@@ -1,0 +1,31 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/install_system_ram_window.S
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+.syntax unified
+.arm
+.section .text,"ax",%progbits
+.global install_window
+install_window:
+    ldr r0, =0x60004000
+    ldr r1, =0x60802000
+    ldr r2, =WINDOW_BYTES
+1:  ldr r3, [r0], #4
+    str r3, [r1], #4
+    subs r2, r2, #4
+    bne 1b
+    ldr r0, =0x60800068
+    ldr r1, =READ_BRANCH
+    str r1, [r0]
+    ldr r0, =0x60800194
+    ldr r1, =WRITE_BRANCH
+    str r1, [r0]
+    dsb sy
+    mov r0, #0
+    mcr p15, 0, r0, c7, c5, 0
+    mcr p15, 0, r0, c7, c5, 6
+    dsb sy
+    isb sy
+    ldr pc, =0x60800c00 /* Exact existing entry checkpoint return, no init. */
+    .ltorg

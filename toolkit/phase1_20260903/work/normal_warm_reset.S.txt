@@ -1,0 +1,32 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/normal_warm_reset.S
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+.syntax unified
+.arm
+.section .text,"ax",%progbits
+.global power_snapshot
+power_snapshot:
+    /* Stock RF-1 rk30_arch_reset(NULL), normal boot_mode != 4.
+       Physical translations of its five MMIO writes. No PMIC transaction.
+       Do not jump to the checkpoint: successful reset never returns. */
+    ldr r0, =0x20004040
+    mov r1, #0
+    str r1, [r0] /* PMU SYS_REG0: no loader/recovery magic */
+    mov r1, #7
+    str r1, [r0, #4] /* PMU SYS_REG1: stock normal reboot */
+    dsb sy
+    ldr r0, =0x20008150
+    mov r1, #0x10000000
+    str r1, [r0] /* stock GRF write, bit12 low with hiword mask */
+    ldr r0, =0x20000000
+    ldr r1, =0x33030000
+    str r1, [r0, #0x40] /* stock PLL slow-mode mask */
+    dsb sy
+    movw r1, #0xeca8
+    str r1, [r0, #0x104] /* RK2928_GLB_SRST_SND */
+    dsb sy
+reset_did_not_complete:
+    b reset_did_not_complete /* never execute reset a second time */
+    .ltorg

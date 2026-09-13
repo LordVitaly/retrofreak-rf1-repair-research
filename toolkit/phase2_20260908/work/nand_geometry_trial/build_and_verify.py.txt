@@ -1,0 +1,124 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/nand_geometry_trial/build_and_verify.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""RAM-only observed-board geometry trial. No USB/device API or NAND writes.
+
+One initial block-geometry shift changes 2048 to4096 before header scanning.
+All original fallback-capacity opcodes and diagnostic cuts remain unchanged.
+"""
+import hashlib
+import importlib.util
+import json
+from pathlib import Path
+import struct
+import sys
+import zlib
+sys.dont_write_bytecode=True
+OUT=Path(__file__).resolve().parent
+WORK=OUT.parent
+OLD=Path('<EXTERNAL_STAGE_03>')
+def sha(data):return hashlib.sha256(data).hexdigest()
+helper_path=OLD/'work/ram_artifact.py'
+assert sha(helper_path.read_bytes())=='<HISTORICAL_HASH_REDACTED>'
+spec=importlib.util.spec_from_file_location('checked_pure_ram_artifact',helper_path)
+helper=importlib.util.module_from_spec(spec);spec.loader.exec_module(helper)
+sources=[
+('trace.raw',WORK/'nand_init_read_trace/trace.raw','<HISTORICAL_HASH_REDACTED>',0x76a0,0x60086c6c),
+('capacity.raw',WORK/'original_boot_diag/ftl_capacity_original.raw','<HISTORICAL_HASH_REDACTED>',0x7534,0x60086b00),
+('bbt.raw',WORK/'original_boot_diag/bbt_trace_v2_original_capacity.raw','<HISTORICAL_HASH_REDACTED>',0x76b8,0x60086c84)]
+guards=(0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c)
+stops=(0xbbc8,0xbc90)
+payloads={};reports=[]
+for name,path,pin,cutoff,cutpc in sources:
+    before=path.read_bytes()
+    assert sha(before)==pin and len(before)==110352 and before[110080:]==bytes(272)
+    assert before[0xaf60:0xaf64]==bytes.fromhex('0003a0e1')
+    assert before[0xb408:0xb40c]==bytes.fromhex('0101a0e3')
+    body=bytearray(before[:110080]);body[0xaf60:0xaf64]=bytes.fromhex('8003a0e1')
+    helper.fix_crc(body)
+    after=bytes(body)+bytes(272)
+    changed=[i for i,(a,b) in enumerate(zip(before,after)) if a!=b]
+    assert changed==[0x1e0,0x1e1,0x1e2,0x1e3,0xaf60],changed
+    assert after[cutoff:cutoff+4]==before[cutoff:cutoff+4]
+    assert after[0xb408:0xb40c]==before[0xb408:0xb40c]
+    assert all(after[o:o+8]==before[o:o+8]==bytes.fromhex('0000e0e31eff2fe1') for o in guards)
+    assert all(after[o:o+4]==before[o:o+4]==bytes.fromhex('feffffea') for o in stops)
+    assert after[0x2c58:0x2d10]==before[0x2c58:0x2d10]
+    assert after[0x7040:0x7478]==before[0x7040:0x7478]
+    assert len(after)==110352 and after[110080:]==bytes(272) and zlib.crc32(after[:110080])==0xad0dadee
+    destination=OUT/name
+    if destination.exists():assert destination.read_bytes()==after
+    else:destination.write_bytes(after)
+    payloads[name]=(before,after)
+    reports.append({'name':name,'path':str(destination),'source':str(path),'source_sha256':pin,'sha256':sha(after),'bytes':len(after),'body_crc32':hex(zlib.crc32(after[:110080])),'tail272_zero':True,'changed_offsets':[hex(i) for i in changed],'cut_pc':hex(cutpc),'cut_unchanged':True,'original_capacity_instruction_unchanged':True,'trace_code_unchanged':True,'all_guards_and_opcode_gate_unchanged':True})
+
+sys.path.insert(0,str(OLD/'work/emulator_deps'))
+from unicorn import Uc,UC_ARCH_ARM,UC_MODE_ARM,UC_HOOK_CODE,UC_HOOK_MEM_WRITE
+from unicorn.arm_const import *
+def addr(off):return 0x60080000+off-0xa34
+G=0x60359a3c
+def machine(raw):
+    u=Uc(UC_ARCH_ARM,UC_MODE_ARM)
+    u.mem_map(0x60000000,0x900000)
+    u.mem_map(0x61000000,0x20000)
+    u.mem_write(0x60000000,raw)
+    u.mem_write(0x60080000,raw[0xa34:110080])
+    return u
+geometry_cases=[]
+for version,raw in zip(('original','trial'),payloads['trace.raw']):
+    u=machine(raw)
+    u.mem_write(G,bytes(0x78))
+    u.mem_write(G+0x14,struct.pack('<I',0x80))
+    u.mem_write(G+0x0e,b'\x10')
+    u.reg_write(UC_ARM_REG_R4,G);u.reg_write(UC_ARM_REG_R9,1)
+    u.reg_write(UC_ARM_REG_R0,G+0x14)
+    writes=[]
+    u.hook_add(UC_HOOK_MEM_WRITE,lambda uc,access,address,size,value,ctx:writes.append((address,size,value)))
+    u.emu_start(addr(0xaf44),addr(0xaf68),count=1000)
+    assert u.reg_read(UC_ARM_REG_PC)==addr(0xaf68)
+    block=struct.unpack('<I',u.mem_read(G+0x14,4))[0]
+    assert block==(2048 if version=='original' else 4096)
+    assert all(G+0x14<=a and a+n<=G+0x18 for a,n,v in writes)
+    geometry_cases.append({'version':version,'ID2_bits3_2':1,'page_sectors':16,'block_sectors':block,'actual_ARM_from':'0x6008a510','actual_ARM_stop':'0x6008a534','only_geometry_block_field_written':True})
+
+# Actual parser and new tracing wrapper execute against a saved FlashInfo input.
+# The physical-read boundary is explicitly a fixture, not hardware evidence.
+record_path=OLD/'work/idb_ecc24_parameter_attempt2/block05_page15.raw'
+record=record_path.read_bytes()[:512]
+assert record[16:20]==b'DNAN' and struct.unpack_from('<H',record,20)[0]==0x120
+u=machine(payloads['trace.raw'][1])
+u.mem_write(G+4,b'\x01');u.mem_write(G+12,b'\x04')
+u.mem_write(0x6101af10,struct.pack('<I',0x3154494e)+bytes(1052))
+native_reads=[]
+def read_fixture(uc,pc,size,ctx):
+    if pc==addr(0x9ef4):
+        sector,main,aux,count=[uc.reg_read(r) for r in (UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3)]
+        assert sector==0x5770 and main and aux==0 and count==1
+        assert struct.unpack('<I',uc.mem_read(uc.reg_read(UC_ARM_REG_SP),4))[0]==0xffffffff
+        uc.mem_write(main,record)
+        native_reads.append({'sector':hex(sector),'count':count,'fixture_read_rc':0,'record_sha256':sha(record)})
+        uc.reg_write(UC_ARM_REG_R0,0);uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR))
+    elif pc in [addr(o) for o in guards]:
+        raise AssertionError(('Unexpected NAND write guard',hex(pc)))
+u.hook_add(UC_HOOK_CODE,read_fixture)
+u.reg_write(UC_ARM_REG_SP,0x607ff000);u.reg_write(UC_ARM_REG_LR,0x6007f000);u.reg_write(UC_ARM_REG_R0,0x5770)
+u.emu_start(addr(0xa158),0x6007f000,count=1000000)
+assert u.reg_read(UC_ARM_REG_PC)==0x6007f000 and u.reg_read(UC_ARM_REG_R0)==0
+assert bytes(u.mem_read(G,0x78))==record[0x18:0x90]
+capacity=struct.unpack('<I',u.mem_read(G+0x24,4))[0]
+assert capacity==0x800000,hex(capacity)
+trace_words=struct.unpack('<10I',u.mem_read(0x6101af10+96,40))
+assert trace_words[:4]==(addr(0xa198),0x5770,1,0)
+assert trace_words[5]==0x4e414e44
+
+report={'all_pass':True,'device_access':False,'scope':'Observed Micron2c44444ba9 RAM-only initial-blockgeometry trial; not a universal fix or persistent NAND repair','patch':{'raw_offset':'0xaf60','runtime_pc':'0x6008a52c','before':'0003a0e1','after':'8003a0e1','instruction_before':'LSL r0,r0,#6','instruction_after':'LSL r0,r0,#7'},'artifacts':reports,'geometry_cases':geometry_cases,'parser_test':{'native_read_is_fixture':True,'input_path':str(record_path),'input_first512_sha256':sha(record),'actual_parser_return':0,'actual_read_trace_words':[hex(v) for v in trace_words],'FlashInfo_geometry_copy_exact':True,'capacity_sectors_loaded_by_actual_parser':capacity,'native_reads':native_reads},'limits':['Geometry arithmetic fixture uses observed ID2bits1/page16/initial0x80; controller/ID-selection path not re-emulated.','Parser input is saved FlashInfo fixture with assumed native read success; live read at0x5770 remains for parent to establish.','No direct capacity or BBT-count injection; no read-result substitutions in payload; all guards and trace code inherited exactly.']}
+prior_manifest=json.loads((WORK/'nand_init_read_trace/manifest.json').read_text())
+for key in ('all_pass','all_changed_bytes_within_allowlist','capacity_original_unchanged','all_eight_denials_executed_no_writes','both_confirm_stops_executed_no_writes','all_256_opcode_routes_checked','no_external_direct_branch_to_format_carrier'):
+    assert prior_manifest[key] is True
+    report[key]=True
+report.update(sha256=reports[0]['sha256'],cut_pc='0x60086c6c',blockgeometry_ramfix=True,guard_execution_proof_inherited_from=str(WORK/'nand_init_read_trace/manifest.json'))
+(OUT/'manifest.json').write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps(report,indent=2))

@@ -1,0 +1,42 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/disassemble_reference_nand.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Offline ARM module disassembly with relocation annotations; never loads module."""
+import argparse
+import json
+import struct
+from pathlib import Path
+from capstone import Cs,CS_ARCH_ARM,CS_MODE_ARM
+from capstone.arm import ARM_OP_MEM,ARM_REG_PC
+ROOT=Path(__file__).parent
+parser=argparse.ArgumentParser()
+parser.add_argument('names',nargs='+')
+args=parser.parse_args()
+info=json.loads((ROOT.parent/'outputs/reference_nand_module_elf.json').read_text())
+data=Path(info['module']).read_bytes()
+md=Cs(CS_ARCH_ARM,CS_MODE_ARM)
+md.detail=True
+relocs={(r['section'],r['offset']):r for r in info['relocations']}
+for name in args.names:
+    for s in info['symbols']:
+        if s['name']!=name or not isinstance(s['section'],int): continue
+        section=info['sections'][s['section']]
+        base=section['offset']
+        print('FUNCTION',name,hex(s['value']),'size',s['size'])
+        for ins in md.disasm(data[base+s['value']:base+s['value']+s['size']],s['value']):
+            notes=[]
+            relocation=relocs.get((s['section'],ins.address))
+            if relocation: notes.append('RELOC '+relocation['symbol'])
+            if ins.mnemonic in ('bl','b') and ins.op_str.startswith('#') and not relocation:
+                target=int(ins.op_str[1:],0)
+                notes.extend(r['name'] for r in info['symbols'] if r['section']==s['section'] and r['value']==target and r['type']=='STT_FUNC')
+            for op in ins.operands:
+                if op.type==ARM_OP_MEM and op.mem.base==ARM_REG_PC:
+                    loc=ins.address+8+op.mem.disp
+                    if 0<=loc<section['size']:
+                        value=struct.unpack_from('<I',data,base+loc)[0]
+                        r=relocs.get((s['section'],loc))
+                        notes.append('literal '+hex(value)+(' + '+r['symbol'] if r else ''))
+            print(hex(ins.address),ins.mnemonic,ins.op_str,'; '+'; '.join(notes) if notes else '')

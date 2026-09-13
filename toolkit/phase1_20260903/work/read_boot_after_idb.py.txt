@@ -1,0 +1,86 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/read_boot_after_idb.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""One cold read with unchanged hardware-proven payload; no NAND writes/retry."""
+import hashlib,json,os,struct,sys,time
+from pathlib import Path
+from ram_console_session import RamConsole
+from console_completion import ANSI,completed_response
+ROOT=Path(__file__).resolve().parents[1]
+assert sys.argv[1:] in (['--fresh-maskrom-confirmed'],['--fresh-maskrom-nand-init-boundary'])
+boundary=sys.argv[1:]==['--fresh-maskrom-nand-init-boundary']
+build=json.loads((ROOT/('outputs/startup_nand_init_build.json' if boundary else 'outputs/ftl_bridge_read_build.json')).read_text())
+proof=json.loads((ROOT/('outputs/startup_nand_init_offline.json' if boundary else 'outputs/ftl_bridge_read_offline.json')).read_text())
+raw=(ROOT/build['cases'][0]['file']).read_bytes()
+digest='<REDACTED:HASH_OR_BYTES>' if boundary else '<REDACTED:HASH_OR_BYTES>'
+assert len(raw)==110352 and hashlib.sha256(raw).hexdigest()==digest==build['cases'][0]['sha256']
+assert proof['all_pass']
+prior=json.loads((ROOT/('work/startup_nand_init_hardware_attempt01/result.json' if boundary else 'work/ftl_bridge_read_hardware_attempt01/result.json')).read_text())
+if not boundary:assert prior['all_pass'] and proof['payload_sha256']==digest
+else:assert build['cases'][0]['cut_pc']=='0x60086c6c' and not prior.get('error')
+for off in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):
+    assert raw[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+for off in (0xbbc8,0xbc90):assert raw[off:off+4]==bytes.fromhex('feffffea')
+loader=ROOT/'work/usb_ram_bridge_checkpoint_modefix.BOOT.OFFLINE_ONLY.bin'
+assert hashlib.sha256(loader.read_bytes()).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+bridgeproof=json.loads((ROOT/'outputs/usb_ram_bridge_checkpoint_modefix_offline_tests.json').read_text())
+assert bridgeproof['six_NAND_entry_guards_reject_without_writes']
+if not boundary:
+    boot=Path(build['official_boot']).read_bytes()
+    assert hashlib.sha256(boot).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+out=ROOT/('work/nand_init_after_idb_readonly_attempt01' if boundary else 'work/boot_after_idb_readonly_attempt01');out.mkdir(exist_ok=False)
+c=None
+result=dict(all_pass=False,payload_sha256=digest,nand_write_enabled=False,pmic_value_writes_by_test=0,explicit_soc_reset_requests=0,scope='Return immediately after original NAND init, before FTL' if boundary else 'One logical boot sector; normal USB entry bypassed, exceptional early USB path not excluded')
+def save(name,value):
+    with (out/name).open('x') as f:json.dump(value,f,indent=2);f.flush();os.fsync(f.fileno())
+def read(name,sector,count):
+    assert (sector,count) in ((0x7effff,1),(0x7f0000,0xd1),(0x7f00d1,2))
+    p=out/(name+'.raw');c.command(f'RS {hex(sector)} {hex(count)} {p}')
+    d=p.read_bytes();assert len(d)==count*528;return d
+try:
+    c=RamConsole(out);result['intro']=c.wait('Select input')
+    assert 'Found 1 rockusb' in result['intro'] and 'Maskrom' in result['intro'];c.select()
+    cmd='DB '+os.path.relpath(loader,out);start=len(''.join(c.chunks));c.commands.append(cmd);c.send_once(cmd)
+    deadline=time.monotonic()+45
+    while time.monotonic()<deadline:
+        response=''.join(c.chunks)
+        if completed_response(response,start,'Download boot ok') is not None:break
+        if 'Error:' in ANSI.sub('',response[start:]):raise RuntimeError('DB error; no retry')
+        time.sleep(.01)
+    else:raise RuntimeError('DB completion missing; no retry')
+    expected=b'RF1CKP02'+struct.pack('<IIII',110080,<REDACTED:ARTIFACT_CRC>,0,0)+bytes(504)
+    assert read('marker_before',0x7effff,1)==expected
+    for i,off in enumerate(range(0,110080,8192)):
+        p=out/f'part{i:02d}.bin'
+        with p.open('xb') as f:f.write(raw[off:min(off+8192,110080)])
+        c.command(f'WS {hex(0x7f0000+off//512)} {p}')
+    assert read('before',0x7f0000,0xd1)==raw
+    save('EXECUTION_DISPATCHED_NO_RETRY.json',dict(payload_sha256=digest,operation=result['scope']))
+    c.command('RD')
+    expected=b'RF1CKP02'+struct.pack('<IIII',110080,<REDACTED:ARTIFACT_CRC>,1,0x60000004)+bytes(504)
+    assert read('marker_after',0x7effff,1)==expected
+    result['bridge_returned']=True
+    data=read('after',0x7f0000,0xd1);assert data[:110080]==raw[:110080]
+    record=struct.unpack_from('<67I',data,110080);result['result_record']=[hex(x) for x in record]
+    result['nand_id']=data[110204:110210].hex();assert result['nand_id']=='2c44444ba900'
+    if boundary:
+        assert record[:2]==(0x44475453,0x60086c6c)
+        result['nand_init_return']=hex(record[66])
+        result['nand_geometry_hex']=data[110272:110344].hex()
+        result['nand_init_success']=record[66]==0
+    else:
+        ex=read('logical_export',0x7f00d1,2);assert ex[:8]==b'RF1READ1'
+        lba,count,rc=struct.unpack_from('<III',ex,8)
+        result.update(logical_lba=hex(lba),logical_sectors=count,logical_return=hex(rc))
+        assert (lba,count)==(int(build['read_lba'],16),1)
+        sector=ex[240:752]
+        result.update(logical_sha256=hashlib.sha256(sector).hexdigest(),matches_official_boot=sector==boot[16384:16896])
+        assert rc==0 and result['matches_official_boot'],'Logical read mismatch; stop, no NAND writes'
+    result['all_pass']=True
+except BaseException as e:result['error']=repr(e);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    save('result.json',result)
+    print(json.dumps({k:v for k,v in result.items() if k!='commands'},indent=2),flush=True)

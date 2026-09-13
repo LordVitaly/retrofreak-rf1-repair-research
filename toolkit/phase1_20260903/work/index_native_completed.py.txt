@@ -1,0 +1,78 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/index_native_completed.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Incremental offline metadata index of manifest-committed native-ECC chunks.
+
+Only the first two aux bytes of each record are indexed; their interpretation
+is deliberately not asserted here. Candidate recovery matches are physical
+copies, not proof of which copy the FTL uses.
+"""
+import hashlib
+import json
+from collections import Counter
+from pathlib import Path
+from verify_native_ecc_page import BOOT, extract
+
+ROOT = Path(__file__).parent
+DUMP = ROOT/'nand_native_ecc40'
+OUT = ROOT/'native_ecc40_index'
+PAGE = 8448
+
+
+def meta(page):
+    return [int.from_bytes(page[i*528+512:i*528+514], 'little') for i in range(16)]
+
+
+def main():
+    OUT.mkdir(exist_ok=True)
+    records = [json.loads(line) for line in (DUMP/'manifest.jsonl').read_text().splitlines()]
+    reference = (BOOT.parent/'recovery.img').read_bytes()[512*8192:768*8192]
+    needle = reference[:128]
+    for record in records:
+        if not record['file'].upper().startswith('NAND_'):
+            continue
+        out = OUT/(Path(record['file']).stem+'.json')
+        if out.exists():
+            previous = json.loads(out.read_text())
+            assert previous['source_sha256'] == record['sha256']
+            continue
+        source = DUMP/record['file']
+        raw = source.read_bytes()
+        assert len(raw) == record['bytes'] == 0x40000*528
+        assert hashlib.sha256(raw).hexdigest() == record['sha256']
+        blocks = []
+        for local in range(64):
+            offset = local*256*PAGE
+            block = raw[offset:offset+256*PAGE]
+            counts = Counter()
+            for p in range(256):
+                start = p*PAGE
+                counts[int.from_bytes(block[start+512:start+514], 'little')] += 1
+            blocks.append(dict(physical_block=record['sector']//4096+local,
+                first_aux0_counts={hex(k):v for k,v in counts.items()},
+                page0_meta=meta(block[:PAGE]), page1_meta=meta(block[PAGE:2*PAGE]),
+                page255_meta=meta(block[-PAGE:]), main_first64=block[:64].hex()))
+        candidates = []
+        start = 0
+        while True:
+            position = raw.find(needle, start)
+            if position < 0:
+                break
+            start = position+1
+            if position%PAGE or position+256*PAGE > len(raw):
+                continue
+            actual = b''.join(extract(raw[position+p*PAGE:position+(p+1)*PAGE]) for p in range(256))
+            candidates.append(dict(physical_sector=record['sector']+position//528,
+                exact_full_2MiB_match=actual == reference,
+                mismatching_bytes=sum(a != b for a,b in zip(actual,reference))))
+        result = dict(source_file=record['file'], source_sha256=record['sha256'],
+                      blocks=blocks, recovery_block2_candidates=candidates)
+        with out.open('x',encoding='utf-8') as stream:
+            json.dump(result,stream,indent=2)
+        print(record['file'], 'indexed and hash rechecked;', 'recovery candidates:', candidates, flush=True)
+
+
+if __name__ == '__main__':
+    main()

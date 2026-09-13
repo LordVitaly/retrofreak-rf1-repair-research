@@ -1,0 +1,36 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_usb_cache_boundary.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Only the cache-boundary trampoline; reuse prior L2 completion contract."""
+import json,hashlib,struct
+import startup_slice_test_harness as h
+from startup_l2_fixture import L2Contract
+from unicorn.arm_const import *
+build=json.loads((h.ROOT/'outputs/usb_cache_off_build.json').read_text())
+raw=(h.ROOT/'work'/build['payload']).read_bytes()
+assert hashlib.sha256(raw).hexdigest()==build['sha256']
+results=[]
+for enabled,ways in ((0,8),(1,8),(1,16)):
+    u=h.machine();u.mem_write(0x60080000,raw[0xa34:110080])
+    l2=L2Contract(u);l2.regs[0x100]=enabled;l2.regs[0x104]=0x76050001 if ways==16 else 0x2060000
+    u.mem_write(0x60040000,struct.pack('<4096I',*[i<<20|0xc0a for i in range(4096)]))
+    for reg,val in (((15,0,0,2,0,0,0),0x60040000),((15,0,0,3,0,0,0),0x55555555),((15,0,0,1,0,0,0),0xc5107d),((15,0,0,0,0,2,0),1)):
+        u.reg_write(UC_ARM_REG_CP_REG,(*reg,val))
+    u.reg_write(UC_ARM_REG_CPSR,0x53)
+    preserved=(UC_ARM_REG_R4,UC_ARM_REG_R5,UC_ARM_REG_R6,UC_ARM_REG_R7,UC_ARM_REG_R8,UC_ARM_REG_R9,UC_ARM_REG_R10,UC_ARM_REG_R11)
+    for i,reg in enumerate(preserved):u.reg_write(reg,0x12340000+i)
+    h.SP=0x603d3a3c
+    rc,writes=h.call(u,0x600982e4,ranges=((0x10138000,0x10139000),),stop=0x60081ae4,budget=1000000)
+    assert u.reg_read(UC_ARM_REG_SP)==h.SP and u.reg_read(UC_ARM_REG_LR)==0x600982e8
+    assert [u.reg_read(r) for r in preserved]==list(range(0x12340000,0x12340008))
+    assert u.reg_read(UC_ARM_REG_CPSR)&0xff==0x53
+    assert u.reg_read(UC_ARM_REG_CP_REG,(15,0,0,1,0,0,0))&0x1005==0
+    assert l2.regs[0x100]==0 and l2.pending is None
+    assert not enabled or l2.cleaned and l2.synced
+    assert bytes(u.mem_read(0x60080000,110080-0xa34))==raw[0xa34:110080]
+    results.append(dict(l2_initial=enabled,ways=ways,pass_test=True,registers_preserved=True,usb_target_exact=True,writes=l2.writes))
+result=dict(all_pass=True,payload_sha256=build['sha256'],cases=results,limits=['Cache-effect model not claimed; exact original L1 code and previously proved L2 clean/disable order','Original USB initializer NOT executed offline; no NAND commands'])
+with (h.ROOT/'outputs/usb_cache_boundary_offline.json').open('x') as f:json.dump(result,f,indent=2)
+print(json.dumps(result,indent=2))

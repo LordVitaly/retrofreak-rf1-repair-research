@@ -1,0 +1,77 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_system_writer_core.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Actual compiled ARM policy/CRC/readback logic, no device and no FTL model."""
+import hashlib,json,struct
+from emulate_flashboot_offline import ROOT,REGS,UC_ARM_REG_LR,UC_ARM_REG_PC,UC_ARM_REG_SP
+from unicorn import Uc,UC_ARCH_ARM,UC_MODE_ARM,UC_HOOK_CODE
+build=json.loads((ROOT/'outputs/system_writer_core_v3_build.json').read_text())
+code=(ROOT/'work/system_writer_core_v3/core.NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(code).hexdigest()==build['sha256']
+donor=(ROOT.parent.parent/'2026-09-01/retro-freak-retrofreak-systemupdate-0-2/work/rkfw_contents/components/system.img').read_bytes()
+assert hashlib.sha256(donor).hexdigest()==build['donor_sha256']
+cases=[]
+def run(name,args,expected,kind='normal'):
+    u=Uc(UC_ARCH_ARM,UC_MODE_ARM)
+    for p,n in ((0x61800000,4096),(0x6101a000,8192),(0x61700000,4096),(0x63000000,0x210000),(0x607f0000,0x10000),(0x60080000,0x10000)):
+        u.mem_map(p,n)
+    u.mem_write(0x61800000,code)
+    source=donor[(args[1]-0xba000)*512:(args[1]-0xba000)*512+args[2]*512] if expected!=1 else b''
+    if source:u.mem_write(0x63000000,source)
+    if kind=='corrupt':u.mem_write(0x63000000,bytes([source[0]^1]))
+    # Deliberately start with token set: every invocation must revoke it first.
+    u.mem_write(0x61700000,struct.pack('<I',0x31575246))
+    writes=[];reads=[];media={}
+    def io(uc,pc,size,ctx):
+        chip,lba,count,buffer=[uc.reg_read(r) for r in REGS]
+        token=struct.unpack('<I',uc.mem_read(0x61700000,4))[0]
+        rc=0
+        assert chip==0 and args[1]<=lba and lba+count<=args[1]+4096 and 0<count<=128
+        if pc==0x60087398:
+            assert token==0x31575246 and buffer==0x63000000+(lba-args[1])*512
+            writes.append((lba,count))
+            if kind=='write_failure':rc=0xffffffff
+            else:media[lba]=bytes(uc.mem_read(buffer,count*512))
+        else:
+            assert pc==0x600846a0 and token==0 and buffer==0x63200000
+            if args[2]==4088 and not writes:
+                assert lba==args[1]+4080 and count==16
+                if kind=='tail_read_failure':rc=0xffffffff
+                else:uc.mem_write(buffer,bytes([0x73])*8192)
+                uc.reg_write(REGS[0],rc);uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR));return
+            reads.append((lba,count))
+            if kind=='read_failure':rc=0xffffffff
+            elif kind!='false_read_success':uc.mem_write(buffer,media[lba])
+        uc.reg_write(REGS[0],rc);uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR))
+    for pc in (0x60087398,0x600846a0):u.hook_add(UC_HOOK_CODE,io,begin=pc,end=pc)
+    for reg,v in zip(REGS,args):u.reg_write(reg,v)
+    u.reg_write(UC_ARM_REG_SP,0x607ff000);u.reg_write(UC_ARM_REG_LR,0x607ffffc)
+    u.emu_start(int(build['entry'],16),0x607ffffc,count=300_000_000)
+    assert u.reg_read(UC_ARM_REG_PC)==0x607ffffc
+    status=struct.unpack('<7I',u.mem_read(0x6101af10,28))
+    assert status[3]==expected and u.reg_read(REGS[0])==(0 if expected==6 else 0xffffffff),(name,status)
+    assert bytes(u.mem_read(0x61700000,4))==bytes(4)
+    if expected in (1,2):assert not writes and not reads
+    elif expected==7:assert not writes and not reads
+    elif expected==3:assert len(writes)==1 and not reads and status[4]==0
+    elif expected in (4,5):assert len(writes)==len(reads)==1 and status[4]==0
+    else:
+        assert writes==reads and sum(n for _,n in writes)==4096 and status[4]==args[2]
+        if args[2]==4088:assert bytes(u.mem_read(0x63000000+4088*512,4096))==bytes([0x73])*4096
+    cases.append(dict(name=name,pass_test=True,status=status[3],completed_sectors=status[4],write_calls=len(writes),read_calls=len(reads)))
+    print('PASS',name,flush=True)
+for name,args in [
+ ('other_chip',(1,0xba000,4096,0x63000000)),('boot',(0,0x6000,4096,0x63000000)),
+ ('userdata',(0,0x38000,4096,0x63000000)),('after_partition',(0,0x13a000,4096,0x63000000)),
+ ('after_image',(0,0x104000,4096,0x63000000)),('unaligned',(0,0xba001,4096,0x63000000)),
+ ('zero_length',(0,0xba000,0,0x63000000)),('oversize',(0,0xba000,4097,0x63000000)),
+ ('overflow',(0,0xfffff000,0xffffffff,0x63000000)),('wrong_buffer',(0,0xba000,4096,0x63000200)),
+ ('last_overrun',(0,0x103000,4096,0x63000000))]:run(name,args,1)
+for name,status in [('corrupt',2),('write_failure',3),('read_failure',4),('false_read_success',5),('normal',6)]:
+    run(name,(0,0xba000,4096,0x63000000),status,name)
+run('last_partial',(0,0x103000,4088,0x63000000),6)
+run('tail_read_failure',(0,0x103000,4088,0x63000000),7,'tail_read_failure')
+with (ROOT/'outputs/system_writer_core_v3_offline.json').open('x') as f:
+    json.dump(dict(all_pass=True,device_access=False,core_sha256=build['sha256'],cases=cases,limits=['I/O callbacks are controlled inputs, not original FTL or physical NAND','Hardware upload/gates/transport not implemented']),f,indent=2)

@@ -1,0 +1,28 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/ftl_bridge_read_hardware_attempt01/result.json",
+  "interpretation": "Original logical reader with the working USB bridge: exact boot sector.",
+  "data": {
+    "commands": "<REDACTED:RAW_LOG_OR_IDENTIFIER>",
+    "payload_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "system_repair_performed": false,
+    "nand_writes_enabled": false,
+    "scope": "One logical boot sector; original v33 return; no own FlashBoot USB startup",
+    "cold_maskrom_visible": true,
+    "bridge_marker_exact": true,
+    "full_ram_exact": true,
+    "bridge_returned": true,
+    "result_record": {
+      "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+      "original_items": 31
+    },
+    "main_control_pointer": "0x6009a1f8",
+    "nand_id": "2c44444ba900",
+    "logical_lba": "0x6020",
+    "logical_sectors": 1,
+    "logical_return": "0x0",
+    "logical_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "matches_official_boot": true,
+    "all_pass": true
+  }
+}

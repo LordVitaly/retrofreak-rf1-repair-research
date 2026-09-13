@@ -1,0 +1,69 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/emulate_flashboot_bbt.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Bounded actual-code BBT replay against dump, with optimistic read status.
+
+No NAND/controller access. Stops at write boundaries, never pretends a write
+succeeded. The BBT work-buffer pointer is injected, not derived from startup.
+"""
+import json
+import struct
+from emulate_flashboot_offline import OfflineFlashBoot, ROOT, FTL, FLASH, REGS, address, UC_ARM_REG_R0, UC_ARM_REG_PC, UC_ARM_REG_LR
+
+class DumpReplay(OfflineFlashBoot):
+    def __init__(self, record):
+        super().__init__(record)
+        self.dump_mode = False
+        self.reads = []
+
+    def read_raw(self,sector,count):
+        chunk,local=divmod(sector,0x40000)
+        assert local+count<=0x40000
+        with (ROOT/'work/nand_native_ecc40'/f'NAND_{chunk:02d}.RAW').open('rb') as source:
+            source.seek(local*528)
+            raw=source.read(count*528)
+        assert len(raw)==count*528
+        return raw
+
+    def code_hook(self, uc, pc, size, unused):
+        if self.dump_mode and pc == address(0x9ef4):
+            sector, main, spare, count = [uc.reg_read(r) for r in REGS]
+            assert 0 < count <= 16 and 0 <= sector < 8388608 and sector+count <= 8388608
+            raw=self.read_raw(sector,count)
+            if main: uc.mem_write(main,b''.join(raw[i:i+512] for i in range(0,len(raw),528)))
+            if spare: uc.mem_write(spare,b''.join(raw[i+512:i+528] for i in range(0,len(raw),528)))
+            self.reads.append(dict(sector=sector,count=count,first_tag=hex(int.from_bytes(raw[512:514],'little'))))
+            uc.reg_write(UC_ARM_REG_R0,0)
+            uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR))
+            return
+        super().code_hook(uc,pc,size,unused)
+
+def main():
+    record = (ROOT/'work/idb_ecc24_parameter_attempt2/block05_page15.raw').read_bytes()[:512]
+    emu = DumpReplay(record)
+    assert emu.call(0xa158,0x50f4) == 0
+    emu.uc.mem_write(FLASH+0xa0,struct.pack('<H',12))
+    emu.call(0x74e0)
+    # Caller-owned scratch buffer: address chosen by harness, not firmware startup.
+    emu.uc.mem_write(FTL+0x9dc4,struct.pack('<I',0x60400000))
+    emu.dump_mode = True
+    result = None
+    error = None
+    try:
+        result = emu.call(0x6a24)
+    except RuntimeError as exc:
+        error = str(exc)
+    report = dict(scope='Actual 6A24 BBT code and callees with dump-backed reads; NOT full startup or controller emulation',
+                  return_value=result,error=error,stop=emu.stopped,
+                  assumed_all_physical_reads_successful=True,
+                  injected_scratch_pointer='gFtl+0x9dc4=0x60400000',
+                  read_count=len(emu.reads),reads=emu.reads,
+                  ftl_header_hex=bytes(emu.uc.mem_read(FTL,0x14)).hex(),
+                  bbt_header_hex=bytes(emu.uc.mem_read(FTL+0x8d80,0x20)).hex())
+    with (ROOT/'outputs/flashboot_offline_bbt_stage2.json').open('x') as output:
+        json.dump(report,output,indent=2)
+    print(json.dumps({k:v for k,v in report.items() if k!='reads'},indent=2))
+
+if __name__=='__main__': main()

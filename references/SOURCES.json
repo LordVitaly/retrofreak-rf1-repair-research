@@ -1,0 +1,86 @@
+[
+  {
+    "name": "Ken / Sui Lab",
+    "title": "Recovering a broken Retro Freak",
+    "date": "2021-01-04",
+    "url": "https://sui-lab.info/archives/3342",
+    "contribution": "Documented using the RetroN 5 full-reset recovery image on Retro Freak and the factory-reset workflow.",
+    "id": "R01",
+    "checked_on": "2026-09-12",
+    "access_check": "page retrieved during publication review"
+  },
+  {
+    "name": "Anonymous 5ch contributor f0xHXxH1",
+    "title": "Retro Freak CFW analysis thread, post #10",
+    "date": "2015-11-16 01:07:01",
+    "url": "https://medaka.5ch.io/test/read.cgi/gameurawaza/1447594308",
+    "contribution": "Documented the hidden service switch and PC USB connection sequence. The reference repair later confirmed that this sequence exposes RK3066 MaskROM.",
+    "id": "R02",
+    "checked_on": "2026-09-12",
+    "access_check": "Not retrievable in the final review browser; attribution retained from the research-session reference record, not newly verified.",
+    "provenance_note": "Post number, handle and timestamp are inherited attribution metadata. Local hardware confirmation is distinct from the old post."
+  },
+  {
+    "name": "hissorii",
+    "title": "retrofd",
+    "url": "https://github.com/hissorii/retrofd",
+    "contribution": "Foundational Retro Freak Android/SD boot/root/ADB research.",
+    "id": "R03",
+    "checked_on": "2026-09-12",
+    "access_check": "page retrieved during publication review"
+  },
+  {
+    "name": "nosuke",
+    "title": "RetroN 5 / Retro Freak hacking diary",
+    "url": "https://www.dentsubo.net/~nosuke/diary/diary.php?d=0&m=10&n=0&y=2017",
+    "contribution": "Practical RETRON5___BOOTSD and bootscript experiments.",
+    "id": "R04",
+    "checked_on": "2026-09-12",
+    "access_check": "page retrieved during publication review"
+  },
+  {
+    "name": "Duddyfinger",
+    "title": "Retro Freak and cartridge-adapter repair case",
+    "url": "https://ameblo.jp/duddyfinger/entry-12856374336.html",
+    "contribution": "Independent later example using the RetroN 5 recovery image on a faulty Retro Freak.",
+    "id": "R05",
+    "checked_on": "2026-09-12",
+    "access_check": "page retrieved during publication review"
+  },
+  {
+    "name": "CYBER Gadget",
+    "title": "Retro Freak update history and instructions",
+    "url": "https://cybergadget.co.jp/support/retrofreak/update/",
+    "contribution": "Official update/version reference.",
+    "id": "R06",
+    "checked_on": "2026-09-12",
+    "access_check": "page retrieved during publication review"
+  },
+  {
+    "name": "GoobyCorp",
+    "title": "RetroFreak_Toolkit",
+    "url": "https://github.com/GoobyCorp/RetroFreak_Toolkit",
+    "contribution": "Public reference for the encrypted Retro Freak update container and nested Rockchip package.",
+    "id": "R07",
+    "checked_on": "2026-09-12",
+    "access_check": "page retrieved during publication review"
+  },
+  {
+    "name": "Rockchip Linux",
+    "title": "rkdeveloptool",
+    "url": "https://github.com/rockchip-linux/rkdeveloptool",
+    "contribution": "Rockusb/RKBoot protocol and package reference.",
+    "id": "R08",
+    "checked_on": "2026-09-12",
+    "access_check": "Retained upstream dependency reference; not independently fetched in the final review."
+  },
+  {
+    "name": "dw",
+    "title": "Published RK3066 BootROM reference",
+    "url": "https://gist.github.com/dw/9300925",
+    "contribution": "Bounded external reference for USB BootROM behavior; exact RF-1 ROM revision not proven identical.",
+    "id": "R09",
+    "checked_on": "2026-09-12",
+    "access_check": "page retrieved during publication review"
+  }
+]

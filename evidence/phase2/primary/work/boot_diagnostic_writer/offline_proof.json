@@ -1,0 +1,107 @@
+{
+  "all_pass": true,
+  "device_access": false,
+  "actual_ARM_core_and_gates": true,
+  "variants": [
+    {
+      "variant": "6_dry",
+      "pass_test": true,
+      "physical_checks": 4096,
+      "negative_cases": 16,
+      "all_2048_blocks_checked_program_and_erase": true,
+      "dynamic_other_candidate_protection": true,
+      "non_boot_mapping_crc": true,
+      "geometry_guards": true,
+      "latched_error_no_retry": true,
+      "core_cases": [
+        "normal",
+        "dry_erase"
+      ],
+      "stack_balanced": true
+    },
+    {
+      "variant": "6_write",
+      "pass_test": true,
+      "physical_checks": 4096,
+      "negative_cases": 16,
+      "all_2048_blocks_checked_program_and_erase": true,
+      "dynamic_other_candidate_protection": true,
+      "non_boot_mapping_crc": true,
+      "geometry_guards": true,
+      "latched_error_no_retry": true,
+      "core_cases": [
+        "normal",
+        "bad_crc",
+        "hidden_failure",
+        "stale_read",
+        "read_error"
+      ],
+      "stack_balanced": true
+    },
+    {
+      "variant": "9_dry",
+      "pass_test": true,
+      "physical_checks": 4096,
+      "negative_cases": 16,
+      "all_2048_blocks_checked_program_and_erase": true,
+      "dynamic_other_candidate_protection": true,
+      "non_boot_mapping_crc": true,
+      "geometry_guards": true,
+      "latched_error_no_retry": true,
+      "core_cases": [
+        "normal"
+      ],
+      "stack_balanced": true
+    },
+    {
+      "variant": "9_write",
+      "pass_test": true,
+      "physical_checks": 4096,
+      "negative_cases": 16,
+      "all_2048_blocks_checked_program_and_erase": true,
+      "dynamic_other_candidate_protection": true,
+      "non_boot_mapping_crc": true,
+      "geometry_guards": true,
+      "latched_error_no_retry": true,
+      "core_cases": [
+        "normal"
+      ],
+      "stack_balanced": true
+    },
+    {
+      "variant": "10_dry",
+      "pass_test": true,
+      "physical_checks": 4096,
+      "negative_cases": 16,
+      "all_2048_blocks_checked_program_and_erase": true,
+      "dynamic_other_candidate_protection": true,
+      "non_boot_mapping_crc": true,
+      "geometry_guards": true,
+      "latched_error_no_retry": true,
+      "core_cases": [
+        "normal"
+      ],
+      "stack_balanced": true
+    },
+    {
+      "variant": "10_write",
+      "pass_test": true,
+      "physical_checks": 4096,
+      "negative_cases": 16,
+      "all_2048_blocks_checked_program_and_erase": true,
+      "dynamic_other_candidate_protection": true,
+      "non_boot_mapping_crc": true,
+      "geometry_guards": true,
+      "latched_error_no_retry": true,
+      "core_cases": [
+        "normal"
+      ],
+      "stack_balanced": true
+    }
+  ],
+  "elapsed_seconds": 45.20300000000134,
+  "limits": [
+    "Native I/O is stubbed at proven original function boundary; no new controller or ECC model.",
+    "Original FTL persistence already tested in prior system writer; current boot requires live dry, once-only write, immediate readback, reopen readback and fresh map capture."
+  ]
+}

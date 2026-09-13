@@ -1,0 +1,30 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/boot_diagnostic_writer/build_capture.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Prepare existing read-only FTL snapshot payload with original capacity opcode."""
+import hashlib,importlib.util,json,sys,zlib
+from pathlib import Path
+sys.dont_write_bytecode=True
+OUT=Path(__file__).resolve().parent
+OLD=Path('<EXTERNAL_STAGE_03>')
+def sha(b):return hashlib.sha256(b).hexdigest()
+src=OLD/'work/ftl_capture_v1/capture.raw';before=src.read_bytes()
+assert sha(before)=='<HISTORICAL_HASH_REDACTED>'
+hp=OLD/'work/ram_artifact.py';assert sha(hp.read_bytes())=='<HISTORICAL_HASH_REDACTED>'
+spec=importlib.util.spec_from_file_location('checked_pure_helper',hp);h=importlib.util.module_from_spec(spec);spec.loader.exec_module(h)
+data=bytearray(before[:110080]);assert data[0xb408:0xb40c]==bytes.fromhex('0205a0e3')
+data[0xb408:0xb40c]=bytes.fromhex('0101a0e3');h.fix_crc(data);raw=bytes(data)+bytes(272)
+changed=[i for i,(a,b) in enumerate(zip(before,raw)) if a!=b]
+assert changed==[0x1e0,0x1e1,0x1e2,0x1e3,0xb408,0xb409]
+assert raw[0xaf60:0xaf64]==bytes.fromhex('0003a0e1')
+assert all(raw[o:o+8]==bytes.fromhex('0000e0e31eff2fe1') for o in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c))
+assert all(raw[o:o+4]==bytes.fromhex('feffffea') for o in (0xbbc8,0xbc90))
+assert len(raw)==110352 and raw[110080:]==bytes(272) and zlib.crc32(raw[:110080])==0xad0dadee
+p=OUT/'fresh_ftl_capture.raw'
+if p.exists():assert p.read_bytes()==raw
+else:p.write_bytes(raw)
+report={'all_pass':True,'device_access':False,'payload':str(p),'sha256':sha(raw),'source':str(src),'source_sha256':sha(before),'changed_offsets':[hex(i) for i in changed],'no_capacity_geometry_or_BBT_RAM_corrections':True,'all_guards_unchanged':True,'cut_pc':'0x600982e4','metadata':{'RS':['0x7f00d1','0x2'],'magic':'RF1READ1','lba':'0x103000','count':1,'require_native_rc':0,'capture_bytes_field_offset':20,'capture_bytes':0xa8000},'export':{'RS_first':'0x800000','sectors':1344,'max_sectors_per_call':16,'bytes':0xa8000,'strip_aux16':True},'layout':{'FTL_RAM_address':'0x602b3000','FTL_RAM_bytes':'0xa6000','NAND_RAM_address':'0x60359000','NAND_RAM_offset':'0xa6000','NAND_RAM_bytes':'0x2000','FTL_header_offset':'0x180','logical_map_offset':'0xf00','logical_map_u16_entries':1896},'proof_reused':str(OLD/'outputs/ftl_capture_offline.json')}
+(OUT/'fresh_ftl_capture.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report,indent=2))

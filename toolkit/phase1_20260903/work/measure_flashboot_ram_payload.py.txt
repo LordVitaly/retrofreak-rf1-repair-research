@@ -1,0 +1,25 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/measure_flashboot_ram_payload.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Offline size feasibility only; compressed bytes are not executable loaders."""
+import hashlib
+import json
+import lzma
+import zlib
+from pathlib import Path
+
+root = Path(__file__).resolve().parents[1]
+d = (root / 'work/FlashBoot.machine_guards.UNPACKAGED_NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(d).hexdigest() == '<REDACTED:HASH_OR_BYTES>'
+variants = {'deflate_raw': zlib.compress(d, level=9, wbits=-15),
+            'lzma_alone': lzma.compress(d, format=lzma.FORMAT_ALONE)}
+assert zlib.decompress(variants['deflate_raw'], wbits=-15) == d
+assert lzma.decompress(variants['lzma_alone'], format=lzma.FORMAT_ALONE) == d
+report = dict(original_bytes=len(d),
+    variants={name: dict(compressed_bytes=len(data), remaining_before_65534=65534-len(data))
+              for name, data in variants.items()},
+    limitation='Host compression round-trip only. No ARM decompressor, startup or USB test; no upload artifact.')
+(root / 'outputs/flashboot_compression_feasibility.json').write_text(json.dumps(report, indent=2)+'\n')
+print(json.dumps(report, indent=2))

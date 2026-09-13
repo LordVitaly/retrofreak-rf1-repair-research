@@ -1,0 +1,41 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_usbplug_ram_dispatch.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Execute original USBplug dispatcher only, with no peripheral access."""
+import hashlib
+import json
+import sys
+from pathlib import Path
+root = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(root / 'work/emulator_deps'))
+from unicorn import Uc, UC_ARCH_ARM, UC_MODE_ARM, UC_HOOK_CODE
+from unicorn.arm_const import UC_ARM_REG_R0, UC_ARM_REG_PC
+
+source = Path(r'<HOST_PATH>')
+d = source.read_bytes()
+prior = json.loads((root / 'outputs/loader_logical_capability_static.json').read_text())
+assert hashlib.sha256(d).hexdigest() == prior['usbplug_sha256']
+u = Uc(UC_ARCH_ARM, UC_MODE_ARM)
+base = 0x60000000
+u.mem_map(base, 0x10000)
+u.mem_write(base, d)
+def stop_at_destination(uc, address, size, context):
+    if address >= base + 0x18bc:
+        uc.emu_stop()
+u.hook_add(UC_HOOK_CODE, stop_at_destination)
+results = []
+for op in range(256):
+    u.reg_write(UC_ARM_REG_R0, op)
+    u.emu_start(base+0x1850, base+0x1944, count=32)
+    results.append(dict(opcode=hex(op), destination=hex(u.reg_read(UC_ARM_REG_PC)-base)))
+accepted = [int(x['opcode'],16) for x in results if x['destination'] != '0x18bc']
+assert accepted == list(range(7))+[11,12,26,27,33,34,255]
+assert all(results[op]['destination'] == '0x18bc' for op in (0x17,0x18,0x19))
+report = dict(usbplug_sha256=hashlib.sha256(d).hexdigest(),
+              executed='Original ARM dispatcher 0x1850 through selected branch destination',
+              results=results, ram_opcodes_rejected=[hex(x) for x in (0x17,0x18,0x19)],
+              device_access=False)
+(root / 'outputs/usbplug_ram_dispatch_execution.json').write_text(json.dumps(report,indent=2)+'\n')
+print('PASS: all 256 opcodes; READ/WRITE/EXECUTE_SDRAM rejected before handler execution.')

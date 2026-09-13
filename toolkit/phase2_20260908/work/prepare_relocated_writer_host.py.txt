@@ -1,0 +1,29 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/prepare_relocated_writer_host.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+from pathlib import Path
+import py_compile
+p=Path(__file__).resolve().parent
+s=(p/'run_header_secondary_repair.py').read_text()
+for old,new in [
+ ('physical == 1028','physical == 74'),
+ ("build = HERE / 'boot_header_secondary'", "build = HERE / 'boot_relocated_active'"),
+ ('PENDING_SECONDARY_FINAL_MANIFEST_NO_HARDWARE','PENDING_RELOCATED_FINAL_MANIFEST_NO_HARDWARE'),
+ ('boot_header_secondary_backup_attempt01','boot_relocated_backup_attempt01'),
+ ("assert getjson(HERE / 'boot_header_map_recheck_attempt01/result.json')['all_pass']", "assert getjson(HERE / 'boot_actual_map_baseline.json')['all_pass']"),
+ ('(22 if mode == 0 else 1028)','(22 if mode == 0 else 74)'),
+ ("out = HERE / f'boot_header_secondary_block{physical}_attempt01'", "out = HERE / f'boot_relocated_header_block{physical}_attempt01'"),
+ ("batch=f'boot_header_secondary_block{physical}'", "batch=f'boot_relocated_header_block{physical}'"),
+ ('Only physical1028; primary22','Only physical74; primary22')]:
+ assert old in s,old
+ s=s.replace(old,new)
+needle="snapshot = (HERE / f'boot_header_map_recheck_attempt01/{kind}/data.bin').read_bytes()"
+assert needle in s
+s=s.replace(needle,needle+"\n    assert sha(snapshot) == getjson(HERE / 'boot_actual_map_baseline.json')['maps'][kind]['sha256']")
+t=p/'run_relocated_header_repair.py'
+with t.open('x') as f:f.write(s)
+py_compile.compile(str(t),doraise=True)
+print('Prepared with no-hardware manifest placeholder: '+str(t))

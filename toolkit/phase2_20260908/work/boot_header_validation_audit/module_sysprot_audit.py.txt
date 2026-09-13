@@ -1,0 +1,37 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/boot_header_validation_audit/module_sysprot_audit.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Offline ELF32 module symbol/relocation lookup, no hardware."""
+from pathlib import Path
+import struct,sys
+from capstone import Cs,CS_ARCH_ARM,CS_MODE_ARM
+p=Path('<EXTERNAL_STAGE_01>/work/recovery_deep/rf_boot/rk30xxnand_ko.ko.3.0.8+')
+b=p.read_bytes();shoff=struct.unpack_from('<I',b,32)[0];ents,n,ssidx=struct.unpack_from('<3H',b,46)
+sections=[struct.unpack_from('<10I',b,shoff+i*ents) for i in range(n)]
+def secdata(i):s=sections[i];return b[s[4]:s[4]+s[5]]
+def st(s,i):return s[i:s.index(0,i)].decode(errors='replace')
+secstrings=secdata(ssidx)
+names=[st(secstrings,x[0]) for x in sections]
+symindex=names.index('.symtab');symdata=secdata(symindex);symstrings=secdata(sections[symindex][6]);symbols=[]
+for off in range(0,len(symdata),16):
+ x=struct.unpack_from('<IIIBBH',symdata,off);symbols.append(dict(name=st(symstrings,x[0]),value=x[1],size=x[2],info=x[3],section=x[5]))
+selected=set(sys.argv[1:] or ['GetRemapTbl','FtlSetSysProtAddr','NandSetSysProtAddr','gsysProtBlk','FlashSysProtSet','FtlFlashSysProtSetOn'])
+for i,s in enumerate(symbols):
+ if s['name'] in selected:print('SYMBOL',i,s,'section_name',names[s['section']] if s['section']<n else '-')
+for ri,rs in enumerate(sections):
+ if rs[1]!=9:continue
+ data=secdata(ri)
+ for off in range(0,len(data),8):
+  ro,info=struct.unpack_from('<II',data,off);sym=symbols[info>>8]
+  if sym['name'] in selected:
+   owner=[s for s in symbols if s['section']==rs[7] and s['size'] and s['value']<=ro<s['value']+s['size']]
+   print('REF',names[rs[7]],hex(ro),'type',info&255,'to',sym['name'],'owners',[(s['name'],hex(s['value'])) for s in owner])
+if '--disasm' in selected:
+ m=Cs(CS_ARCH_ARM,CS_MODE_ARM)
+ for s in symbols:
+  if s['name'] in selected and s['section']<n and s['size']:
+   print('DISASM',s['name'])
+   for i in m.disasm(secdata(s['section'])[s['value']:s['value']+s['size']],s['value']):print(hex(i.address),i.mnemonic,i.op_str)

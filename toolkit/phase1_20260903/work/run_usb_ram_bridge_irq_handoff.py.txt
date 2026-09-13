@@ -1,0 +1,136 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/run_usb_ram_bridge_irq_handoff.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Fixed RAM-only hardware route. Never use these WS addresses on a NAND loader.
+
+One fresh MaskROM DB -> exact 528-byte bridge marker -> fixed RAM payload WS ->
+full RAM readback -> optional guarded FlashBoot handoff. No system repair writes.
+"""
+import argparse,hashlib,json,os,struct,subprocess,threading,time
+from pathlib import Path
+from direct_winpty_console import DirectConsole
+from read_device_identity import TOOL
+from console_completion import completed_response
+ROOT=Path(__file__).resolve().parents[1]
+p=argparse.ArgumentParser()
+p.add_argument('--after-confirmed-cold-maskrom',action='store_true')
+p.add_argument('--execute-guarded-handoff',action='store_true')
+p.add_argument('--user-requested-single-repeat',action='store_true',help='One repeat of the identical original guarded handoff; preserve attempt01')
+p.add_argument('--capacity-fixed',action='store_true',help='One minimal 4GiB capacity correction on observed RF-1; no NAND writes')
+args=p.parse_args()
+if args.capacity_fixed and args.user_requested_single_repeat:p.error('Choose corrected payload or identical repeat, never both')
+if not args.after_confirmed_cold_maskrom:
+    p.error('A NEW user-confirmed cold MaskROM entry is mandatory')
+loader=ROOT/'work/usb_ram_bridge_irq_handoff.BOOT.OFFLINE_ONLY.bin'
+payload=ROOT/'work/usb_ram_bridge_irq_handoff.guarded_payload.RAM_ONLY.raw'
+if args.capacity_fixed:payload=ROOT/'work/usb_ram_bridge_irq_handoff.capacity4g.RAM_ONLY.raw'
+assert hashlib.sha256(loader.read_bytes()).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+expected=payload.read_bytes()
+assert hashlib.sha256(expected).hexdigest()==('<REDACTED:HASH_OR_BYTES>' if args.capacity_fixed else '<REDACTED:HASH_OR_BYTES>')
+assert len(expected)==110352
+for n in (1,2,3):
+    assert json.loads((ROOT/f'outputs/fixed_boundary{n:02d}_verification.json').read_text())['all_eight_exact']
+offline=json.loads((ROOT/'outputs/usb_ram_bridge_irq_handoff_offline_tests.json').read_text())
+if args.capacity_fixed:
+    offline=json.loads((ROOT/'outputs/capacity_fixed_full_transport_tests.json').read_text())
+    assert offline['payload_sha256']==hashlib.sha256(expected).hexdigest() and offline['capacity_fixed']
+    build=json.loads((ROOT/'outputs/capacity_fixed_full_build.json').read_text())
+    assert build['sha256']==hashlib.sha256(expected).hexdigest()
+    assert all(build[k] for k in ('eight_error_guards_executed_no_writes','two_confirm_stops_preserved','all_256_flashboot_opcodes_checked','no_diagnostic_carriers_or_cuts'))
+    ab=json.loads((ROOT/'work/startup_ftl_capacity_hardware_attempt01/result.json').read_text())
+    assert [(c['name'],c['returned'],c['ftl_block_count']) for c in ab['cases']]==[('ftl_capacity_original',True,0),('ftl_capacity_fixed',True,2048)]
+assert offline['build_sha256']==hashlib.sha256(loader.read_bytes()).hexdigest()
+assert all(offline[k] for k in ('marker_exact','full_110352_byte_RAM_roundtrip','six_NAND_entry_guards_reject_without_writes',
+    'all_256_opcodes_checked','three_corrupted_payloads_refused','guarded_flashboot_handoff_bytes_exact',
+    'bridge_survives_cleared_low_append_area','WS_512_plus_16_unwrapped','disconnect_before_copy','conditional_irq_eoi_before_disconnect'))
+running=subprocess.run(['tasklist','/FI','IMAGENAME eq Android_Console_Tool.exe','/FO','CSV','/NH'],capture_output=True,text=True,check=True).stdout
+assert 'Android_Console_Tool.exe' not in running,'Another console is active'
+out=ROOT/('work/usb_ram_bridge_capacity_fixed_hardware_attempt01' if args.capacity_fixed else 'work/usb_ram_bridge_irq_handoff_hardware_attempt02' if args.user_requested_single_repeat else 'work/usb_ram_bridge_irq_handoff_hardware_attempt01');out.mkdir(exist_ok=False)
+main=expected[:110080]
+assert hashlib.sha256(main).hexdigest()==('<REDACTED:HASH_OR_BYTES>' if args.capacity_fixed else '<REDACTED:HASH_OR_BYTES>')
+marker=out/'bridge_marker.raw';readback=out/'guarded_payload_ram_readback.raw'
+marker_expected=b'RF1RAM04'+struct.pack('<II',110080,<REDACTED:ARTIFACT_CRC>)+bytes(528-16)
+env=dict(os.environ);env['__COMPAT_LAYER']='RunAsInvoker'
+proc=DirectConsole.spawn([str(TOOL)],cwd=str(TOOL.parent),env=env,dimensions=(40,160),backend=1)
+chunks=[];done=threading.Event();stream=(out/'transcript.txt').open('x',encoding='utf-8')
+result=dict(commands=[],marker_exact=False,RAM_roundtrip_exact=False,handoff_command_sent=False,
+    system_repair_performed=False,capacity_fixed=args.capacity_fixed,
+    payload_sha256=hashlib.sha256(expected).hexdigest(),
+    scope='WS allowed only after exact bridge marker; targets RAM, not NAND')
+def reader():
+    try:
+        while proc.isalive():
+            s=proc.read(4096)
+            if s:chunks.append(s);stream.write(s);stream.flush()
+    except EOFError:pass
+    finally:done.set()
+threading.Thread(target=reader,daemon=True).start()
+def wait(fragment,start=0):
+    deadline=time.monotonic()+45
+    while time.monotonic()<deadline:
+        text=''.join(chunks)
+        if fragment in text[start:]:return text[start:]
+        if done.is_set() or not proc.isalive():break
+        time.sleep(.05)
+    raise RuntimeError('Expected response absent; no further commands')
+def command(value):
+    # Command construction is fixed below; no caller-supplied arbitrary command.
+    result['commands'].append(value)
+    start=len(''.join(chunks));proc.write(value+'\r\n')
+    tokens={'DB':'Download boot ok','RS':'Read Sector to file (100%)',
+            'WS':'Write Sector from file (100%)','RFI':'Flash Info:', 'RD':'Reset Device OK'}
+    token=tokens[value.split()[0]]
+    deadline=time.monotonic()+45
+    while time.monotonic()<deadline:
+        response=completed_response(''.join(chunks),start,token)
+        if response is not None:return response
+        if done.is_set() or not proc.isalive():break
+        time.sleep(.05)
+    raise RuntimeError('Command success token plus following prompt absent; no further commands')
+try:
+    intro=wait('Select input')
+    assert all(s in intro for s in ('Found 1 rockusb','DevNo=1'))
+    assert 'Maskrom' in intro
+    start=len(''.join(chunks));proc.write('1\r\n');wait('Rockusb>',start)
+    assert 'Download boot ok' in command(f'DB {loader}')
+    response=command(f'RS 0x7effff 0x1 {marker}')
+    assert '(100%)' in response and marker.read_bytes()==marker_expected,'RAM bridge identity absent; WS FORBIDDEN'
+    result['marker_exact']=True
+    print('RAM_BRIDGE_MARKER_EXACT; bounded RAM transfer permitted',flush=True)
+    response=command('RFI')
+    result['RFI_response']=response
+    assert 'Flash Info:' in response  # RAM-only bridge need not expose usable NAND geometry.
+    # Console long WS does not advance as expected on this bridge. Each command
+    # is at most one measured 16-sector packet, with an explicit address.
+    for index,start in enumerate(range(0,len(main),8192)):
+        part=out/f'part{index:02d}.main512.bin'
+        with part.open('xb') as f:f.write(main[start:start+8192])
+        response=command(f'WS {hex(0x7f0000+start//512)} {part}')
+        assert '(100%)' in response and 'fail' not in response.lower(),'RAM transfer not reported successful; no handoff'
+    response=command(f'RS 0x7f0000 0xd1 {readback}')
+    actual=readback.read_bytes()
+    assert '(100%)' in response and actual==expected,'RAM readback mismatch; no handoff'
+    result['RAM_roundtrip_exact']=True
+    result['readback_sha256']=hashlib.sha256(readback.read_bytes()).hexdigest()
+    print('RAM_ROUNDTRIP_EXACT 110352 bytes; guarded FlashBoot bytes verified',flush=True)
+    if args.execute_guarded_handoff:
+        # The bridge repurposes RD only after CRC approval of this exact payload.
+        result['handoff_command_sent']=True
+        start=len(''.join(chunks))
+        try:result['handoff_response']=command('RD')
+        except RuntimeError as exc:
+            result['handoff_response']=''.join(chunks)[start:]
+            result['handoff_observation']=str(exc)
+            # A re-enumerating USB device may lose the old prompt. This does not
+            # establish success and does not authorize any retry or second DB.
+    print(json.dumps(result,indent=2),flush=True)
+except BaseException as exc:
+    result['error']=repr(exc)
+    raise
+finally:
+    if proc.isalive():proc.terminate(force=True)
+    done.wait(2)
+    if done.is_set():stream.close()
+    with (out/'result.json').open('x',encoding='utf-8') as f:json.dump(result,f,indent=2)

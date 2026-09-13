@@ -1,0 +1,256 @@
+{
+  "device_access": false,
+  "actual_kernel_sha256": "af7e01d68227df6f1936b3bd35fac398e0f7f5be1a42060dfb713a196013963f",
+  "actual_arm_function": "dwc_otg_pcd_check_vbus_timer@0xc06a4fcc",
+  "hardware_status_virtual_address": "0xfed0815c",
+  "register_offset": "GRF +0x15c",
+  "fixtures": "First VBUS observation; phy suspended; pullup 0 or1; printk/PHY/scheduling boundaries are stubbed",
+  "results": [
+    {
+      "status_bit20": 0,
+      "status_bit17": 0,
+      "gadget_pullup_requested": 0,
+      "connection_work_scheduled": false,
+      "calls": [
+        {
+          "pc": "0xc06a4eb4",
+          "name": "phy_suspend",
+          "args": [
+            "0x1",
+            "0x0",
+            "0xffff8b34",
+            "0x1"
+          ]
+        },
+        {
+          "pc": "0xc0469f54",
+          "name": "add_timer",
+          "args": [
+            "0xc1800b3c",
+            "0x0",
+            "0xffff8b34",
+            "0x1"
+          ]
+        }
+      ]
+    },
+    {
+      "status_bit20": 0,
+      "status_bit17": 0,
+      "gadget_pullup_requested": 1,
+      "connection_work_scheduled": false,
+      "calls": [
+        {
+          "pc": "0xc06a4eb4",
+          "name": "phy_suspend",
+          "args": [
+            "0x1",
+            "0x0",
+            "0xffff8b34",
+            "0x1"
+          ]
+        },
+        {
+          "pc": "0xc0469f54",
+          "name": "add_timer",
+          "args": [
+            "0xc1800b3c",
+            "0x0",
+            "0xffff8b34",
+            "0x1"
+          ]
+        }
+      ]
+    },
+    {
+      "status_bit20": 0,
+      "status_bit17": 1,
+      "gadget_pullup_requested": 0,
+      "connection_work_scheduled": false,
+      "calls": [
+        {
+          "pc": "0xc06a4eb4",
+          "name": "phy_suspend",
+          "args": [
+            "0x1",
+            "0x0",
+            "0xffff8b34",
+            "0x1"
+          ]
+        },
+        {
+          "pc": "0xc0469f54",
+          "name": "add_timer",
+          "args": [
+            "0xc1800b3c",
+            "0x0",
+            "0xffff8b34",
+            "0x1"
+          ]
+        }
+      ]
+    },
+    {
+      "status_bit20": 0,
+      "status_bit17": 1,
+      "gadget_pullup_requested": 1,
+      "connection_work_scheduled": false,
+      "calls": [
+        {
+          "pc": "0xc06a4eb4",
+          "name": "phy_suspend",
+          "args": [
+            "0x1",
+            "0x0",
+            "0xffff8b34",
+            "0x1"
+          ]
+        },
+        {
+          "pc": "0xc0469f54",
+          "name": "add_timer",
+          "args": [
+            "0xc1800b3c",
+            "0x0",
+            "0xffff8b34",
+            "0x1"
+          ]
+        }
+      ]
+    },
+    {
+      "status_bit20": 1,
+      "status_bit17": 0,
+      "gadget_pullup_requested": 0,
+      "connection_work_scheduled": false,
+      "calls": [
+        {
+          "pc": "0xc0469f54",
+          "name": "add_timer",
+          "args": [
+            "0xc1800b3c",
+            "0x0",
+            "0x0",
+            "0x0"
+          ]
+        }
+      ]
+    },
+    {
+      "status_bit20": 1,
+      "status_bit17": 0,
+      "gadget_pullup_requested": 1,
+      "connection_work_scheduled": false,
+      "calls": [
+        {
+          "pc": "0xc0469f54",
+          "name": "add_timer",
+          "args": [
+            "0xc1800b3c",
+            "0x0",
+            "0x0",
+            "0x0"
+          ]
+        }
+      ]
+    },
+    {
+      "status_bit20": 1,
+      "status_bit17": 1,
+      "gadget_pullup_requested": 0,
+      "connection_work_scheduled": false,
+      "calls": [
+        {
+          "pc": "0xc08b5de4",
+          "name": "printk",
+          "args": [
+            "0xc09dd5ae",
+            "0x0",
+            "0xffff8b34",
+            "0x0"
+          ]
+        },
+        {
+          "pc": "0xc06a4eb4",
+          "name": "phy_suspend",
+          "args": [
+            "0x0",
+            "0x0",
+            "0xffff8b34",
+            "0x1"
+          ]
+        },
+        {
+          "pc": "0xc0469f54",
+          "name": "add_timer",
+          "args": [
+            "0xc1800b3c",
+            "0x0",
+            "0xffff8b34",
+            "0x1"
+          ]
+        }
+      ]
+    },
+    {
+      "status_bit20": 1,
+      "status_bit17": 1,
+      "gadget_pullup_requested": 1,
+      "connection_work_scheduled": true,
+      "calls": [
+        {
+          "pc": "0xc08b5de4",
+          "name": "printk",
+          "args": [
+            "0xc09dd5ae",
+            "0x0",
+            "0xffff8b34",
+            "0x0"
+          ]
+        },
+        {
+          "pc": "0xc06a4f8c",
+          "name": "msc_lock",
+          "args": [
+            "0xc1800000",
+            "0x0",
+            "0xffff8b34",
+            "0x0"
+          ]
+        },
+        {
+          "pc": "0xc06a4eb4",
+          "name": "phy_suspend",
+          "args": [
+            "0x1",
+            "0x0",
+            "0xffff8b34",
+            "0x0"
+          ]
+        },
+        {
+          "pc": "0xc0473020",
+          "name": "schedule_delayed_work",
+          "args": [
+            "0xc1800b70",
+            "0x8",
+            "0xffff8b34",
+            "0x0"
+          ]
+        },
+        {
+          "pc": "0xc0469f54",
+          "name": "add_timer",
+          "args": [
+            "0xc1800b3c",
+            "0x8",
+            "0xffff8b34",
+            "0xffff8b98"
+          ]
+        }
+      ]
+    }
+  ],
+  "all_pass": true,
+  "limitation": "This proves the kernel control flow. Actual ordinary-boot ID/VBUS bits remain unmeasured."
+}

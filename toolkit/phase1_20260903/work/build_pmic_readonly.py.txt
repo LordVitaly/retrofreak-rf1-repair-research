@@ -1,0 +1,116 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_pmic_readonly.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Bounded compile/branch audit for five PMIC register reads. No device access."""
+import hashlib,json,struct,subprocess,sys,zlib
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'work/emulator_deps'))
+from unicorn import Uc,UC_ARCH_ARM,UC_MODE_ARM,UC_HOOK_MEM_READ,UC_HOOK_MEM_WRITE
+from unicorn.arm_const import UC_CPU_ARM_CORTEX_A9,UC_ARM_REG_PC
+devon=sys.argv[1:]==['--devon']
+assert sys.argv[1:] in ([],['--devon'])
+variant='pmic_devon_v1' if devon else 'pmic_readonly_v1'
+out=ROOT/'work'/variant;out.mkdir(exist_ok=False)
+source=(ROOT/'work/usb_ram_bridge_checkpoint_modefix.guarded_payload.RAM_ONLY.raw').read_bytes()
+assert hashlib.sha256(source).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+elfpath=out/'pmic.elf'
+subprocess.run([str(ROOT/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe'),'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-nostdlib','work/pmic_devon.S' if devon else 'work/pmic_readonly.S','-Wl,-T,work/power_hold_snapshot.ld','-o',str(elfpath)],cwd=ROOT,check=True)
+elf=elfpath.read_bytes();phoff=struct.unpack_from('<I',elf,28)[0];sz,n=struct.unpack_from('<HH',elf,42);code=[]
+for i in range(n):
+    typ,off,va,pa,fs,ms,flags,align=struct.unpack_from('<8I',elf,phoff+i*sz)
+    if typ==1 and fs and flags&1:
+        assert va==0x60000400 and fs<=0xc00;code.append(elf[off:off+fs])
+assert len(code)==1
+data=bytearray(source[:110080]);data[0x400:0x400+len(code[0])]=code[0]
+struct.pack_into('<I',data,4,0xea000000|((0x60000400-0x60000004-8)//4))
+data[0x1e0:0x1e4]=bytes(4);base=zlib.crc32(data);basis={}
+for bit in range(32):
+    t=bytearray(data);t[0x1e0+bit//8]^=1<<(bit%8);v=zlib.crc32(t)^base;mask=1<<bit
+    while v:
+        p=v.bit_length()-1
+        if p not in basis:basis[p]=(v,mask);break
+        v^=basis[p][0];mask^=basis[p][1]
+v=<REDACTED:ARTIFACT_CRC>^base;solution=0
+while v:
+    p=v.bit_length()-1;v^=basis[p][0];solution^=basis[p][1]
+struct.pack_into('<I',data,0x1e0,solution);assert zlib.crc32(data)==<REDACTED:ARTIFACT_CRC>
+allowed=((4,8),(0x1e0,0x1e4),(0x400,0x400+len(code[0])))
+assert all(any(a<=i<b for a,b in allowed) for i,(a,b) in enumerate(zip(source,data)) if a!=b)
+proof=[]
+cases=('success','gated','busy','nack','start_timeout','rx_timeout','stop_timeout')
+if devon:cases+=('changed_original','write_nack','write_timeout','readback_mismatch')
+for case in cases:
+    u=Uc(UC_ARCH_ARM,UC_MODE_ARM,cpu=UC_CPU_ARM_CORTEX_A9)
+    for a,s in ((0x60000000,0x100000),(0x60800000,0x10000),(0x61000000,0x20000),(0x20000000,0x1000),(0x20008000,0x1000),(0x2002f000,0x1000)):u.mem_map(a,s)
+    u.mem_write(0x60000000,bytes(data))
+    initial={0x200000f0:0x20 if case=='gated' else 0,0x200080d4:0xa55,0x20008154:6,0x2002f000:1 if case=='busy' else 0,0x2002f004:0x60006,0x2002f008:0,0x2002f00c:0,0x2002f018:0,0x2002f01c:0}
+    state=dict(initial);writes=[];selected=[];pmic={0x3f:0x44,0x40:0x34,0x50:0x04,0x52:0,0x38:0x0d};pmic_writes=[]
+    if devon:pmic[0x3f]=0x10 if case=='changed_original' else 0
+    for a,v in initial.items():u.mem_write(a,struct.pack('<I',v))
+    def wr(uc,access,a,size,v,ctx):
+        assert size==4
+        if a>=0x60000000:
+            assert 0x6101ae00<=a<a+size<=0x6101ae80;return
+        writes.append((a,v))
+        allowed_mmio=(0x200080d4,0x20008154,0x2002f000,0x2002f004,0x2002f008,0x2002f00c,0x2002f014,0x2002f01c)
+        assert a in allowed_mmio or devon and a in (0x2002f010,0x2002f100),hex(a)
+        if a in (0x200080d4,0x20008154):
+            mask=v>>16;assert mask==(0xf000 if a==0x200080d4 else 0x1000)
+            state[a]=(state[a]&~mask)|(v&mask)
+        elif a==0x2002f008:
+            assert v in (0,0x100005a);state[a]=v
+        elif a==0x2002f00c:
+            assert v==0 or (v&~255)==0x1000000 and (v&255) in pmic
+            state[a]=v
+            if v:selected.append(v&255)
+        elif a==0x2002f000:
+            assert v in (0,0x4b,0x63,0x73) or devon and v in (0x49,0x41,0x51)
+            state[a]=v
+            if v in (0x4b,0x49):state[0x2002f01c]=0 if case=='start_timeout' else 0x40 if case=='nack' else 0x10
+            if v in (0x73,0x51):state[0x2002f01c]=0 if case=='stop_timeout' else 0x20
+        elif a==0x2002f100:
+            assert devon and v==0x43f5a and selected==[0x3f,0x3f] and pmic[0x3f]==0
+            state[a]=v
+        elif a==0x2002f010:
+            assert devon and v==3 and state[0x2002f100]==0x43f5a and state[0x2002f000]==0x41
+            assert not pmic_writes
+            pmic_writes.append((0x3f,4))
+            if case not in ('write_nack','write_timeout','readback_mismatch'):pmic[0x3f]=4
+            state[0x2002f01c]=0x40 if case=='write_nack' else 0 if case=='write_timeout' else 4
+        elif a==0x2002f014:
+            assert v==1 and state[0x2002f000]==0x63
+            state[0x2002f01c]=0 if case=='rx_timeout' else 8
+            state[0x2002f200]=pmic[state[0x2002f00c]&255]
+        elif a==0x2002f01c:state[a]&=~v
+        else:state[a]=v
+    def rd(uc,access,a,size,v,ctx):
+        if a<0x60000000:
+            assert size==4 and a in state,hex(a)
+            uc.mem_write(a,struct.pack('<I',state[a]))
+    u.hook_add(UC_HOOK_MEM_WRITE,wr);u.hook_add(UC_HOOK_MEM_READ,rd)
+    u.emu_start(0x60000000,0x60800c00,count=1600000)
+    assert u.reg_read(UC_ARM_REG_PC)==0x60800c00
+    snap=bytes(u.mem_read(0x6101ae00,272));assert snap[:8]==(b'RF1PHLD1' if devon else b'RF1PMC01') and snap[128:]==bytes(144)
+    status,count=struct.unpack_from('<II',snap,8)
+    assert status==dict(success=0,gated=1,busy=1,nack=4,start_timeout=2,rx_timeout=3,stop_timeout=5,changed_original=6,write_nack=4,write_timeout=3,readback_mismatch=7)[case],(case,status)
+    if case=='success':
+        if devon:
+            assert count==3 and selected==[0x3f]*3 and pmic_writes==[(0x3f,4)] and pmic[0x3f]==4
+            for i,(value,ipd) in enumerate(((0,8),(4,4),(4,8))):assert struct.unpack_from('<4I',snap,48+16*i)==(0x3f,0,value,ipd)
+        else:
+            assert count==5 and selected==list(pmic)
+            for i,(reg,value) in enumerate(pmic.items()):assert struct.unpack_from('<4I',snap,48+16*i)==(reg,0,value,8)
+    elif case in ('gated','busy'):assert writes==[]
+    elif case in ('write_nack','write_timeout'):assert len(selected)==2 and count==1 and len(pmic_writes)==1
+    elif case=='readback_mismatch':assert len(selected)==3 and count==2 and len(pmic_writes)==1
+    else:assert len(selected)==1 and count==0 and not pmic_writes
+    for a in (0x200080d4,0x20008154,0x2002f004):assert state[a]==initial[a]
+    proof.append(dict(case=case,status=status,complete_transactions=count,mmio_writes=len(writes),return_exact=True,no_nand_access=True,pmic_value_write_attempts=pmic_writes))
+raw=bytes(data)+bytes(272)
+with (out/'pmic.raw').open('xb') as f:f.write(raw)
+report=dict(all_pass=True,device_access=False,file=f'work/{variant}/pmic.raw',sha256=hashlib.sha256(raw).hexdigest(),code_bytes=len(code[0]),registers=[0x3f]*3 if devon else list(pmic),proof=proof,scope='DEVON variant: require DEVCTRL==0, write ONLY DEVCTRL=4 once, readback==4; stop on first error, no retry, no NAND or voltage writes. Bus restored.' if devon else 'Five PMIC reads only; bus restored.')
+with (out/'build.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

@@ -1,0 +1,13 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/boot_visibility_repair/synthetic/block26/block_manifest.h
+Role: case_specific_payload_source_not_complete_standalone_firmware
+Original repair session must not be resumed from this public copy.
+
+#define TARGET_BLOCK 26u
+#define TARGET_SECTOR 0x1a000u
+#define SOURCE_CRC 0x8b65e8e6u
+#define OLD_MAIN_CRC 0xe4ebd95eu
+#define AUX_CRC 0xd20d938du
+#define AUX_RUNS 10u
+static const unsigned short aux_runs[AUX_RUNS*2]={1,61952,1,1,1,10,2,26,4075,65535,1,61952,1,1,1,10,2,26,11,65535};

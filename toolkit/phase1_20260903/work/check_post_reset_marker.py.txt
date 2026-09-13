@@ -1,0 +1,26 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/check_post_reset_marker.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""One read-only liveness check after normal-reset request; never retry/reset."""
+import json,os,sys
+from pathlib import Path
+from ram_console_session import RamConsole
+ROOT=Path(__file__).resolve().parents[1]
+assert sys.argv[1:] in ([], ['--post-idb'])
+post_idb=sys.argv[1:]==['--post-idb']
+out=ROOT/('work/post_idb_reset_marker_attempt01' if post_idb else 'work/post_normal_reset_marker_attempt01');out.mkdir(exist_ok=False)
+expected=(ROOT/('work/post_idb_powerheld_boot_attempt01/marker_after_devon.raw' if post_idb else 'work/normal_warm_reset_hardware_attempt01/marker_before.raw')).read_bytes()
+c=None
+result=dict(phase='select',nand_writes=0,pmic_writes=0,ram_writes=0,reset_commands=0,user_led_on=True,user_tv_no_signal=True)
+try:
+    c=RamConsole(out);result['intro']=c.wait('Select input');c.select()
+    p=out/'marker.raw';result['phase']='one_marker_read'
+    c.command(f'RS 0x7effff 0x1 {p}')
+    raw=p.read_bytes();result.update(read_complete=True,marker_bytes=len(raw),marker_exact=raw==expected,marker_prefix_hex=raw[:24].hex(),phase='MARKER_READ_COMPLETE')
+except BaseException as e:result.update(error=repr(e),read_complete=False,phase='MARKER_UNAVAILABLE_NO_RETRY')
+finally:
+    if c:c.close();result['commands']=c.commands
+    with (out/'result.json').open('x',encoding='utf-8') as f:json.dump(result,f,indent=2);f.flush();os.fsync(f.fileno())
+    print(json.dumps(result,indent=2),flush=True)

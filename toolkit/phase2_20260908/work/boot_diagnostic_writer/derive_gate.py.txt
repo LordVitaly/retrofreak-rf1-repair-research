@@ -1,0 +1,48 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/boot_diagnostic_writer/derive_gate.py
+Role: historical_device_runner_or_stateful_scenario_review_before_any_use
+Original repair session must not be resumed from this public copy.
+
+"""Source-only adaptation of previously tested native gates. No device calls."""
+from pathlib import Path
+OUT=Path(__file__).resolve().parent
+OLD=Path('<EXTERNAL_STAGE_03>/work')
+s=(OLD/'system_writer_gate.c').read_text()
+s=s.replace('non-system logical partition','other logical block').replace('"system_writer_gate.h"','"boot_gate.h"').replace('"system_writer_protection.h"','"boot_protection.h"\n#include "boot_manifest.h"')
+s=s.replace('protected_blocks[block>>3]','DYNAMIC_PROTECTED[block>>3]')
+start=s.index('    if(first<0xba000u')
+end=s.index('    GATE->ready=0x31504752u;',start)
+s=s[:start]+'''    if(first!=TARGET_LBA) return deny(0x1001u);
+    const volatile u16 *header=(const volatile u16 *)0x602b3180u;
+    if(header[4]!=16u || header[5]!=4096u || header[6]!=12u || header[7]!=2048u || header[8]!=1896u) return deny(0x1002u);
+    const volatile u16 *map=(const volatile u16 *)0x602b3f00u;
+    for(u32 i=0;i<256u;i++) DYNAMIC_PROTECTED[i]=baseline_protected[i];
+    u32 crc=~0u, target=first/4096u;
+    for(u32 logical=0;logical<1896u;logical++) {
+        u32 p=map[logical];
+        if(p>=2048u) return deny(0x1003u);
+        /* Each invocation protects ALL current other owners, including the
+         * other two candidate blocks after any earlier relocation. */
+        if(p && logical!=target) DYNAMIC_PROTECTED[p>>3]|=1u<<(p&7u);
+        if(logical!=6u && logical!=9u && logical!=10u) {
+            crc=crc_byte(crc,p&255u);crc=crc_byte(crc,p>>8);
+        }
+    }
+    if(~crc!=NON_BOOT_MAP_CRC) return deny(0x1005u);
+    if(!map[target] || protected(map[target])) return deny(0x1004u);
+''' +s[end:]
+(OUT/'boot_gate.c').write_text(s)
+s=(OLD/'system_writer_dry_handoff.S').read_text()
+s=s.replace('ldr r1, =0xbc000 /* Fixed donor portion 188, no host-selected operation. */','ldr r1, =TARGET_LBA /* Compile-time fixed boot block; no host-selected write. */')
+needle='    ldr r0, =0x61702000\n'
+assert s.count(needle)==1
+s=s.replace(needle,'''    ldr r0, =0x61700100
+    ldr r1, =0x63000100
+    mov r2, #256
+6:  ldr r3, [r0], #4
+    str r3, [r1], #4
+    subs r2, r2, #4
+    bne 6b
+'''+needle)
+(OUT/'handoff.S').write_text(s)

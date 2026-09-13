@@ -1,0 +1,31 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/verify_flashboot_full_remap.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Compare actual-code map with independently indexed raw NAND metadata."""
+import json
+from pathlib import Path
+root=Path(__file__).resolve().parents[1]
+replay=json.loads((root/'outputs/flashboot_offline_remap_full_stage3_extended_native_buffers.json').read_text())
+inventory=json.loads((root/'outputs/native_ftl_inventory_2048blocks.json').read_text())['all_candidates']
+assert replay['result']==0 and replay['error'] is None and replay['stop'] is None
+assert replay['buffers_injected'] is False
+mapping=replay['logical_to_physical_u16']
+missing=[i for i in range(186,260) if mapping[i]==0]
+assert missing==[188,195,198,204,208,215,219,223,237,244,258]
+matched=[]
+for logical in range(186,260):
+    candidates=inventory.get(str(logical),[])
+    if candidates:
+        assert len(candidates)==1
+        assert mapping[logical]==candidates[0]['physical_block']
+        matched.append(logical)
+assert len(matched)==63
+assert sum(bool(x) for x in mapping)==1447
+report=dict(scope='Actual firmware map vs independent metadata inventory; all reads assumed successful; not hardware execution',
+            mapped_logical_blocks=1447,matching_system_blocks=matched,missing_system_blocks=missing,
+            physical_read_calls=replay['remap_read_count'],write_guard_triggered=False,
+            native_buffers=True)
+with (root/'outputs/flashboot_full_remap_verified.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

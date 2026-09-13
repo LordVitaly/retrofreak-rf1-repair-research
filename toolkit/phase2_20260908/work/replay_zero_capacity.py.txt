@@ -1,0 +1,78 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/replay_zero_capacity.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""PC-only ARM replay. All NAND write calls terminate before execution."""
+from pathlib import Path
+import sys,struct,json
+OLD=Path('<EXTERNAL_STAGE_03>')
+HERE=Path(__file__).resolve().parent
+sys.path.insert(0,str(OLD/'work'))
+from emulate_flashboot_bbt import DumpReplay
+from emulate_flashboot_offline import FLASH,FTL,REGS,address,UC_ARM_REG_PC,UC_ARM_REG_LR,UC_ARM_REG_R0
+
+class Replay(DumpReplay):
+    def __init__(self,record):
+        super().__init__(record)
+        self.write_entries.remove(address(0x7038)) # only allow PC-side formatter
+        self.attempted_writes=[]
+    def read_raw(self,sector,count):
+        block,local=divmod(sector,4096)
+        if block in (12,13):
+            p=OLD/'work/bbt_copy12_restore_attempt01'/f'final_block{block}.raw'
+            return p.read_bytes()[local*528:(local+count)*528]
+        return super().read_raw(sector,count)
+    def code_hook(self,uc,pc,size,unused):
+        if self.dump_mode and pc==address(0x9ef4):
+            sector,main,aux,count=[uc.reg_read(r) for r in REGS]
+            if not (0<count<=16 and 0<=sector and sector+count<=8388608):
+                self.reads.append(dict(sector=sector,count=count,assumed_error='outside physical NAND'))
+                uc.reg_write(UC_ARM_REG_R0,0xffffffff)
+                uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR))
+                return
+        if pc==address(0x3b0c):
+            sector,main,aux,mode=[uc.reg_read(r) for r in REGS]
+            self.attempted_writes.append(dict(sector=sector,mode=mode,
+                main_first64=bytes(uc.mem_read(main,64)).hex(),
+                main4096_matches_current=bytes(uc.mem_read(main,4096))==b''.join((HERE/'bbt_cold_attempt01/block12_full.raw').read_bytes()[i:i+512] for i in range(0,8*528,528)),
+                auxiliary_halfwords=[struct.unpack('<H',uc.mem_read(aux+i*16,2))[0] for i in range(8)]))
+        super().code_hook(uc,pc,size,unused)
+
+record=(OLD/'work/idb_ecc24_parameter_attempt2/block05_page15.raw').read_bytes()[:512]
+e=Replay(record)
+e.allow_statistics_data()
+assert e.call(0xa158,0x50f4)==0
+e.uc.mem_write(FLASH+0xa0,struct.pack('<H',12))
+e.uc.mem_write(FLASH+0x28,struct.pack('<I',0x40000000))
+e.call(0x74e0)
+fields=struct.unpack('<5H',e.uc.mem_read(FTL+6,10))
+assert fields==(0x438,16,4096,12,0),fields
+e.dump_mode=True
+result={'scope':'PC ARM replay, injected previously observed fallback capacity, post-write BBT input; no USB/controller/ECC emulation',
+        'ftl_fields':list(fields)}
+result['bbt_result']=e.call(0x6a24)
+assert result['bbt_result']==0xffffffff
+try:
+    e.call(0x7038)
+except RuntimeError as exc:
+    result['stop']=e.stopped
+    result['error']=str(exc)
+result['write_attempts']=e.attempted_writes
+result['reads']=e.reads
+assert result['stop']['reason']=='write_or_format_entry'
+assert result['write_attempts'][0]['sector']==0xc000
+assert result['write_attempts'][0]['main4096_matches_current']
+assert result['write_attempts'][0]['auxiliary_halfwords']==[0xf000,0x438,0xff70,0xffff,12,13,14,15]
+good=Replay(record)
+good.allow_statistics_data()
+assert good.call(0xa158,0x50f4)==0
+good.uc.mem_write(FLASH+0xa0,struct.pack('<H',12))
+good.call(0x74e0)
+good.dump_mode=True
+result['correct_capacity_bbt_result']=good.call(0x6a24)
+assert result['correct_capacity_bbt_result']==0 and not good.attempted_writes
+result['all_assertions_pass']=True
+with (HERE/'zero_capacity_replay_v3.json').open('x') as f:json.dump(result,f,indent=2)
+print(json.dumps({k:v for k,v in result.items() if k!='reads'},indent=2))

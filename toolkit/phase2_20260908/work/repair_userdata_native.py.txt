@@ -1,0 +1,68 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/repair_userdata_native.py
+Role: historical_device_runner_or_stateful_scenario_review_before_any_use
+Original repair session must not be resumed from this public copy.
+
+"""Repair only unmounted userdata with its stock, static e2fsck after full backup."""
+from pathlib import Path
+import subprocess,json,hashlib,re,sys
+assert not sys.flags.optimize
+assert sys.argv[1:]==['--verified-adb-unmounted-data']
+work=Path(__file__).resolve().parent
+backupdir=work/'live_adb_before_userdata_repair/userdata_raw'
+backup=(backupdir/'userdata_linux.img').read_bytes()
+saved=json.loads((backupdir/'result.json').read_text())
+assert len(backup)==saved['bytes']==268435456
+assert hashlib.sha256(backup).hexdigest()==saved['sha256']
+assert hashlib.md5(backup).hexdigest()==saved['md5'] and not saved['nand_writes']
+prior=json.loads((work/'userdata_native_repair_attempt01/result.json').read_text())
+assert not prior['write_attempted']
+out=work/'userdata_native_repair_attempt02'
+out.mkdir(exist_ok=False)
+adb=r'<EXTERNAL_STAGE_02>/work/AndroidTool_Release_v2.43/AndroidTool_Release_v2.43/bin/adb.exe'
+prefix=[adb,'-s','<DEVICE_SERIAL_REDACTED>']
+result={'all_pass':False,'backup_sha256':saved['sha256'],'write_attempted':False,'partition':'/dev/block/mtdblock6','system_writes':False}
+def run(args,label,timeout=45):
+ p=subprocess.run(prefix+args,capture_output=True,timeout=timeout)
+ data=p.stdout+p.stderr
+ (out/(label+'.txt')).write_bytes(data)
+ assert p.returncode==0,(label,p.returncode)
+ return data
+def shell(command,label,timeout=45):return run(['shell',command],label,timeout)
+def unmounted(label):
+ mounts=shell('/sbin/busybox cat /proc/mounts',label)
+ assert b' /data ' not in mounts
+ assert b'/dev/block/mtdblock8 /system ext4 ro,' in mounts
+ return mounts
+try:
+ unmounted('mounts_before')
+ assert re.search(rb'\buid=0(?:\s|\()',shell('/sbin/busybox id','id'))
+ native=out/'e2fsck_device.bin'
+ run(['pull','/sbin/e2fsck',str(native)],'native_checker_pull')
+ assert hashlib.sha256(native.read_bytes()).hexdigest()=='3c1f512797ee803f7e3c5ee1f88f4774721774845caf76552d8a3a8937246022'
+ current=shell('/sbin/busybox dd if=/dev/block/mtdblock6 bs=4096 count=65536 | /sbin/busybox md5sum','full_before_md5')
+ assert b'65536+0 records out' in current and saved['md5'].encode() in current
+ unmounted('mounts_before_write')
+ (out/'WRITE_ATTEMPTED_DO_NOT_REPEAT.json').write_text(json.dumps({'backup_sha256':saved['sha256'],'command':'/sbin/e2fsck -f -y /dev/block/mtdblock6'},indent=2))
+ result['write_attempted']=True
+ data=shell('/sbin/e2fsck -f -y /dev/block/mtdblock6; rf1_rc=$?; /sbin/busybox echo RF1_FSCK_EXIT=$rf1_rc','repair',120)
+ codes=re.findall(rb'RF1_FSCK_EXIT=(\d+)',data)
+ assert len(codes)==1
+ result['repair_exit']=int(codes[0])
+ assert result['repair_exit'] in (0,1,2,3),result
+ shell('/sbin/busybox sync && echo 3 > /proc/sys/vm/drop_caches','sync_drop_caches')
+ unmounted('mounts_after')
+ data=shell('/sbin/e2fsck -f -n /dev/block/mtdblock6; rf1_rc=$?; /sbin/busybox echo RF1_VERIFY_EXIT=$rf1_rc','verify_readonly',120)
+ codes=re.findall(rb'RF1_VERIFY_EXIT=(\d+)',data)
+ assert len(codes)==1
+ result['verify_exit']=int(codes[0])
+ assert result['verify_exit']==0,result
+ shell('/sbin/busybox sync','final_sync')
+ result['all_pass']=True
+except BaseException as exc:
+ result['error']=repr(exc)
+ raise
+finally:
+ (out/'result.json').write_text(json.dumps(result,indent=2))
+ print(json.dumps(result,indent=2),flush=True)

@@ -1,0 +1,39 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_direct_physical_reader.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""One-instruction RAM-reader variant: disable RS boot-page remapping entirely.
+Build and bounded existing-wrapper proof only; no device access.
+"""
+import ast,hashlib,json,struct,sys
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'work/emulator_deps'))
+path=ROOT/'work/prove_rs_boot_mapping.py'
+tree=ast.parse(path.read_text());prefix=[]
+for node in tree.body:
+    if isinstance(node,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='cases' for t in node.targets):break
+    prefix.append(node)
+env={'__file__':str(path),'__name__':'existing_rs_model'}
+exec(compile(ast.Module(body=prefix,type_ignores=[]),str(path),'exec'),env)
+known=env['known'];usb=env['usb'];rc4=env['rc4'];crc32=env['crc32'];off=env['off'];size=env['size']
+code=bytearray(usb);assert code[0x78c4:0x78c8]==bytes.fromhex('910201e0')
+code[0x78c4:0x78c8]=bytes.fromhex('0010a0e3') # MOV r1,#0, threshold0: normal physical path for ALL sectors.
+proof=[]
+for sector,count in ((0,16),(0x1000,16),(0x5000,16),(0x50e0,16),(0x50f0,16),(0xbff0,16),(0xc000,16),(0x16020,16)):
+    actual,calls=env['replay'](code,0xffff,sector,count)
+    assert actual==env['dump'][sector*528:(sector+count)*528]
+    assert calls==[dict(sector=hex(sector),count=count)]
+    proof.append(dict(sector=hex(sector),count=count,linear_exact=True,physical_calls=calls))
+container=bytearray(known);container[off:off+size]=rc4(code)
+struct.pack_into('<I',container,len(container)-4,crc32(container[:-4]))
+diffs=[i for i,(a,b) in enumerate(zip(known,container)) if a!=b]
+assert all(off+0x78c4<=i<off+0x78c8 or i>=len(known)-4 for i in diffs)
+assert rc4(container[off:off+size])==code and len(container)==len(known)
+out=ROOT/'work/direct_physical_reader_v1';out.mkdir(exist_ok=False)
+target=out/'reader.bin'
+with target.open('xb') as f:f.write(container)
+report=dict(all_pass=True,device_access=False,file=str(target.relative_to(ROOT)),sha256=hashlib.sha256(container).hexdigest(),base_sha256=hashlib.sha256(known).hexdigest(),entry472_bytes=size,change='Only RS 0x78c4 MUL r1,r1,r2 -> MOV r1,#0; no low-page remapping, native ECC40 remains unchanged.',proof=proof,nand_init_changed=False,nand_write_functions_changed=False,intrinsically_write_disabled=False,allowed_hardware_commands=['DB exact reader ONCE after fresh MaskROM','RID','RFI','RS fixed control and early physical sectors only'],note='Do not use WS/RD/erase/format/FTL. No claim of hardware ECC status reporting.')
+with (out/'build.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

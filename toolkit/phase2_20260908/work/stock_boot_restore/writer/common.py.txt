@@ -1,0 +1,82 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/stock_boot_restore/writer/common.py
+Role: completed_stock_return_or_temporary_USB_probe_historical_source
+No binaries or specimen auxiliary headers are included. Do not resume this old hardware session.
+
+"""Read-only input validation shared by the offline builder and proofs."""
+from pathlib import Path
+import hashlib
+import json
+import sys
+
+if sys.flags.optimize:
+    raise RuntimeError('Assertions are required; Python -O is forbidden')
+sys.dont_write_bytecode = True
+OUT = Path(__file__).resolve().parent
+HERE = OUT.parents[2]
+BASE = OUT.parent
+OLD = Path('<EXTERNAL_STAGE_03>')
+ERROR_CASES = ['bad_source', 'read_error', 'bad_old_aux', 'bad_old_main',
+               'erase_error', 'program_error', 'stale', 'bad_new_aux', 'bad_geometry']
+IMMUTABLE_SOURCE_PINS = {
+    'writer.c': '<HISTORICAL_HASH_REDACTED>',
+    'core.ld': '<HISTORICAL_HASH_REDACTED>',
+    'handoff.S': '<HISTORICAL_HASH_REDACTED>',
+    'original.S': '<HISTORICAL_HASH_REDACTED>',
+    'handoff.ld': '<HISTORICAL_HASH_REDACTED>',
+}
+SOURCE_NAMES = tuple(IMMUTABLE_SOURCE_PINS) + (
+    'common.py', 'build.py', 'test_offline.py', 'test_handoff.py', 'finalize.py')
+
+
+def sha(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def digest(path):
+    return sha(Path(path).read_bytes())
+
+
+def pin(path, expected):
+    path = Path(path)
+    data = path.read_bytes()
+    assert sha(data) == expected, ('SHA mismatch', str(path))
+    return data
+
+
+def read_json(path):
+    return json.loads(Path(path).read_text(encoding='utf-8-sig'))
+
+
+def dump(path, data):
+    Path(path).write_text(json.dumps(data, indent=2) + '\n', encoding='utf-8')
+
+
+def proof_inputs():
+    """Bind every proof to the exact unfinished manifest and all its input files."""
+    path = OUT / 'manifest.json'
+    manifest_bytes = path.read_bytes()
+    m = json.loads(manifest_bytes)
+    assert m['build_pass'] and not m['all_pass'] and not m['hardware_ready']
+    assert not m['device_access'] and not m['synthetic_only']
+    assert m['variants'] and len(m['variants']) == 2 * len(m['blocks'])
+    expected = {f'{block}_{kind}' for block in m['blocks'] for kind in ('dry', 'write')}
+    assert set(m['variants']) == expected
+    assert m['error_test_variant'] in expected and m['error_test_variant'].endswith('_write')
+    assert m['expected_error_cases'] == ERROR_CASES
+    for name, expected_sha in m['source_sha256'].items():
+        pin(OUT / name, expected_sha)
+    for name, expected_sha in IMMUTABLE_SOURCE_PINS.items():
+        pin(OUT / name, expected_sha)
+    for path_text, expected_sha in m['input_file_pins'].items():
+        pin(path_text, expected_sha)
+    for spec in m['variants'].values():
+        for path_key, hash_key in [('payload', 'sha256'), ('core_path', 'core_sha256'),
+                                   ('source_path', 'source_sha256')]:
+            pin(spec[path_key], spec[hash_key])
+    for block in m['blocks'].values():
+        for path_key, hash_key in [('old_main_path', 'old_main_sha256'),
+                                   ('native_aux_path', 'native_aux_u16_sha256')]:
+            pin(block[path_key], block[hash_key])
+    return m, sha(manifest_bytes)

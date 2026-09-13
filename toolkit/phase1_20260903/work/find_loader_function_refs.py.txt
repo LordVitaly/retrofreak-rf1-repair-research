@@ -1,0 +1,22 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/find_loader_function_refs.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+import struct
+from pathlib import Path
+from capstone import Cs, CS_ARCH_ARM, CS_MODE_ARM
+data=Path(r'<HOST_PATH>').read_bytes()
+targets={0x60000ae4}
+md=Cs(CS_ARCH_ARM,CS_MODE_ARM)
+for offset in range(0,len(data)-3,4):
+    word=struct.unpack_from('<I',data,offset)[0]
+    if word in targets: print('pointer',hex(offset),hex(word))
+    if word&0x0e000000==0x0a000000:
+        rel=word&0xffffff
+        if rel&0x800000: rel-=0x1000000
+        dest=0x60000000+offset+8+rel*4
+        if dest in targets:
+            print('branch',hex(offset),hex(dest))
+            for ins in md.disasm(data[max(0,offset-24):offset+12],0x60000000+max(0,offset-24)):
+                print(hex(ins.address),ins.mnemonic,ins.op_str)

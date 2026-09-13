@@ -1,0 +1,69 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/native_system_view.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Read-only file-like system view from unique F200 bases plus validated-field F100 candidates.
+Missing mappings raise errors. No zero fill, reference fill, device access, or filesystem repair.
+This view models the critical partition subset, not arbitrary userdata duplicate selection.
+"""
+import io
+import json
+from functools import lru_cache
+from pathlib import Path
+from verify_native_ecc_page import extract
+ROOT=Path(__file__).parent
+class MissingMappingError(OSError): pass
+class NativeSystemView(io.RawIOBase):
+    def __init__(self):
+        super().__init__()
+        info=json.loads((ROOT.parent/'outputs/native_ftl_inventory_2048blocks.json').read_text())
+        assert info['indexed_physical_blocks']==2048
+        self.groups=info['all_candidates']
+        cache=json.loads((ROOT.parent/'outputs/native_cache_inventory_2048blocks.json').read_text())
+        self.cache={e['logical_sector']:e for e in cache['entries']}
+        self.position=0
+        self.size=151548*1024
+    def readable(self): return True
+    def seekable(self): return True
+    def tell(self): return self.position
+    def seek(self,offset,whence=0):
+        new=offset if whence==0 else self.position+offset if whence==1 else self.size+offset if whence==2 else -1
+        if new<0: raise ValueError('Invalid seek')
+        self.position=new
+        return new
+    @lru_cache(maxsize=128)
+    def physical_page(self,block,page):
+        chunk,local=divmod(block,64)
+        with (ROOT/'nand_native_ecc40'/f'NAND_{chunk:02d}.RAW').open('rb') as f:
+            f.seek((local*256+page)*8448)
+            return extract(f.read(8448))
+    def read(self,size=-1):
+        if size is None or size<0: size=max(0,self.size-self.position)
+        size=min(size,max(0,self.size-self.position))
+        out=bytearray()
+        pos=self.position
+        while size:
+            logical=186+pos//2097152
+            within=pos%2097152
+            page,inner=divmod(within,8192)
+            candidates=self.groups.get(str(logical),[])
+            if len(candidates)!=1:
+                raise MissingMappingError(f'Logical system block {logical} has {len(candidates)} F200 candidates at system offset {pos}')
+            data=bytearray(self.physical_page(candidates[0]['physical_block'],page))
+            cached=self.cache.get(logical*4096+page*16)
+            if cached:
+                overlay=self.physical_page(cached['physical_block'],cached['page'])
+                for sector in range(16):
+                    if cached['valid_sector_mask']&(1<<sector):
+                        data[sector*512:(sector+1)*512]=overlay[sector*512:(sector+1)*512]
+            take=min(size,8192-inner)
+            out.extend(data[inner:inner+take])
+            pos+=take
+            size-=take
+        self.position=pos
+        return bytes(out)
+    def readinto(self,buffer):
+        data=self.read(len(buffer))
+        buffer[:len(data)]=data
+        return len(data)

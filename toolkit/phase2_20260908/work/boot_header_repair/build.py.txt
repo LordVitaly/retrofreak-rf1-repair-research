@@ -1,0 +1,105 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/boot_header_repair/build.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Offline fixed physical22 header-ID repair; real output requires fresh cold native backup."""
+import argparse,hashlib,importlib.util,json,struct,subprocess,sys,zlib
+from pathlib import Path
+sys.dont_write_bytecode=True
+OUT=Path(__file__).resolve().parent;HERE=OUT.parents[1]
+OLD=Path('<EXTERNAL_STAGE_03>')
+def sha(b):return hashlib.sha256(b).hexdigest()
+def pin(p,s):
+ b=p.read_bytes();assert sha(b)==s,str(p);return b
+def main():
+ ap=argparse.ArgumentParser();ap.add_argument('--synthetic',action='store_true');ap.add_argument('--backup-dir',type=Path);ap.add_argument('--backup-sha256');args=ap.parse_args()
+ dest=OUT/'synthetic' if args.synthetic else OUT;dest.mkdir(exist_ok=True)
+ hp=OLD/'work/ram_artifact.py';pin(hp,'<HISTORICAL_HASH_REDACTED>')
+ sp=importlib.util.spec_from_file_location('pure_helper',hp);h=importlib.util.module_from_spec(sp);sp.loader.exec_module(h)
+ parent=pin(HERE/'work/boot_map_compare/capture_mode1.raw','<HISTORICAL_HASH_REDACTED>')
+ original=pin(OLD/'work/FlashBoot.packet512.STATIC_ONLY.bin','ed820d1c51ab4b75b9b6758cfac378732cdfaa9cbc12d7cfe3f24b57c70615f5')
+ previous=json.loads((HERE/'work/boot_diagnostic_writer/manifest.json').read_text());assert previous['all_pass']
+ oldmain=pin(HERE/'work/boot_diagnostic_writer/block6.source.bin','<HISTORICAL_HASH_REDACTED>')
+ candidate=pin(HERE/'work/boot_header_validation_audit/candidate_fixed_id.img','3e9556dc6195a7d6616685f9d58a439c23fe55dbe760ba9254f4d233ba79df0f')
+ proofpath=HERE/'work/boot_header_validation_audit/report.json';proof=json.loads(pin(proofpath,'<HISTORICAL_HASH_REDACTED>'))
+ assert proof['all_expected_results_pass'] and not proof['device_access'] and proof['candidate_correct_id_in_memory_only']['return_code']==1
+ assert proof['images']['stock']['actual_arm']['return_code']==1 and proof['images']['candidate']['actual_arm']['return_code']==0
+ assert proof['fixed_candidate']['sha256']==sha(candidate) and proof['fixed_candidate']['all_other_bytes_exact']
+ source=candidate[:2097152];assert len(source)==len(oldmain)==2097152
+ changed=[i for i,(a,b) in enumerate(zip(oldmain,source)) if a!=b]
+ assert changed and all(0x240<=i<0x260 for i in changed)
+ assert source[0x240:0x260]==bytes.fromhex('<HISTORICAL_HASH_REDACTED>')
+ sourcepath=dest/'block6_fixed_id.source.bin';sourcepath.write_bytes(source)
+ prioraux=pin(HERE/'work/boot_physical_backup_attempt01/block22.aux16.bin','<HISTORICAL_HASH_REDACTED>')
+ (OUT/'original.S').write_bytes((OLD/'work/system_writer_original.S').read_bytes())
+ (OUT/'handoff.ld').write_bytes((OLD/'work/ftl_bridge_read.ld').read_bytes())
+ if not args.synthetic:
+  assert args.backup_dir and args.backup_sha256,'Fresh cold backup dir and explicit SHA required'
+  backupdir=args.backup_dir.resolve();assert backupdir!=(HERE/'work/boot_physical_backup_attempt01').resolve()
+  backup_report=json.loads((backupdir/'result.json').read_text());assert backup_report['all_pass']
+ report={'all_pass':False,'hardware_ready':False,'build_pass':False,'synthetic_only':args.synthetic,'device_access':False,'fresh_cold_backup_required':True,'fresh_cold_backup_provided':not args.synthetic,'source_parent_sha256':sha(parent),'variants':{},'blocks':{},'cut_pc':'0x600982e4','return_pc':'0x60000100','fixed_candidate_sha256':sha(candidate),'candidate_verifier_proof_sha256':sha(proofpath.read_bytes()),'source_changed_offsets':changed,'source_changes_confined_to_header_id':True,'allowed_physical_blocks':[22]}
+ if not args.synthetic:
+  report['fresh_cold_backup_pins']={str(p):sha(p.read_bytes()) for p in (backupdir/'result.json',backupdir/'block22.json',backupdir/'block22.raw')}
+ zig=str(OLD/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe')
+ for physical,logical in ((22,6),):
+  if args.synthetic:
+   values=list(struct.unpack('<4096H',prioraux))
+   raw=b''.join(oldmain[i*512:(i+1)*512]+struct.pack('<H',values[i])+b'\xa5'*14 for i in range(4096))
+  else:
+   rawpath=backupdir/'block22.raw';raw=pin(rawpath,args.backup_sha256);assert len(raw)==4096*528
+   summary=json.loads((backupdir/'block22.json').read_text())
+   assert summary['all_pass'] and summary['native_page_rc']==[0]*256 and summary['physical_block']==22 and summary['logical']==6
+   assert sha(raw)==summary['raw_sha256']
+   mainbytes=b''.join(raw[i:i+512] for i in range(0,len(raw),528));assert mainbytes==oldmain,'Cold physical22 must equal diagnostic block6 before ID correction'
+   assert all(raw[i+514:i+528]==b'\xa5'*14 for i in range(0,len(raw),528))
+   values=[struct.unpack_from('<H',raw,i+512)[0] for i in range(0,len(raw),528)]
+  auxiliary=struct.pack('<4096H',*values)
+  assert auxiliary==prioraux,'Every native u16 must match the metadata preserved by prior verified write'
+  if not args.synthetic:assert sha(auxiliary)==summary['aux16_sha256'] and sha(oldmain)==summary['main_sha256']
+  templates=[];indices=[]
+  for page in range(256):
+   template=values[page*16:(page+1)*16]
+   if template not in templates:templates.append(template)
+   indices.append(templates.index(template))
+  assert 1<=len(templates)<=256 and all(index<len(templates) for index in indices)
+  assert [v for index in indices for v in templates[index]]==values
+  d=dest/f'block{physical}';d.mkdir(exist_ok=True)
+  (d/'oldmain.bin').write_bytes(oldmain);(d/'native_aux_u16.bin').write_bytes(auxiliary)
+  (d/'block_manifest.h').write_text(f'#define TARGET_BLOCK {physical}u\n#define TARGET_SECTOR {hex(physical*4096)}u\n#define SOURCE_CRC {hex(zlib.crc32(source))}u\n#define OLD_MAIN_CRC {hex(zlib.crc32(oldmain))}u\n#define AUX_CRC {hex(zlib.crc32(auxiliary))}u\n#define AUX_TEMPLATES {len(templates)}u\nstatic const unsigned char aux_page_index[256]={{'+','.join(map(str,indices))+'};\nstatic const unsigned short aux_templates[AUX_TEMPLATES*16]={'+','.join(str(n) for t in templates for n in t)+'};\n')
+  report['blocks'][str(physical)]={'logical':logical,'source_path':str(sourcepath),'source_sha256':sha(source),'source_crc32':hex(zlib.crc32(source)),'old_main_sha256':sha(oldmain),'old_main_crc32':hex(zlib.crc32(oldmain)),'native_backup_sha256':sha(raw),'native_aux_u16_sha256':sha(auxiliary),'native_aux_crc32':hex(zlib.crc32(auxiliary)),'aux_templates':len(templates),'aux_compressed_bytes':len(templates)*32+256,'fresh_main_equals_current_diagnostic_block6':not args.synthetic,'fresh_backup_directory':str(backupdir) if not args.synthetic else None,'native_aux_equals_preceding_physical_backup':True}
+  for variant in ('dry','write'):
+   elf=d/(variant+'.elf')
+   flags=[zig,'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-mfloat-abi=soft','-Oz','-g','-ffreestanding','-fno-builtin','-fno-stack-protector','-ffunction-sections','-nostdlib','-I'+str(d)]
+   if variant=='dry':flags+=['-DRF_DRY_RUN']
+   subprocess.run(flags+[str(OUT/'writer.c'),str(OUT/'original.S'),'-Wl,-T,'+str(OUT/'core.ld'),'-Wl,-e,boot_physical_write','-o',str(elf)],check=True,cwd=OUT)
+   code=h.elf_code(elf.read_bytes(),0x61800000,0x1300);syms=h.symbols(elf.read_bytes());assert len(code)%4==0 and syms['boot_physical_write']==0x61800000
+   assert struct.unpack_from('<I',elf.read_bytes(),0x18)[0]==0x61800000
+   for name,off in (('original_program',0xba10),('original_erase',0xbc1c)):
+    at=syms[name]-0x61800000;assert code[at:at+8]==original[off:off+8]
+   (d/(variant+'.core.bin')).write_bytes(code)
+   helf=d/(variant+'.handoff.elf')
+   subprocess.run([zig,'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-nostdlib','-DCORE_BYTES='+str(len(code)),str(OUT/'handoff.S'),'-Wl,-T,'+str(OUT/'handoff.ld'),'-Wl,-e,writer_before','-o',str(helf)],check=True,cwd=OUT)
+   hc=h.elf_code(helf.read_bytes(),0x60007040,0x180);hs=h.symbols(helf.read_bytes())
+   data=bytearray(parent[:110080]);data[0x2800:0x2800+len(code)]=code;data[0x7040:0x71c0]=hc+bytes(0x180-len(hc))
+   patches={4:h.branch(0x60000004,hs['writer_before']),0x18d18:h.branch(0x600982e4,hs['writer_after'])}
+   # Keep every nonphysical NAND writer as its exact deny stub.
+   for off,name in ((0xba10,'gate_program'),(0xbc1c,'gate_erase')):
+    assert data[off:off+8]==bytes.fromhex('0000e0e31eff2fe1');patches[off]=h.branch(0x6007f5cc+off,syms[name])
+   if variant=='write':
+    for off in (0xbbc8,0xbc90):patches[off]=struct.unpack_from('<I',original,off)[0]
+   for off,word in patches.items():struct.pack_into('<I',data,off,word)
+   h.fix_crc(data);payload=bytes(data)+bytes(272)
+   allowed=[(4,8),(0x1e0,0x1e4),(0x2800,0x2800+len(code)),(0x7040,0x71c0)]+[(p,p+4) for p in patches]
+   assert all(any(a<=i<b for a,b in allowed) for i,(x,y) in enumerate(zip(parent,payload)) if x!=y)
+   assert payload[0xb408:0xb40c]==bytes.fromhex('0101a0e3') and payload[0xaf60:0xaf64]==bytes.fromhex('0003a0e1') and payload[0x76f8:0x76fc]==bytes.fromhex('0100a0e3')
+   assert all(payload[o:o+8]==bytes.fromhex('0000e0e31eff2fe1') for o in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xbd5c))
+   assert all(payload[o+4:o+8]==bytes.fromhex('1eff2fe1') for o in (0xba10,0xbc1c))
+   assert all(payload[o:o+4]==(original[o:o+4] if variant=='write' else bytes.fromhex('feffffea')) for o in (0xbbc8,0xbc90))
+   assert len(payload)==110352 and zlib.crc32(payload[:110080])==0xad0dadee and payload[110080:]==bytes(272)
+   path=d/(variant+('.SYNTHETIC_ONLY.raw' if args.synthetic else '.raw'));path.write_bytes(payload)
+   report['variants'][f'{physical}_{variant}']={'payload':str(path),'sha256':sha(payload),'physical_block':physical,'sector':physical*4096,'source_path':str(sourcepath),'source_sha256':sha(source),'core_sha256':sha(code),'core_bytes':len(code),'helper_bytes':len(hc),'symbols':{n:hex(syms[n]) for n in ('boot_physical_write','gate_program','gate_erase','gate_copy','gate_forbidden','original_program','original_erase')},'handoff_symbols':{n:hex(hs[n]) for n in ('writer_before','writer_after')},'allowed_changes_proved':True,'nonphysical_denials_exact':True,'confirm_stops_preserved':variant=='dry','confirm_original_restored':variant=='write'}
+ report['build_pass']=True
+ (dest/'manifest.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps({'build_pass':True,'synthetic_only':args.synthetic,'variants':{k:{t:v[t] for t in ('sha256','core_bytes')} for k,v in report['variants'].items()},'blocks':report['blocks']},indent=2))
+if __name__=='__main__':main()

@@ -1,0 +1,19 @@
+{
+  "boot_completed": true,
+  "gui_resumed": true,
+  "data_rw": true,
+  "cache_rw": true,
+  "four_system_blocks_exact": true,
+  "gui_and_gles_exact": true,
+  "ext4_runtime_errors": 0,
+  "android_fatal_exceptions": 0,
+  "nand_init_dumps": 3,
+  "functional_checks_pass": true,
+  "usb_current": {
+    "force_usb_mode": 2,
+    "functions": "adb",
+    "state": "CONFIGURED",
+    "enable": 1,
+    "diagnostic_boot_still_installed": true
+  }
+}

@@ -1,0 +1,82 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/read_early_boot_compare.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Bounded post-repair physical comparison: RAM DB, identity, control, blocks0..17.
+No logical FTL, WS, erase, format or reset command. Current entry is the observed
+BootROM return after the authorized stock warm reset, not a claimed cold boot.
+"""
+import hashlib,json,os,sys,time
+from pathlib import Path
+from ram_console_session import RamConsole
+from console_completion import ANSI,completed_response
+from verify_native_ecc_page import BOOT,extract
+ROOT=Path(__file__).resolve().parents[1]
+direct=sys.argv[1:]==['--direct-after-fresh-maskrom']
+ecc24=sys.argv[1:]==['--idb-ecc24-after-fresh-maskrom']
+assert sys.argv[1:] in ([],['--direct-after-fresh-maskrom'],['--idb-ecc24-after-fresh-maskrom'])
+loader=ROOT/('work/idb_ecc24_reader_v1/reader.bin' if ecc24 else 'work/direct_physical_reader_v1/reader.bin' if direct else 'work/RetronLoader_RS_FIXED_BOUNDARY_RAM_ONLY.bin')
+assert hashlib.sha256(loader.read_bytes()).hexdigest()==('<REDACTED:HASH_OR_BYTES>' if ecc24 else '<REDACTED:HASH_OR_BYTES>' if direct else '<REDACTED:HASH_OR_BYTES>')
+if direct:assert json.loads((ROOT/'work/direct_physical_reader_v1/build.json').read_text())['all_pass']
+if ecc24:assert json.loads((ROOT/'work/idb_ecc24_reader_v1/build.json').read_text())['all_pass']
+for n in (1,2,3):assert json.loads((ROOT/f'outputs/fixed_boundary{n:02d}_verification.json').read_text())['all_eight_exact']
+assert json.loads((ROOT/'work/normal_warm_reset_hardware_attempt01/result.json').read_text())['reset_request_sent']
+assert not json.loads((ROOT/'work/post_normal_reset_marker_attempt01/result.json').read_text())['read_complete']
+backup=ROOT/'work/nand_native_ecc40/NAND_00.RAW'
+with backup.open('rb') as f:assert hashlib.file_digest(f,'sha256').hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+out=ROOT/('work/early_boot_ecc24_attempt01' if ecc24 else 'work/early_boot_direct_attempt01' if direct else 'work/early_boot_compare_attempt01');out.mkdir(exist_ok=False)
+result=dict(all_reads_complete=False,nand_write_commands=0,ftl_init=False,entry='user-confirmed fresh MaskROM' if direct or ecc24 else 'observed MaskROM after stock warm reset; not cold boot',loader_sha256=hashlib.sha256(loader.read_bytes()).hexdigest(),rows=[])
+c=None
+def save(path,obj):
+    with path.open('x',encoding='utf-8') as f:json.dump(obj,f,indent=2);f.flush();os.fsync(f.fileno())
+def command_once(cmd,token):
+    assert cmd in ('RID','RFI') or cmd=='DB '+os.path.relpath(loader,out)
+    start=len(''.join(c.chunks));c.commands.append(cmd);c.send_once(cmd)
+    deadline=time.monotonic()+45
+    while time.monotonic()<deadline:
+        alltext=''.join(c.chunks)
+        response=completed_response(alltext,start,token)
+        if response is not None:return response
+        plain=ANSI.sub('',alltext[start:])
+        if 'Error:' in plain and 'Rockusb>' in plain:raise RuntimeError(plain)
+        if c.done.is_set():raise RuntimeError('Console ended; no retry')
+        time.sleep(.005)
+    raise RuntimeError('Missing '+cmd+' completion; no retry')
+try:
+    c=RamConsole(out);intro=c.wait('Select input');result['intro']=intro
+    assert all(t in intro for t in ('Found 1 rockusb','Maskrom','Vid=0x2207,Pid=0x300a'));c.select()
+    result['phase']='download_known_read_path_once'
+    command_once('DB '+os.path.relpath(loader,out),'Download boot ok')
+    result['identity']=command_once('RID','2C 44 44 4B A9')
+    info=command_once('RFI','Flash Info:');result['flash_info']=info
+    assert all(s in info for s in ('MICRON','4096MB','2048KB','8KB','ECC Bits: 40'))
+    if ecc24:
+        p=out/'control_idb5_header.raw';c.command(f'RS 0x5000 0x1 {p}')
+        raw=p.read_bytes();assert len(raw)==528
+        with backup.open('rb') as f:f.seek(5*4096*528);expected_header=f.read(528)
+        assert raw[:512]==expected_header[:512],'ECC24 IDB5 header changed; no subsequent reads'
+        result['control_header_main_exact']=True
+    else:
+        p=out/'control_boot_page2.raw';c.command(f'RS 0x16020 0x10 {p}')
+        raw=p.read_bytes()
+        assert extract(raw)==BOOT.read_bytes()[16384:24576]
+        result['control_main_exact']=True
+    result['phase']='read_idb_ecc24_boot_streams' if ecc24 else 'read_four_idb_first16pages_direct' if direct else 'read_first_18_RS_block_ranges'
+    count=256 if direct or ecc24 else 4096
+    blockbytes=count*528
+    with backup.open('rb') as f:
+        for b in ((5,1,3,6) if ecc24 else (1,3,5,6) if direct else range(18)):
+            p=out/f'block{b:02d}.raw';c.command(f'RS {hex(b*4096)} {hex(count)} {p}')
+            actual=p.read_bytes();assert len(actual)==blockbytes
+            f.seek(b*4096*528);old=f.read(blockbytes);assert len(old)==blockbytes
+            diffs=[i for i,(a,z) in enumerate(zip(actual,old)) if a!=z]
+            main=sum(i%528<512 for i in diffs)
+            row=dict(block=b,sector=hex(b*4096),raw_bytes=blockbytes,raw_sha256=hashlib.sha256(actual).hexdigest(),backup_sha256=hashlib.sha256(old).hexdigest(),raw_exact=not diffs,main_mismatching_bytes=main,aux_mismatching_bytes=len(diffs)-main,first_raw_offsets=diffs[:24],affected_pages=sorted(set(i//8448 for i in diffs)),hardware_ecc_status_available=False)
+            result['rows'].append(row);save(out/f'block{b:02d}.comparison.json',row)
+            print(json.dumps(row),flush=True)
+    result.update(all_reads_complete=True,all_raw_exact=all(r['raw_exact'] for r in result['rows']),all_main_exact=all(r['main_mismatching_bytes']==0 for r in result['rows']),phase='EARLY_READ_COMPARISON_COMPLETE',scope='ECC24 boot-order stream vs nativeECC40 boot-order backup. Address order matches, correction differs; hardware ECC status unavailable.' if ecc24 else 'CORRECTION: direct physical data vs boot-remapped backup below12; differences are NOT valid corruption counts.' if direct else 'NativeECC40 boot-order streams below12, physical above12; backup uses boot order below12 too. No raw physical invariance claim.')
+except BaseException as e:result['error']=repr(e);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    save(out/'result.json',result);print(json.dumps({k:v for k,v in result.items() if k!='rows'},indent=2),flush=True)

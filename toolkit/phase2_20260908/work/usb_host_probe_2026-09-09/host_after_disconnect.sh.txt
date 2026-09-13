@@ -1,0 +1,95 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/usb_host_probe_2026-09-09/host_after_disconnect.sh
+Role: completed_stock_return_or_temporary_USB_probe_historical_source
+No binaries or specimen auxiliary headers are included. Do not resume this old hardware session.
+
+#!/sbin/busybox sh
+# Temporary RAM-only USB role probe. No flash, mount, or persistent properties.
+BB=/sbin/busybox
+ROOT=/mnt/ram/rf1_usb_host_probe
+MODE=/sys/bus/platform/drivers/usb20_otg/force_usb_mode
+VBUS=/sys/bus/platform/drivers/usb20_otg/vbus_status
+STATE=/sys/class/android_usb/android0/state
+ENABLE=/sys/class/android_usb/android0/enable
+
+readv() { "$BB" cat "$1" 2>/dev/null; }
+disconnected() {
+    [ "$(readv "$VBUS")" = 0 ] && [ "$(readv "$STATE")" = DISCONNECTED ]
+}
+switch_once() {
+    disconnected || return 11
+    [ "$(readv "$MODE")" = 2 ] || return 12
+    printf '0\n' > "$ENABLE" || return 13
+    printf '1\n' > "$MODE" || return 14
+    printf '1\n' > "$ENABLE" || return 15
+    [ "$(readv "$MODE")" = 1 ] || return 16
+}
+
+if [ "$1" = --self-test ]; then
+    ROOT=/mnt/ram/rf1_usb_host_selftest_$$
+    "$BB" mkdir "$ROOT" || exit 90
+    MODE=$ROOT/mode; VBUS=$ROOT/vbus; STATE=$ROOT/state; ENABLE=$ROOT/enable
+    printf '2\n' > "$MODE"; printf '1\n' > "$VBUS"
+    printf 'CONFIGURED\n' > "$STATE"; printf '1\n' > "$ENABLE"
+    if disconnected; then exit 91; fi
+    if switch_once; then exit 92; fi
+    [ "$(readv "$MODE")" = 2 ] || exit 93
+    printf '0\n' > "$VBUS"
+    if disconnected; then exit 94; fi
+    printf '1\n' > "$VBUS"; printf 'DISCONNECTED\n' > "$STATE"
+    if disconnected; then exit 95; fi
+    printf '0\n' > "$VBUS"
+    disconnected || exit 96
+    switch_once || exit 97
+    [ "$(readv "$MODE")" = 1 ] && [ "$(readv "$ENABLE")" = 1 ] || exit 98
+    if switch_once; then exit 99; fi
+    "$BB" rm "$MODE" "$VBUS" "$STATE" "$ENABLE"
+    "$BB" rmdir "$ROOT"
+    echo SELF_TEST_PASS_ONLY_TMPFS_FILES
+    exit 0
+fi
+
+[ "$1" = --arm ] || exit 2
+[ "$("$BB" id -u)" = 0 ] || exit 3
+[ "$(getprop sys.boot_completed)" = 1 ] || exit 4
+[ "$(readv "$MODE")" = 2 ] || exit 5
+[ "$(readv "$VBUS")" = 1 ] || exit 6
+[ "$(readv "$STATE")" = CONFIGURED ] || exit 7
+"$BB" mkdir "$ROOT/one_shot_started" || exit 8
+echo $$ > "$ROOT/pid"
+echo ARMED_WAITING_FOR_PHYSICAL_PC_CABLE_REMOVAL > "$ROOT/status"
+echo "initial_mode=$(readv "$MODE") initial_vbus=$(readv "$VBUS") initial_gadget=$(readv "$STATE")"
+
+# Stable VBUS-off and disconnected gadget; abort if the user has not acted in 10 min.
+elapsed=0
+stable=0
+while [ "$elapsed" -lt 600 ]; do
+    [ "$(readv "$MODE")" = 2 ] || { echo ABORT_MODE_CHANGED > "$ROOT/status"; exit 9; }
+    if disconnected; then stable=$((stable+1)); else stable=0; fi
+    [ "$stable" -ge 8 ] && break
+    "$BB" sleep 1
+    elapsed=$((elapsed+1))
+done
+[ "$stable" -ge 8 ] || { echo EXPIRED_WITHOUT_SWITCH > "$ROOT/status"; exit 10; }
+echo SWITCHING_ONCE > "$ROOT/status"
+switch_once
+rc=$?
+echo "switch_rc=$rc mode=$(readv "$MODE") enable=$(readv "$ENABLE")"
+if [ "$rc" != 0 ]; then echo SWITCH_FAILED_$rc > "$ROOT/status"; exit "$rc"; fi
+echo HOST_MODE_SET_TEMPORARILY_UNTIL_REBOOT > "$ROOT/status"
+
+# Read-only observation in tmpfs. Never fight Android or periodically switch modes.
+sample=0
+while [ "$sample" -lt 90 ]; do
+    echo "sample=$sample mode=$(readv "$MODE") gadget=$(readv "$STATE")"
+    "$BB" ls /sys/bus/usb/devices
+    "$BB" cat /proc/bus/input/devices
+    if [ "$(readv "$MODE")" != 1 ]; then
+        echo MODE_CHANGED_AFTER_SWITCH > "$ROOT/status"
+        break
+    fi
+    "$BB" sleep 2
+    sample=$((sample+1))
+done
+"$BB" dmesg > "$ROOT/dmesg_after.txt"

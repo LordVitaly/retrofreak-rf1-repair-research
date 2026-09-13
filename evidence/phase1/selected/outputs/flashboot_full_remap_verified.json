@@ -1,0 +1,29 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "outputs/flashboot_full_remap_verified.json",
+  "interpretation": "Bounded offline verification of the original FTL; not a hardware test.",
+  "data": {
+    "scope": "Actual firmware map vs independent metadata inventory; all reads assumed successful; not hardware execution",
+    "mapped_logical_blocks": 1447,
+    "matching_system_blocks": {
+      "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+      "original_items": 63
+    },
+    "missing_system_blocks": [
+      188,
+      195,
+      198,
+      204,
+      208,
+      215,
+      219,
+      223,
+      237,
+      244,
+      258
+    ],
+    "physical_read_calls": 4892,
+    "write_guard_triggered": false,
+    "native_buffers": true
+  }
+}

@@ -1,0 +1,40 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/capture_live_adb.py
+Role: historical_device_runner_or_stateful_scenario_review_before_any_use
+Original repair session must not be resumed from this public copy.
+
+from pathlib import Path
+import subprocess, json, hashlib, sys
+from concurrent.futures import ThreadPoolExecutor
+adb = r'<EXTERNAL_STAGE_02>/work/AndroidTool_Release_v2.43/AndroidTool_Release_v2.43/bin/adb.exe'
+assert not sys.argv[1:] or sys.argv[1:] in (['--cold-after-system'],['--after-data-repair'])
+dirname='live_adb_after_data_repair' if sys.argv[1:]==['--after-data-repair'] else ('live_adb_cold_after_system' if sys.argv[1:] else 'live_adb_after_cache')
+out = Path(__file__).resolve().parent / dirname
+out.mkdir(exist_ok=False)
+cases = {
+ 'id': ['shell','id'],
+ 'getprop': ['shell','getprop'],
+ 'dmesg': ['shell','dmesg'],
+ 'logcat': ['logcat','-d','-v','threadtime','-b','main','-b','system'],
+ 'mount': ['shell','mount'],
+ 'ps': ['shell','ps'],
+}
+if sys.argv[1:]:
+ cases['cold_file_md5']=['shell','/sbin/busybox md5sum /system/app/RetroFreakGUI.apk /system/lib/libGLESv1_CM.so']
+ for block,skip in ((192,3072),(195,4608),(198,6144),(204,9216)):
+  cases[f'cold_block{block}_md5']=['shell',f'/sbin/busybox dd if=/dev/block/mtdblock8 bs=4096 skip={skip} count=512 | /sbin/busybox md5sum']
+if sys.argv[1:]==['--after-data-repair']:
+ cases['activity']=['shell','dumpsys activity activities']
+ cases['input']=['shell','cat /proc/bus/input/devices']
+ cases['usb_paths']=['shell','/sbin/busybox find /sys/devices/platform -name force_usb_mode']
+def capture(item):
+ name,args = item
+ p = subprocess.run([adb,'-s','<DEVICE_SERIAL_REDACTED>',*args],capture_output=True,timeout=40)
+ (out/(name+'.txt')).write_bytes(p.stdout)
+ (out/(name+'.stderr.txt')).write_bytes(p.stderr)
+ return {'name':name,'returncode':p.returncode,'bytes':len(p.stdout),'sha256':hashlib.sha256(p.stdout).hexdigest()}
+with ThreadPoolExecutor(max_workers=3) as pool:
+ result=list(pool.map(capture,cases.items()))
+(out/'result.json').write_text(json.dumps(result,indent=2))
+print(json.dumps(result,indent=2))

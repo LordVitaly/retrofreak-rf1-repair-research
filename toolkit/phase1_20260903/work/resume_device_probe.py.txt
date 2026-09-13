@@ -1,0 +1,18 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/resume_device_probe.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+from pathlib import Path
+import importlib.util
+
+# Reuse the inspected, command-restricted reader with an isolated output root.
+source = Path(r'<HOST_PATH>')
+spec = importlib.util.spec_from_file_location('safe_reader', source)
+reader = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(reader)
+reader.ROOT = Path(__file__).resolve().parents[1]
+destination = reader.ROOT / 'work' / 'probe_official_page_full.raw'
+if destination.exists():
+    raise FileExistsError(f'Refusing to overwrite {destination}')
+reader.main()

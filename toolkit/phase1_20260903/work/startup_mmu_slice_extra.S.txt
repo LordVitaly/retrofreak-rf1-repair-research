@@ -1,0 +1,93 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/startup_mmu_slice_extra.S
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+.syntax unified
+.arm
+.section .extra,"ax",%progbits
+.global mmu_before_guard, mmu_after_restore
+/* Base MMU diagnostic stops before L2; RF_L2_SLICE adds the bounded L2
+   snapshot/restore helper. Both refuse an enabled inherited L2. */
+mmu_before_guard:
+    ldr r0, =0x10138100
+    ldr r0, [r0]
+    str r0, [r4, #60]
+    cmp r0, #0
+    bne mmu_refused
+    mrc p15, 0, r0, c2, c0, 2
+    str r0, [r4, #64]
+    cmp r0, #0
+    bne mmu_refused
+    mrc p15, 0, r0, c2, c0, 0
+    str r0, [r4, #68]
+    mrc p15, 0, r0, c3, c0, 0
+    str r0, [r4, #72]
+    mrc p15, 0, r0, c13, c0, 0
+    str r0, [r4, #76]
+    cmp r0, #0
+    bne mmu_refused
+    mrc p15, 2, r0, c0, c0, 0
+    str r0, [r4, #84]
+    cmp r0, #1
+    bhi mmu_refused
+#ifdef RF_L2_SLICE
+    b l2_before_snapshot
+#endif
+    bx lr
+mmu_refused:
+    mov r0, #0
+    str r0, [r4, #4]
+    ldr r0, =RF_STAGE_TAG
+    str r0, [r4]
+    dsb sy
+    ldr pc, =0x60800c00
+    .ltorg
+
+mmu_after_restore:
+    /* Caller is IRQ-masked SVC, using the saved diagnostic main stack.
+       Use the original L1 set/way clean+invalidate loop before disabling
+       caches. Base variant has L2 disabled; RF_L2_SLICE subsequently flushes
+       and disables L2 before restoring any saved RAM. */
+    mov r8, lr
+    mrc p15, 0, r0, c1, c0, 0
+    str r0, [r4, #80]
+#ifdef RF_L2_SLICE
+    ldr r0, =0x10138100
+    ldr r0, [r0]
+    str r0, [r4, #112]
+#endif
+    /* Preserve the real inherited selector throughout original startup.
+       Select L1 data only for the diagnostic return clean operation. */
+    mov r0, #0
+    mcr p15, 2, r0, c0, c0, 0
+    isb sy
+    ldr r0, =0x6009994c
+    blx r0
+    dsb sy
+    mrc p15, 0, r0, c1, c0, 0
+    bic r0, r0, #0x1000
+    bic r0, r0, #5
+    mcr p15, 0, r0, c1, c0, 0
+    isb sy
+#ifdef RF_L2_SLICE
+    bl l2_after_restore
+#endif
+    mov r0, #0
+    mcr p15, 0, r0, c7, c5, 0
+    mcr p15, 0, r0, c7, c5, 6
+    mcr p15, 0, r0, c8, c7, 0
+    dsb sy
+    isb sy
+    ldr r0, [r4, #68]
+    mcr p15, 0, r0, c2, c0, 0
+    ldr r0, [r4, #72]
+    mcr p15, 0, r0, c3, c0, 0
+    ldr r0, [r4, #76]
+    mcr p15, 0, r0, c13, c0, 0
+    ldr r0, [r4, #84]
+    mcr p15, 2, r0, c0, c0, 0
+    dsb sy
+    isb sy
+    bx r8
+    .ltorg

@@ -1,0 +1,1100 @@
+{
+  "name": "data",
+  "bytes": 4194304,
+  "sha256": "<HISTORICAL_HASH_REDACTED>",
+  "sequence": 5020,
+  "start": 1,
+  "errno": -5,
+  "feature_compat": 0,
+  "feature_incompat": 1,
+  "integrity": "Legacy format has no enabled transaction checksums; structural validation only",
+  "commits": [],
+  "pending": [],
+  "scan_headers": [
+    {
+      "block": 1,
+      "type": 2,
+      "sequence": 4909
+    },
+    {
+      "block": 2,
+      "type": 1,
+      "sequence": 4910
+    },
+    {
+      "block": 4,
+      "type": 2,
+      "sequence": 4910
+    },
+    {
+      "block": 5,
+      "type": 1,
+      "sequence": 4911
+    },
+    {
+      "block": 7,
+      "type": 2,
+      "sequence": 4911
+    },
+    {
+      "block": 8,
+      "type": 1,
+      "sequence": 4912
+    },
+    {
+      "block": 10,
+      "type": 2,
+      "sequence": 4912
+    },
+    {
+      "block": 11,
+      "type": 1,
+      "sequence": 4913
+    },
+    {
+      "block": 13,
+      "type": 2,
+      "sequence": 4913
+    },
+    {
+      "block": 14,
+      "type": 1,
+      "sequence": 4914
+    },
+    {
+      "block": 31,
+      "type": 2,
+      "sequence": 4914
+    },
+    {
+      "block": 32,
+      "type": 1,
+      "sequence": 4915
+    },
+    {
+      "block": 45,
+      "type": 2,
+      "sequence": 4915
+    },
+    {
+      "block": 46,
+      "type": 1,
+      "sequence": 4916
+    },
+    {
+      "block": 57,
+      "type": 2,
+      "sequence": 4916
+    },
+    {
+      "block": 58,
+      "type": 1,
+      "sequence": 4917
+    },
+    {
+      "block": 68,
+      "type": 2,
+      "sequence": 4917
+    },
+    {
+      "block": 69,
+      "type": 1,
+      "sequence": 4918
+    },
+    {
+      "block": 81,
+      "type": 2,
+      "sequence": 4918
+    },
+    {
+      "block": 82,
+      "type": 1,
+      "sequence": 4919
+    },
+    {
+      "block": 91,
+      "type": 2,
+      "sequence": 4919
+    },
+    {
+      "block": 92,
+      "type": 1,
+      "sequence": 4920
+    },
+    {
+      "block": 103,
+      "type": 2,
+      "sequence": 4920
+    },
+    {
+      "block": 104,
+      "type": 1,
+      "sequence": 4921
+    },
+    {
+      "block": 120,
+      "type": 2,
+      "sequence": 4921
+    },
+    {
+      "block": 121,
+      "type": 1,
+      "sequence": 4922
+    },
+    {
+      "block": 126,
+      "type": 2,
+      "sequence": 4922
+    },
+    {
+      "block": 127,
+      "type": 1,
+      "sequence": 4923
+    },
+    {
+      "block": 132,
+      "type": 2,
+      "sequence": 4923
+    },
+    {
+      "block": 133,
+      "type": 1,
+      "sequence": 4924
+    },
+    {
+      "block": 146,
+      "type": 2,
+      "sequence": 4924
+    },
+    {
+      "block": 147,
+      "type": 1,
+      "sequence": 4925
+    },
+    {
+      "block": 151,
+      "type": 2,
+      "sequence": 4925
+    },
+    {
+      "block": 152,
+      "type": 1,
+      "sequence": 4926
+    },
+    {
+      "block": 160,
+      "type": 2,
+      "sequence": 4926
+    },
+    {
+      "block": 161,
+      "type": 1,
+      "sequence": 4927
+    },
+    {
+      "block": 169,
+      "type": 2,
+      "sequence": 4927
+    },
+    {
+      "block": 170,
+      "type": 1,
+      "sequence": 4928
+    },
+    {
+      "block": 175,
+      "type": 2,
+      "sequence": 4928
+    },
+    {
+      "block": 176,
+      "type": 1,
+      "sequence": 4929
+    },
+    {
+      "block": 184,
+      "type": 2,
+      "sequence": 4929
+    },
+    {
+      "block": 185,
+      "type": 1,
+      "sequence": 4930
+    },
+    {
+      "block": 192,
+      "type": 2,
+      "sequence": 4930
+    },
+    {
+      "block": 193,
+      "type": 1,
+      "sequence": 4931
+    },
+    {
+      "block": 201,
+      "type": 2,
+      "sequence": 4931
+    },
+    {
+      "block": 202,
+      "type": 1,
+      "sequence": 4932
+    },
+    {
+      "block": 207,
+      "type": 2,
+      "sequence": 4932
+    },
+    {
+      "block": 208,
+      "type": 1,
+      "sequence": 4933
+    },
+    {
+      "block": 218,
+      "type": 2,
+      "sequence": 4933
+    },
+    {
+      "block": 219,
+      "type": 1,
+      "sequence": 4934
+    },
+    {
+      "block": 226,
+      "type": 2,
+      "sequence": 4934
+    },
+    {
+      "block": 227,
+      "type": 1,
+      "sequence": 4935
+    },
+    {
+      "block": 234,
+      "type": 2,
+      "sequence": 4935
+    },
+    {
+      "block": 235,
+      "type": 1,
+      "sequence": 4936
+    },
+    {
+      "block": 243,
+      "type": 2,
+      "sequence": 4936
+    },
+    {
+      "block": 244,
+      "type": 1,
+      "sequence": 4937
+    },
+    {
+      "block": 254,
+      "type": 2,
+      "sequence": 4937
+    },
+    {
+      "block": 255,
+      "type": 1,
+      "sequence": 4938
+    },
+    {
+      "block": 264,
+      "type": 2,
+      "sequence": 4938
+    },
+    {
+      "block": 265,
+      "type": 1,
+      "sequence": 4939
+    },
+    {
+      "block": 273,
+      "type": 2,
+      "sequence": 4939
+    },
+    {
+      "block": 274,
+      "type": 1,
+      "sequence": 4940
+    },
+    {
+      "block": 279,
+      "type": 2,
+      "sequence": 4940
+    },
+    {
+      "block": 280,
+      "type": 1,
+      "sequence": 4941
+    },
+    {
+      "block": 293,
+      "type": 2,
+      "sequence": 4941
+    },
+    {
+      "block": 294,
+      "type": 1,
+      "sequence": 4942
+    },
+    {
+      "block": 303,
+      "type": 2,
+      "sequence": 4942
+    },
+    {
+      "block": 304,
+      "type": 1,
+      "sequence": 4943
+    },
+    {
+      "block": 312,
+      "type": 2,
+      "sequence": 4943
+    },
+    {
+      "block": 313,
+      "type": 1,
+      "sequence": 4944
+    },
+    {
+      "block": 324,
+      "type": 2,
+      "sequence": 4944
+    },
+    {
+      "block": 325,
+      "type": 1,
+      "sequence": 4945
+    },
+    {
+      "block": 329,
+      "type": 2,
+      "sequence": 4945
+    },
+    {
+      "block": 330,
+      "type": 2,
+      "sequence": 4946
+    },
+    {
+      "block": 331,
+      "type": 1,
+      "sequence": 4947
+    },
+    {
+      "block": 335,
+      "type": 2,
+      "sequence": 4947
+    },
+    {
+      "block": 336,
+      "type": 2,
+      "sequence": 4948
+    },
+    {
+      "block": 337,
+      "type": 1,
+      "sequence": 4949
+    },
+    {
+      "block": 342,
+      "type": 2,
+      "sequence": 4949
+    },
+    {
+      "block": 343,
+      "type": 1,
+      "sequence": 4950
+    },
+    {
+      "block": 351,
+      "type": 2,
+      "sequence": 4950
+    },
+    {
+      "block": 352,
+      "type": 1,
+      "sequence": 4951
+    },
+    {
+      "block": 359,
+      "type": 2,
+      "sequence": 5008
+    },
+    {
+      "block": 360,
+      "type": 1,
+      "sequence": 5009
+    },
+    {
+      "block": 375,
+      "type": 2,
+      "sequence": 5009
+    },
+    {
+      "block": 376,
+      "type": 1,
+      "sequence": 5010
+    },
+    {
+      "block": 381,
+      "type": 2,
+      "sequence": 5010
+    },
+    {
+      "block": 382,
+      "type": 1,
+      "sequence": 5011
+    },
+    {
+      "block": 390,
+      "type": 2,
+      "sequence": 5011
+    },
+    {
+      "block": 391,
+      "type": 1,
+      "sequence": 5012
+    },
+    {
+      "block": 399,
+      "type": 2,
+      "sequence": 5012
+    },
+    {
+      "block": 400,
+      "type": 1,
+      "sequence": 5013
+    },
+    {
+      "block": 409,
+      "type": 2,
+      "sequence": 5013
+    },
+    {
+      "block": 410,
+      "type": 1,
+      "sequence": 5014
+    },
+    {
+      "block": 423,
+      "type": 2,
+      "sequence": 5014
+    },
+    {
+      "block": 424,
+      "type": 1,
+      "sequence": 5015
+    },
+    {
+      "block": 438,
+      "type": 2,
+      "sequence": 5015
+    },
+    {
+      "block": 439,
+      "type": 1,
+      "sequence": 5016
+    },
+    {
+      "block": 447,
+      "type": 2,
+      "sequence": 5016
+    },
+    {
+      "block": 448,
+      "type": 1,
+      "sequence": 5017
+    },
+    {
+      "block": 458,
+      "type": 2,
+      "sequence": 5017
+    },
+    {
+      "block": 459,
+      "type": 1,
+      "sequence": 5018
+    },
+    {
+      "block": 468,
+      "type": 2,
+      "sequence": 5018
+    },
+    {
+      "block": 471,
+      "type": 1,
+      "sequence": 5020
+    },
+    {
+      "block": 482,
+      "type": 2,
+      "sequence": 5020
+    },
+    {
+      "block": 483,
+      "type": 1,
+      "sequence": 5021
+    },
+    {
+      "block": 619,
+      "type": 2,
+      "sequence": 4964
+    },
+    {
+      "block": 620,
+      "type": 1,
+      "sequence": 4965
+    },
+    {
+      "block": 634,
+      "type": 2,
+      "sequence": 4965
+    },
+    {
+      "block": 635,
+      "type": 1,
+      "sequence": 4966
+    },
+    {
+      "block": 644,
+      "type": 2,
+      "sequence": 4966
+    },
+    {
+      "block": 645,
+      "type": 1,
+      "sequence": 4967
+    },
+    {
+      "block": 658,
+      "type": 2,
+      "sequence": 4967
+    },
+    {
+      "block": 659,
+      "type": 1,
+      "sequence": 4968
+    },
+    {
+      "block": 664,
+      "type": 2,
+      "sequence": 4968
+    },
+    {
+      "block": 665,
+      "type": 1,
+      "sequence": 4969
+    },
+    {
+      "block": 673,
+      "type": 2,
+      "sequence": 4969
+    },
+    {
+      "block": 674,
+      "type": 1,
+      "sequence": 4970
+    },
+    {
+      "block": 679,
+      "type": 2,
+      "sequence": 4970
+    },
+    {
+      "block": 680,
+      "type": 1,
+      "sequence": 4971
+    },
+    {
+      "block": 691,
+      "type": 2,
+      "sequence": 4971
+    },
+    {
+      "block": 692,
+      "type": 1,
+      "sequence": 4972
+    },
+    {
+      "block": 702,
+      "type": 2,
+      "sequence": 4972
+    },
+    {
+      "block": 703,
+      "type": 1,
+      "sequence": 4973
+    },
+    {
+      "block": 709,
+      "type": 2,
+      "sequence": 4973
+    },
+    {
+      "block": 710,
+      "type": 1,
+      "sequence": 4974
+    },
+    {
+      "block": 718,
+      "type": 2,
+      "sequence": 4974
+    },
+    {
+      "block": 719,
+      "type": 1,
+      "sequence": 4975
+    },
+    {
+      "block": 724,
+      "type": 2,
+      "sequence": 4975
+    },
+    {
+      "block": 725,
+      "type": 1,
+      "sequence": 4976
+    },
+    {
+      "block": 732,
+      "type": 2,
+      "sequence": 4976
+    },
+    {
+      "block": 733,
+      "type": 1,
+      "sequence": 4977
+    },
+    {
+      "block": 742,
+      "type": 2,
+      "sequence": 4977
+    },
+    {
+      "block": 743,
+      "type": 1,
+      "sequence": 4978
+    },
+    {
+      "block": 751,
+      "type": 2,
+      "sequence": 4978
+    },
+    {
+      "block": 752,
+      "type": 1,
+      "sequence": 4979
+    },
+    {
+      "block": 760,
+      "type": 2,
+      "sequence": 4979
+    },
+    {
+      "block": 761,
+      "type": 1,
+      "sequence": 4980
+    },
+    {
+      "block": 769,
+      "type": 2,
+      "sequence": 4980
+    },
+    {
+      "block": 770,
+      "type": 1,
+      "sequence": 4981
+    },
+    {
+      "block": 775,
+      "type": 2,
+      "sequence": 4981
+    },
+    {
+      "block": 776,
+      "type": 1,
+      "sequence": 4982
+    },
+    {
+      "block": 787,
+      "type": 2,
+      "sequence": 4982
+    },
+    {
+      "block": 788,
+      "type": 1,
+      "sequence": 4983
+    },
+    {
+      "block": 798,
+      "type": 2,
+      "sequence": 4983
+    },
+    {
+      "block": 799,
+      "type": 1,
+      "sequence": 4984
+    },
+    {
+      "block": 808,
+      "type": 2,
+      "sequence": 4984
+    },
+    {
+      "block": 809,
+      "type": 1,
+      "sequence": 4985
+    },
+    {
+      "block": 814,
+      "type": 2,
+      "sequence": 4985
+    },
+    {
+      "block": 815,
+      "type": 1,
+      "sequence": 4986
+    },
+    {
+      "block": 820,
+      "type": 2,
+      "sequence": 4986
+    },
+    {
+      "block": 821,
+      "type": 1,
+      "sequence": 4987
+    },
+    {
+      "block": 829,
+      "type": 2,
+      "sequence": 4987
+    },
+    {
+      "block": 830,
+      "type": 1,
+      "sequence": 4988
+    },
+    {
+      "block": 835,
+      "type": 2,
+      "sequence": 4988
+    },
+    {
+      "block": 836,
+      "type": 1,
+      "sequence": 4989
+    },
+    {
+      "block": 850,
+      "type": 2,
+      "sequence": 4989
+    },
+    {
+      "block": 851,
+      "type": 1,
+      "sequence": 4990
+    },
+    {
+      "block": 865,
+      "type": 2,
+      "sequence": 4990
+    },
+    {
+      "block": 866,
+      "type": 1,
+      "sequence": 4991
+    },
+    {
+      "block": 876,
+      "type": 2,
+      "sequence": 4991
+    },
+    {
+      "block": 877,
+      "type": 1,
+      "sequence": 4992
+    },
+    {
+      "block": 885,
+      "type": 2,
+      "sequence": 4992
+    },
+    {
+      "block": 886,
+      "type": 1,
+      "sequence": 4993
+    },
+    {
+      "block": 891,
+      "type": 2,
+      "sequence": 4993
+    },
+    {
+      "block": 892,
+      "type": 1,
+      "sequence": 4994
+    },
+    {
+      "block": 903,
+      "type": 2,
+      "sequence": 4994
+    },
+    {
+      "block": 904,
+      "type": 1,
+      "sequence": 4995
+    },
+    {
+      "block": 911,
+      "type": 2,
+      "sequence": 4995
+    },
+    {
+      "block": 912,
+      "type": 1,
+      "sequence": 4996
+    },
+    {
+      "block": 916,
+      "type": 2,
+      "sequence": 4996
+    },
+    {
+      "block": 917,
+      "type": 1,
+      "sequence": 4997
+    },
+    {
+      "block": 928,
+      "type": 2,
+      "sequence": 4997
+    },
+    {
+      "block": 929,
+      "type": 1,
+      "sequence": 4998
+    },
+    {
+      "block": 934,
+      "type": 2,
+      "sequence": 4998
+    },
+    {
+      "block": 935,
+      "type": 1,
+      "sequence": 4999
+    },
+    {
+      "block": 943,
+      "type": 2,
+      "sequence": 4999
+    },
+    {
+      "block": 944,
+      "type": 1,
+      "sequence": 5000
+    },
+    {
+      "block": 949,
+      "type": 2,
+      "sequence": 5000
+    },
+    {
+      "block": 950,
+      "type": 1,
+      "sequence": 5001
+    },
+    {
+      "block": 962,
+      "type": 2,
+      "sequence": 5001
+    },
+    {
+      "block": 963,
+      "type": 1,
+      "sequence": 5002
+    },
+    {
+      "block": 974,
+      "type": 2,
+      "sequence": 5002
+    },
+    {
+      "block": 975,
+      "type": 1,
+      "sequence": 5003
+    },
+    {
+      "block": 983,
+      "type": 2,
+      "sequence": 5003
+    },
+    {
+      "block": 984,
+      "type": 1,
+      "sequence": 5004
+    },
+    {
+      "block": 991,
+      "type": 2,
+      "sequence": 5004
+    },
+    {
+      "block": 992,
+      "type": 1,
+      "sequence": 5005
+    },
+    {
+      "block": 1000,
+      "type": 2,
+      "sequence": 5005
+    },
+    {
+      "block": 1001,
+      "type": 1,
+      "sequence": 5006
+    }
+  ],
+  "stop": {
+    "block": 1,
+    "expected_sequence": 5020,
+    "observed_header": [
+      3225106840,
+      2,
+      4909
+    ],
+    "reason": "Magic or sequence does not continue recovery chain"
+  },
+  "committed_overlay_blocks": [],
+  "visited_journal_blocks": 1,
+  "overlay_inspection": {
+    "paths": [
+      {
+        "path": "/",
+        "inode": 2,
+        "size": 4096,
+        "entries": [
+          {
+            "name": "lost+found",
+            "inode": 11,
+            "size": 4096
+          },
+          {
+            "name": "dontpanic",
+            "inode": 8193,
+            "size": 4096
+          },
+          {
+            "name": "misc",
+            "inode": 8194,
+            "size": 4096
+          },
+          {
+            "name": "local",
+            "inode": 12,
+            "size": 4096
+          },
+          {
+            "name": "data",
+            "inode": 14,
+            "size": 4096
+          },
+          {
+            "name": "app-private",
+            "inode": 15,
+            "size": 4096
+          },
+          {
+            "name": "app-asec",
+            "inode": 16,
+            "size": 4096
+          },
+          {
+            "name": "app",
+            "inode": 17,
+            "size": 4096
+          },
+          {
+            "name": "property",
+            "inode": 18,
+            "size": 4096
+          },
+          {
+            "name": "ssh",
+            "inode": 19,
+            "size": 4096
+          },
+          {
+            "name": "dalvik-cache",
+            "inode": 21,
+            "size": 4096
+          },
+          {
+            "name": "resource-cache",
+            "inode": 22,
+            "size": 4096
+          },
+          {
+            "name": "drm",
+            "inode": 23,
+            "size": 4096
+          },
+          {
+            "name": "media",
+            "inode": 24,
+            "size": 4096
+          },
+          {
+            "name": "user",
+            "inode": 25,
+            "size": 4096
+          }
+        ]
+      },
+      {
+        "path": "/system",
+        "error_type": "FileNotFoundError",
+        "error": "File not found: /system"
+      },
+      {
+        "path": "/system/dropbox",
+        "error_type": "FileNotFoundError",
+        "error": "File not found: /system/dropbox"
+      },
+      {
+        "path": "/data",
+        "inode": 14,
+        "size": 4096,
+        "entries": []
+      },
+      {
+        "path": "/property",
+        "inode": 18,
+        "size": 4096,
+        "entries": []
+      },
+      {
+        "path": "/dalvik-cache",
+        "inode": 21,
+        "size": 4096,
+        "error_type": "MissingRange",
+        "error": "Missing native LBA 0x3b0f8, ext4 block 1567"
+      },
+      {
+        "path": "/tombstones",
+        "error_type": "FileNotFoundError",
+        "error": "File not found: /tombstones"
+      }
+    ],
+    "missing_native_lbas": [
+      241912
+    ]
+  }
+}

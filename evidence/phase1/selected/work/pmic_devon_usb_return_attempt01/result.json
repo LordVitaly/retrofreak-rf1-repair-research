@@ -1,0 +1,22 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/pmic_devon_usb_return_attempt01/result.json",
+  "interpretation": "RAM/LED retained without USB while PSU remained connected; no baseline A/B.",
+  "data": {
+    "all_pass": true,
+    "nand_writes": 0,
+    "pmic_writes": 0,
+    "ram_writes": 0,
+    "execution_commands": 0,
+    "user_reports_led_stayed_on": true,
+    "phase": "RAM_STATE_PRESERVED_ACROSS_USB_DISCONNECT",
+    "intro": "<REDACTED:RAW_LOG_OR_IDENTIFIER>",
+    "marker_exact": true,
+    "stage_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "stage_bytes": 110352,
+    "stage_exact": true,
+    "pmic_registers_reread": false,
+    "normal_boot_verified": false,
+    "commands": "<REDACTED:RAW_LOG_OR_IDENTIFIER>"
+  }
+}

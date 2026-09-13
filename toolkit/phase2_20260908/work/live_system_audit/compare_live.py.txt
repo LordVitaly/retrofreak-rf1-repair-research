@@ -1,0 +1,41 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/live_system_audit/compare_live.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Read-only comparison of complete Linux-system chunks against pinned official image."""
+from pathlib import Path
+import hashlib,json,struct,collections,time
+OUT=Path(__file__).resolve().parent;WORK=OUT.parent
+source_path=Path(r'<EXTERNAL_STAGE_01>/work/rkfw_contents/components/system.img')
+source=source_path.read_bytes();assert len(source)==155185152 and hashlib.sha256(source).hexdigest()=='b9ca511124e6c3d9ee2a1e31220f6bf5a858f06d88f9003f5fd7f7e25cf5676a'
+parts=[];offset=0;chunkmeta=[]
+for n in (0,8192,16384,24576,32768):
+ path=WORK/f'live_adb_after_cache/system_raw/{n}.bin';data=path.read_bytes();assert n*4096==offset and len(data)==min(33554432,len(source)-offset)
+ parts.append(data);chunkmeta.append(dict(path=str(path),offset=offset,bytes=len(data),sha256=hashlib.sha256(data).hexdigest()));offset+=len(data)
+live=b''.join(parts);assert len(live)==len(source)
+assert hashlib.md5(live).hexdigest()=='<HISTORICAL_HASH_REDACTED>','Linux read changed vs whole-device MD5!'
+FF=bytes([255])*1024;ZZ=bytes(1024);bad=[];classes=collections.Counter();ranges=[]
+for fs in range(len(source)//1024):
+ a=source[fs*1024:(fs+1)*1024];b=live[fs*1024:(fs+1)*1024]
+ if a==b:continue
+ cls='all_FF' if b==FF else 'all_zero' if b==ZZ else 'mixed'
+ classes[cls]+=1;bad.append(fs)
+ if ranges and ranges[-1]['last_fsblock']+1==fs and ranges[-1]['kind']==cls:ranges[-1]['last_fsblock']=fs
+ else:ranges.append(dict(first_fsblock=fs,last_fsblock=fs,kind=cls))
+for r in ranges:
+ r['offset']=r['first_fsblock']*1024;r['bytes']=(r['last_fsblock']-r['first_fsblock']+1)*1024;r['first_ftl_logical_block']=(0xba000+r['offset']//512)//4096;r['last_ftl_logical_block']=(0xba000+(r['offset']+r['bytes']-1)//512)//4096
+refhash={hashlib.sha256(source[i:i+2097152]).hexdigest():i for i in range(0,len(source),2097152)}
+chunks=[]
+for off in range(0,len(source),2097152):
+ a=source[off:off+2097152];b=live[off:off+2097152]
+ if a==b:continue
+ h=hashlib.sha256(b).hexdigest();chunks.append(dict(offset=off,logical_ftl_block=186+off//2097152,bytes=len(b),bad_1k_blocks=sum(a[i:i+1024]!=b[i:i+1024] for i in range(0,len(a),1024)),live_all_FF=b==bytes([255])*len(b),live_all_zero=b==bytes(len(b)),live_sha256=h,source_sha256=hashlib.sha256(a).hexdigest(),matches_other_source_offset=refhash.get(h)))
+base=json.loads((OUT/'report.json').read_text());metadata={}
+for name,off,n in [('superblock',1024,1024),('group_descriptors',2048,1024),('inode225',base['inode_records']['225']['inode_image_offset'],128),('inode234',base['inode_records']['234']['inode_image_offset'],128)]+[(f'fsblock{fs}',fs*1024,1024) for fs in (25585,25597,28058,38883,38931)]:
+ a=source[off:off+n];b=live[off:off+n];(OUT/(name+'.linux.bin')).write_bytes(b);metadata[name]=dict(offset=off,bytes=n,exact=a==b,live_all_FF=b==bytes([255])*n,live_all_zero=b==bytes(n),different_bytes=sum(x!=y for x,y in zip(a,b)),live_head32=b[:32].hex())
+report=dict(hardware_access=False,all_chunks_complete=True,source_path=str(source_path),source_sha256=hashlib.sha256(source).hexdigest(),source_md5=hashlib.md5(source).hexdigest(),live_sha256=hashlib.sha256(live).hexdigest(),live_md5=hashlib.md5(live).hexdigest(),live_matches_root_md5=True,total_bytes=len(source),bad_1KiB_blocks=len(bad),bad_1KiB_bytes=len(bad)*1024,classification=dict(classes),ranges=ranges,bad_2MiB_chunks=chunks,metadata=metadata,chunks=chunkmeta)
+(OUT/'live_compare_report.json').write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps({k:v for k,v in report.items() if k not in ('ranges','chunks')},indent=2))
+print('RANGECOUNT',len(ranges),'TOP',sorted(ranges,key=lambda r:r['bytes'],reverse=True)[:12])

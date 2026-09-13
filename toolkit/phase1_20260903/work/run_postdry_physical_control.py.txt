@@ -1,0 +1,65 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/run_postdry_physical_control.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""One NEW user-confirmed cold MaskROM. Reuse 3/3-proven physical reader.
+Read only: boot controls and complete physical blocks560/312 involved in dry RAM state.
+No new dump of whole NAND; no write/erase/FTL commands. Never automatic retry.
+"""
+import hashlib,json,struct,sys,time
+from pathlib import Path
+from ram_console_session import RamConsole
+from console_completion import completed_response
+assert sys.argv[1:]==['--after-new-confirmed-cold-maskrom']
+ROOT=Path(__file__).resolve().parents[1]
+loader=ROOT/'work/RetronLoader_RS_FIXED_BOUNDARY_RAM_ONLY.bin'
+assert hashlib.sha256(loader.read_bytes()).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+for n in (1,2,3):assert json.loads((ROOT/f'outputs/fixed_boundary{n:02d}_verification.json').read_text())['all_eight_exact']
+dry=json.loads((ROOT/'work/system_writer_dry_hardware_attempt01/result.json').read_text());assert dry['all_pass']
+assert dry['journal']==[dict(kind=4,physical_sector='0x230000',status='0xffffffff',portion='0xbc000')]
+assert dry['map_changes']==[dict(logical=188,before=0,after=312)]
+sectors=[0x16020,0x16000,0x160c0]+[block*4096+page*16 for block in (560,312) for page in range(256)]
+assert len(sectors)==515 and len(set(sectors))==515
+out=ROOT/'work/postdry_physical_control_attempt01';out.mkdir(exist_ok=False)
+class PhysicalConsole(RamConsole):
+    def select(self):
+        assert 'Maskrom' in self.wait('Select input')
+        super().select()
+    def command(self,value):
+        parts=value.split();op=parts[0]
+        assert op in ('DB','RFI','RS')
+        if op=='RS':
+            assert int(parts[1],16) in sectors and parts[2]=='0x10'
+            return super().command(value)
+        if op=='DB':assert value==f'DB {loader}' and not any(x.startswith('DB ') for x in self.commands)
+        if op=='RFI':assert value=='RFI'
+        token='Download boot ok' if op=='DB' else 'Rockusb>'
+        self.commands.append(value);start=len(''.join(self.chunks));self.proc.write(value+'\r\n')
+        deadline=time.monotonic()+45
+        while time.monotonic()<deadline:
+            response=completed_response(''.join(self.chunks),start,token)
+            if response is not None:return response
+            if self.done.is_set():break
+            time.sleep(.05)
+        raise RuntimeError('No completion, no retry')
+result=dict(all_pass=False,nand_write_commands_sent=False,commands=[],pages=[],scope='Exact raw528 compare of 3 boot pages and whole physical blocks560/312, NOT whole NAND invariance');c=None
+try:
+    c=PhysicalConsole(out);c.select();result['commands']=c.commands
+    c.command(f'DB {loader}');info=c.command('RFI')
+    assert all(x in info for x in ('MICRON','4096MB','ECC Bits: 40'))
+    for index,sector in enumerate(sectors):
+        file=out/f'page{index:03d}_{sector:x}.raw';c.command(f'RS {hex(sector)} 0x10 {file}')
+        raw=file.read_bytes();assert len(raw)==8448
+        chunk,local=divmod(sector,0x40000)
+        with (ROOT/f'work/nand_native_ecc40/NAND_{chunk:02d}.RAW').open('rb') as f:f.seek(local*528);expected=f.read(8448)
+        assert len(expected)==8448
+        row=dict(sector=hex(sector),raw_sha256=hashlib.sha256(raw).hexdigest(),baseline_sha256=hashlib.sha256(expected).hexdigest(),exact=raw==expected);result['pages'].append(row)
+        assert row['exact'],row
+        if index in (0,2,258,514):print('PASS postdry physical pages',index+1,'/',len(sectors),flush=True)
+    result['all_pass']=True
+except BaseException as e:result['error']=repr(e);raise
+finally:
+    if c:c.close()
+    with (out/'result.json').open('x') as f:json.dump(result,f,indent=2)
+    print(json.dumps({k:v for k,v in result.items() if k not in ('commands','pages')},indent=2),flush=True)

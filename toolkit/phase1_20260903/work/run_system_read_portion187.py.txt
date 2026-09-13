@@ -1,0 +1,60 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/run_system_read_portion187.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""One known 2MiB logical system read after the successful dry-run; no NAND writes."""
+import hashlib,json,struct,sys
+from pathlib import Path
+from ram_console_session import RamConsole
+assert sys.argv[1:]==['--after-dry-pass']
+ROOT=Path(__file__).resolve().parents[1];build=json.loads((ROOT/'work/system_read_portion_187/build.json').read_text())
+raw=(ROOT/'work/system_read_portion_187/read.raw').read_bytes()
+assert hashlib.sha256(raw).hexdigest()==build['sha256']=='<REDACTED:HASH_OR_BYTES>'
+assert json.loads((ROOT/'outputs/system_read_portion_offline.json').read_text())['all_pass']
+dry=json.loads((ROOT/'work/system_writer_dry_hardware_attempt01/result.json').read_text());assert dry['all_pass']
+donor=(ROOT.parent.parent/'2026-09-01/retro-freak-retrofreak-systemupdate-0-2/work/rkfw_contents/components/system.img').read_bytes()
+assert hashlib.sha256(donor).hexdigest()=='b9ca511124e6c3d9ee2a1e31220f6bf5a858f06d88f9003f5fd7f7e25cf5676a'
+expected=donor[2097152:4194304];complement=bytes(x^255 for x in expected)
+out=ROOT/'work/system_read_portion187_hardware_attempt01';out.mkdir(exist_ok=False)
+result=dict(all_pass=False,nand_writes_enabled=False,system_repair_performed=False,payload_sha256=build['sha256'],commands=[]);c=None
+try:
+    c=RamConsole(out);c.select();result['commands']=c.commands
+    marker=out/'window.raw';c.command(f'RS 0x7efffe 0x1 {marker}')
+    assert marker.read_bytes()==b'RF1WIN01'+struct.pack('<IIII',0x800000,4096,0x63000000,16)+bytes(504)
+    before=out/'previous.raw';c.command(f'RS 0x7f0000 0xd1 {before}')
+    assert hashlib.sha256(before.read_bytes()).hexdigest()==dry['after_sha256']=='<REDACTED:HASH_OR_BYTES>'
+    for i,off in enumerate(range(0,2097152,8192)):
+        file=out/f'prefill{i:03d}.bin'
+        with file.open('xb') as f:f.write(complement[off:off+8192])
+        c.command(f'WS {hex(0x800000+off//512)} {file}')
+    for i,off in enumerate(range(0,110080,8192)):
+        file=out/f'payload{i:02d}.bin'
+        with file.open('xb') as f:f.write(raw[off:min(off+8192,110080)])
+        c.command(f'WS {hex(0x7f0000+off//512)} {file}')
+    before=out/'before.raw';c.command(f'RS 0x7f0000 0xd1 {before}');assert before.read_bytes()==raw
+    c.command('RD')
+    after=out/'after.raw';c.command(f'RS 0x7f0000 0xd1 {after}');data=after.read_bytes()
+    result['after_sha256']=hashlib.sha256(data).hexdigest()
+    assert len(data)==110352 and data[:110080]==raw[:110080] and data[110348:]==bytes(4)
+    assert struct.unpack_from('<II',data,110080)==(0x44475453,0x600982e4)
+    assert struct.unpack_from('<I',data,110344)[0]==0x6009a1f8
+    result['bridge_returned']=True
+    record=out/'status.raw';c.command(f'RS 0x7f00d1 0x1 {record}');status=record.read_bytes()
+    result['read_status']=list(struct.unpack_from('<4I',status,8))
+    assert len(status)==528 and status[:8]==b'RF1READ2' and struct.unpack_from('<4I',status,8)==(0xbb000,4096,0,4096)
+    image=bytearray()
+    for i in range(256):
+        file=out/f'data{i:03d}.raw';c.command(f'RS {hex(0x800000+i*16)} 0x10 {file}')
+        part=file.read_bytes();assert len(part)==8448
+        assert all(part[j+512:j+528]==bytes(16) for j in range(0,8448,528))
+        image.extend(b''.join(part[j:j+512] for j in range(0,8448,528)))
+    with (out/'system_portion.bin').open('xb') as f:f.write(image)
+    result.update(bytes=len(image),sha256=hashlib.sha256(image).hexdigest(),expected_sha256=hashlib.sha256(expected).hexdigest(),mismatching_bytes=sum(a!=b for a,b in zip(image,expected)))
+    assert image==expected
+    result['all_pass']=True
+except BaseException as e:result['error']=repr(e);raise
+finally:
+    if c:c.close()
+    with (out/'result.json').open('x') as f:json.dump(result,f,indent=2)
+    print(json.dumps({k:v for k,v in result.items() if k!='commands'},indent=2),flush=True)

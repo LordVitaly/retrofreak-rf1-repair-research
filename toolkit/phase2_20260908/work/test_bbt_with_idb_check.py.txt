@@ -1,0 +1,82 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/test_bbt_with_idb_check.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Bounded compiled ARM gate test. Native erase/program mocked, no hardware."""
+import hashlib,json,struct,sys
+from pathlib import Path
+ROOT=Path('<EXTERNAL_STAGE_03>');sys.path.insert(0,str(ROOT/'work/emulator_deps'))
+from unicorn import Uc,UC_ARCH_ARM,UC_MODE_ARM,UC_HOOK_CODE
+from unicorn.arm_const import *
+out=Path('<THREAD_ROOT>\\work\\bbt_with_idb_check_v1');meta=json.loads((out/'build.json').read_text());sym=meta['symbols']
+usb=(out/'usbplug.bin').read_bytes();addon=(out/'addon.bin').read_bytes()
+source=(out/'page0.main512.bin').read_bytes();control=(out/'erase_copy12_once.bin').read_bytes()
+B,G,S,BUF,SP,STOP=0x60000000,0x60020e48,0x60801000,0x60030000,0x60700000,0x60802000
+geometry=(ROOT/'work/bbt_physical_ecc40_attempt01/loaded_marker.raw').read_bytes()[80:256]
+R=(UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3)
+expected_aux=b''.join(struct.pack('<H',v)+b'\xff'*14 for v in meta['aux_words'])
+tests=[]
+def new(erase_rc=0,program_rc=0):
+    u=Uc(UC_ARCH_ARM,UC_MODE_ARM);u.mem_map(B,0x900000);u.mem_write(B,usb);u.mem_write(G,geometry)
+    u.emu_start(B+0x30,B+0x34,count=10000)
+    assert bytes(u.mem_read(0x60800000,len(addon)))==addon
+    assert list(struct.unpack('<16I',u.mem_read(S,64)))==[0x31424449,0x0c000101,0,0,0,0,0,0,0xc000,0,0,0,0,0,0,0]
+    calls=[]
+    def hook(uc,pc,size,user):
+        a=[uc.reg_read(r) for r in R]
+        if pc==sym['native_erase']:
+            assert a[0]==0xc000;calls.append('erase');uc.reg_write(R[0],erase_rc&0xffffffff)
+        elif pc==sym['native_program']:
+            assert a==[0xc000,0x600105c8,0x600205c8,0]
+            assert uc.mem_read(G+18,1)==b'\x28'
+            assert bytes(uc.mem_read(a[1],8192))==source
+            assert bytes(uc.mem_read(a[2],256))==expected_aux
+            calls.append('program');uc.reg_write(R[0],program_rc&0xffffffff)
+        else:return
+        uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR))
+    for pc in (sym['native_program'],sym['native_erase']):u.hook_add(UC_HOOK_CODE,hook,begin=pc,end=pc)
+    return u,calls
+def call(u,name,args):
+    for r,v in zip(R,args):u.reg_write(r,v)
+    u.reg_write(UC_ARM_REG_SP,SP);u.reg_write(UC_ARM_REG_LR,STOP)
+    u.emu_start(sym[name] if isinstance(name,str) else B+name,STOP,count=3000000)
+    assert u.reg_read(UC_ARM_REG_PC)==STOP and u.reg_read(UC_ARM_REG_SP)==SP
+    return u.reg_read(R[0])
+def write(u,sector,d):
+    u.mem_write(BUF,b''.join(d[i:i+512]+bytes(range(16)) for i in range(0,len(d),512)))
+    return call(u,'guarded_write',(0,sector,BUF,len(d)//512))
+u,calls=new();assert write(u,0x7f0100,control)==0 and write(u,0xc000,source)==0
+s=list(struct.unpack('<13I',u.mem_read(S,52)))
+assert s[2:10]==[3,0,1,0,1,0,0xc010,0] and calls==['erase','program']
+assert write(u,0xc000,source) and write(u,0x7f0100,control) and calls==['erase','program']
+tests.append('exact one erase and one ECC40 8192-main/256-aux program; repeats rejected')
+for er,pr in ((-1,0),(0,-1)):
+    u,calls=new(er,pr);rc=write(u,0x7f0100,control)
+    if not rc:rc=write(u,0xc000,source)
+    assert rc and struct.unpack('<I',u.mem_read(S+12,4))[0]
+    before=calls.copy();assert write(u,0x7f0100,control) and write(u,0xc000,source) and calls==before
+tests.append('erase/program errors sticky; no retry')
+for sector,d,armed in ((0xb000,source,True),(0xd000,source,True),(0xc010,source,True),(0xc000,source,False),(0xc000,bytes(8192),True),(0xc000,source[:512],True),(0x7f0100,bytes(512),False)):
+    u,calls=new()
+    if armed:assert write(u,0x7f0100,control)==0
+    before=calls.copy();assert write(u,sector,d) and calls==before
+for name,args in (('guarded_low_erase',(0xc000,0,0,0)),('guarded_low_erase',(0xd000,0,0,0)),('guarded_low_program',(0xc000,0x600105c8,0x600205c8,0)),('guarded_program',(0,0xc000,0x600105c8,0x600205c8))):
+    u,calls=new();assert call(u,name,args) and not calls
+tests.append('outside copy12, wrong page/count/data/control and ungated entries denied')
+for off in (0x4230,0x75ac,0x7614,0x7624):
+    u,calls=new();assert call(u,off,(0,0,0,0))==0xffffffff and not calls
+for op in range(256):
+    u,calls=new();u.reg_write(R[0],op)
+    expected={0:0x18d0,1:0x18d8,4:0x18f0,5:0x18f8,0x1a:0x1908,0x1b:0x1928}.get(op,0x18bc)
+    u.emu_start(B+0x1850,B+expected,count=32);assert u.reg_read(UC_ARM_REG_PC)==B+expected
+tests.append('all256 dispatch paths; destructive autodetect/erase fallback disabled')
+# Reuse prior actual native parser/fallback proof: those functions have no
+# BBT-specific preprocessor branch; native USB code otherwise unchanged.
+old=(ROOT/'work/idb_copy6_guard_v10/usbplug.bin').read_bytes()
+for a,b in ((0x5250,0x528c),(0x5290,0x5360),(0x6d80,0x6ea0)):
+    assert usb[a:b]==old[a:b]
+report=dict(all_pass=True,hardware_executed=False,writer_sha256=meta['files']['writer.bin']['sha256'],tests=tests,preinit_exact=True,source_main_and_aux_exact=True,limits='Compiled guards/native call arguments proved; native NAND/BCH physical correctness inherited, not emulated. Hardware preflight and erase/program/readback still required.')
+with (out/'offline_test.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

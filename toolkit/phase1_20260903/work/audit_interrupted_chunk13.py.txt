@@ -1,0 +1,29 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/audit_interrupted_chunk13.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Local file comparison only: completed reread versus interrupted PC output."""
+import hashlib
+import json
+from pathlib import Path
+ROOT=Path(__file__).parent
+paths=[ROOT/'nand_native_ecc40'/name for name in ('NAND_13_UNCONFIRMED_BSOD.RAW','NAND_13.RAW')]
+a,b=[p.read_bytes() for p in paths]
+assert len(a)==len(b)==138412032
+first=next((i for i,(x,y) in enumerate(zip(a,b)) if x!=y),None)
+last=next((len(a)-1-i for i,(x,y) in enumerate(zip(reversed(a),reversed(b))) if x!=y),None)
+rows=[]
+for page in range(len(a)//8448):
+    x,y=a[page*8448:(page+1)*8448],b[page*8448:(page+1)*8448]
+    if x!=y:
+        rows.append(page)
+result=dict(paths=list(map(str,paths)),sha256=[hashlib.sha256(x).hexdigest() for x in (a,b)],
+            first_difference=first,last_difference=last,differing_pages=len(rows),
+            first_differing_page=rows[0] if rows else None,last_differing_page=rows[-1] if rows else None,
+            interrupted_tail_all_zero=bool(first is not None and not any(a[first:])),
+            interrupted_tail_zero_fraction=a[first:].count(0)/len(a[first:]) if first is not None else None)
+print(json.dumps(result,indent=2))
+out=ROOT.parent/'outputs/interrupted_chunk13_comparison.json'
+if not out.exists():
+    with out.open('x') as f: json.dump(result,f,indent=2)

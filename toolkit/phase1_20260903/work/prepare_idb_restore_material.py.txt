@@ -1,0 +1,46 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/prepare_idb_restore_material.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Prepare source material only, NOT a physical NAND image or upload payload.
+Preserve RF-1 header/init/padding from original copy6; use exact saved copy6
+tail and independently matching saved FlashInfo. Never write this linearly.
+"""
+import hashlib,json,struct,sys
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'work/emulator_deps'))
+from audit_ram_loader_container import rc4
+old=Path(r'<HOST_PATH>')
+with old.open('rb') as f:
+    copies={}
+    for b in (3,5,6):f.seek(b*4096*528);copies[b]=f.read(256*528)
+assert all(len(v)==135168 for v in copies.values())
+def mains(raw):return b''.join(raw[i:i+512] for i in range(0,len(raw),528))
+def dec(data):return b''.join(rc4(data[i:i+512]) for i in range(0,len(data),512))
+sources={b:mains(raw) for b,raw in copies.items()}
+init=[dec(sources[b][4*512:28*512]) for b in (3,5,6)]
+assert init[0]==init[1]==init[2]
+image=bytearray(sources[6])
+header=rc4(image[:512]);assert header[:4]==bytes.fromhex('55aaf00f')
+assert struct.unpack_from('<H',header,12)==(4,) and struct.unpack_from('<HH',header,506)==(24,240)
+tailraw=(ROOT/'work/idb_ecc24_targeted_attempt1/block06_page15.raw').read_bytes()
+image[240*512:243*512]=mains(tailraw[:3*528])
+info6=(ROOT/'work/idb_ecc24_parameter_attempt2/block06_page15.raw').read_bytes()
+info5=(ROOT/'work/idb_ecc24_parameter_attempt2/block05_page15.raw').read_bytes()
+assert info5==info6 and len(info6)==528
+assert hashlib.sha256(info6).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+image[244*512:245*512]=info6[:512]
+code=dec(image[28*512:243*512])
+for b in (3,6):assert code==(ROOT/f'outputs/FlashBoot.from_NAND_block{b:02d}.verified_STATIC_ONLY.bin').read_bytes()
+assert len(code)==110080 and hashlib.sha256(code).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+assert dec(image[4*512:28*512])==init[0]
+assert image[:4*512]==sources[6][:4*512]
+changed=sorted(set(i//512 for i,(a,b) in enumerate(zip(image,sources[6])) if a!=b))
+assert set(changed)<=set((240,241,242,244))
+out=ROOT/'work/idb_restore_material_v1';out.mkdir(exist_ok=False)
+filename='copy6.BOOT_ORDER_MAIN512.NOT_FOR_UPLOAD.bin'
+with (out/filename).open('xb') as f:f.write(image)
+report=dict(source_material_verified=True,ready_to_write=False,device_access=False,file=str((out/filename).relative_to(ROOT)),bytes=len(image),sha256=hashlib.sha256(image).hexdigest(),flashboot_sha256=hashlib.sha256(code).hexdigest(),init_sha256=hashlib.sha256(init[0]).hexdigest(),source_copy=6,changed_boot_records_vs_old=changed,header_and_native_init_preserved=True,flashinfo_raw_sha256=hashlib.sha256(info6).hexdigest(),provenance=['original ECC24 backup copy6 headers/init/padding','same-copy6 saved ECC24 page15 records0..2','same-copy6 FlashInfo single-record read, exact independent copy5 match','full FlashBoot independently verified from copies3 and6'],warning='BOOT-ORDER ENCRYPTED MAIN512 SOURCE ONLY. NO BCH/OOB, NO PHYSICAL PAGE LAYOUT. DO NOT WS THIS INTO LINEAR NAND.',blocker='No checked bounded IDB writer yet: must target only one selected copy, program its required boot-page order/ECC and preserve all other regions. Existing system writer protects IDB and is not applicable.')
+with (out/'manifest.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

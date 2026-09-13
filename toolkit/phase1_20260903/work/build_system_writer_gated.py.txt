@@ -1,0 +1,41 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_system_writer_gated.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Gated ARM writer core + dry variant. Not yet a hardware payload."""
+import hashlib,json,struct,subprocess,zlib
+from pathlib import Path
+from ram_artifact import elf_code,symbols
+ROOT=Path(__file__).resolve().parents[1];out=ROOT/'work/system_writer_gated_v3';out.mkdir(exist_ok=False)
+capture=json.loads((ROOT/'work/ftl_capture_hardware_attempt01/result.json').read_text());assert capture['all_pass'] and not capture['mapping_differences_from_original_model']
+snapshot=(ROOT/'work/ftl_capture_hardware_attempt01/ftl_nand_ram.bin').read_bytes()
+assert hashlib.sha256(snapshot).hexdigest()==capture['snapshot_sha256']=='<REDACTED:HASH_OR_BYTES>'
+mapping=list(struct.unpack_from('<1896H',snapshot,0xf00));assert mapping==capture['logical_to_physical']
+protected=set(range(18))|{p for logical,p in enumerate(mapping) if p and not 186<=logical<=259}
+assert all(p==0 or p not in protected for p in mapping[186:260])
+mask=bytearray(256)
+for p in protected:mask[p>>3]|=1<<(p&7)
+non_system=b''.join(struct.pack('<H',p) for logical,p in enumerate(mapping) if not 186<=logical<=259)
+crc=zlib.crc32(non_system)
+with (out/'system_writer_protection.h').open('x') as f:
+    f.write('static const unsigned char protected_blocks[256]={'+','.join(str(b) for b in mask)+'};\n#define NON_SYSTEM_MAP_CRC '+hex(crc)+'u\n')
+donor=(ROOT.parent.parent/'2026-09-01/retro-freak-retrofreak-systemupdate-0-2/work/rkfw_contents/components/system.img').read_bytes()
+assert hashlib.sha256(donor).hexdigest()=='b9ca511124e6c3d9ee2a1e31220f6bf5a858f06d88f9003f5fd7f7e25cf5676a'
+with (out/'system_writer_manifest.h').open('x') as f:f.write('static const unsigned int donor_crc[74]={'+','.join(hex(zlib.crc32(donor[i:i+2097152]))+'u' for i in range(0,len(donor),2097152))+'};\n')
+original=(ROOT/'work/FlashBoot.packet512.STATIC_ONLY.bin').read_bytes()
+assert hashlib.sha256(original).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+report=dict(device_access=False,hardware_ready=False,hardware_snapshot_sha256=capture['snapshot_sha256'],protected_blocks=sorted(protected),non_system_map_crc32=hex(crc),variants={})
+for name in ('write','dry'):
+    flags=[str(ROOT/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe'),'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-mfloat-abi=soft','-Oz','-g','-ffreestanding','-fno-builtin','-fno-stack-protector','-ffunction-sections','-nostdlib','-DRF_GATED','-I'+str(out)]
+    if name=='dry':flags+=['-DRF_DRY_RUN']
+    path=out/(name+'.elf')
+    subprocess.run(flags+['work/system_writer_core.c','work/system_writer_gate.c','work/system_writer_original.S','-Wl,-T,work/system_writer_gated.ld','-Wl,-e,system_write_portion','-o',str(path)],check=True,cwd=ROOT)
+    elf=path.read_bytes();code=elf_code(elf,0x61800000,0x1300);syms=symbols(elf)
+    for symbol,offset in [('original_program',0xba10),('original_erase',0xbc1c),('original_logical',0x7dcc),('original_wrapper',0x3b0c)]:
+        at=syms[symbol]-0x61800000
+        assert code[at:at+8]==original[offset:offset+8],symbol
+    with (out/(name+'.NOT_FOR_UPLOAD.bin')).open('xb') as f:f.write(code)
+    report['variants'][name]=dict(sha256=hashlib.sha256(code).hexdigest(),bytes=len(code),symbols={s:hex(syms[s]) for s in ['system_write_portion','gate_prepare','gate_logical','gate_wrapper','gate_program','gate_erase','gate_copy','gate_forbidden','original_program','original_erase','original_logical','original_wrapper']})
+with (ROOT/'outputs/system_writer_gated_v3_build.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps({k:v for k,v in report.items() if k!='protected_blocks'},indent=2))

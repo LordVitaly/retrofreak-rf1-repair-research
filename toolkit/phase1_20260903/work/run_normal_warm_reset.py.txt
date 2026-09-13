@@ -1,0 +1,48 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/run_normal_warm_reset.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Explicitly authorized single normal-reset request. NEVER retry RD/DB."""
+import hashlib,json,os,sys,time
+from pathlib import Path
+from ram_console_session import RamConsole
+assert sys.argv[1:]==['--authorized-normal-boot-once']
+ROOT=Path(__file__).resolve().parents[1]
+prior=ROOT/'work/pmic_devon_usb_return_attempt01'
+old=json.loads((prior/'result.json').read_text());assert old['all_pass']
+build=json.loads((ROOT/'work/normal_warm_reset_v1/build.json').read_text());assert build['all_pass']
+payload=(ROOT/build['file']).read_bytes()
+assert len(payload)==110352 and hashlib.sha256(payload).hexdigest()==build['sha256']=='<REDACTED:HASH_OR_BYTES>'
+out=ROOT/'work/normal_warm_reset_hardware_attempt01';out.mkdir(exist_ok=False)
+result=dict(phase='authenticate',reset_request_sent=False,normal_boot_verified=False,nand_writes_by_payload=0,pmic_writes_by_payload=0,payload_sha256=build['sha256'])
+c=None
+def save(path,obj):
+    with path.open('x',encoding='utf-8') as f:json.dump(obj,f,indent=2);f.flush();os.fsync(f.fileno())
+try:
+    c=RamConsole(out);intro=c.wait('Select input');result['intro']=intro
+    assert 'Found 1 rockusb' in intro and 'Vid=0x2207,Pid=0x300a' in intro
+    c.select()
+    p=out/'marker_before.raw';c.command(f'RS 0x7effff 0x1 {p}')
+    assert p.read_bytes()==(prior/'marker.raw').read_bytes()
+    p=out/'previous_stage.raw';c.command(f'RS 0x7f0000 0xd1 {p}')
+    assert hashlib.sha256(p.read_bytes()).hexdigest()==old['stage_sha256']
+    for i,off in enumerate(range(0,110080,8192)):
+        p=out/f'payload{i:02d}.bin'
+        with p.open('xb') as f:f.write(payload[off:min(off+8192,110080)])
+        c.command(f'WS {hex(0x7f0000+off//512)} {p}')
+    p=out/'reset_before.raw';c.command(f'RS 0x7f0000 0xd1 {p}')
+    assert p.read_bytes()==payload
+    save(out/'EXECUTION_ATTEMPTED_NO_RETRY.json',dict(payload_sha256=build['sha256'],warning='Ordinary boot may write its own data; this reset payload cannot access NAND.'))
+    result['phase']='dispatch_reset_once'
+    start=len(''.join(c.chunks));c.commands.append('RD');c.send_once('RD')
+    result['reset_request_sent']=True
+    # A disconnect or missing normal console completion is expected for reset,
+    # but is NOT proof of reset or of a successful normal boot.
+    deadline=time.monotonic()+5
+    while time.monotonic()<deadline and not c.done.is_set():time.sleep(.05)
+    result.update(phase='RESET_REQUEST_SENT_AWAIT_SCREEN_OBSERVATION',console_after_request=''.join(c.chunks)[start:],reader_error=c.reader_error)
+except BaseException as e:result['error']=repr(e);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    save(out/'result.json',result);print(json.dumps(result,indent=2),flush=True)

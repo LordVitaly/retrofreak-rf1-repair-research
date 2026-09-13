@@ -1,0 +1,172 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_bootstrap_to_main.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""End-to-end ARM to main; two explicit ROM-ID inputs and write-only MMIO sinks."""
+import hashlib
+import argparse
+from collections import deque
+import itertools
+import json
+import struct
+import sys
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'work/emulator_deps'))
+from unicorn import Uc,UcError,UC_ARCH_ARM,UC_MODE_ARM,UC_HOOK_CODE,UC_HOOK_MEM_WRITE,UC_HOOK_MEM_READ,UC_HOOK_MEM_INVALID,UC_PROT_READ,UC_PROT_WRITE,UC_PROT_EXEC
+from unicorn.arm_const import UC_CPU_ARM_CORTEX_A9,UC_ARM_REG_PC,UC_ARM_REG_SP
+blob=(ROOT/'work/ram_bootstrap.NOT_FOR_UPLOAD.bin').read_bytes()
+build=json.loads((ROOT/'outputs/ram_bootstrap_build.json').read_text())
+assert hashlib.sha256(blob).hexdigest()==build['binary_sha256']
+d=(ROOT/'work/FlashBoot.machine_guards_usb_only.UNPACKAGED_NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(d).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+main=struct.unpack_from('<I',d,0x3d8)[0]
+p=argparse.ArgumentParser()
+p.add_argument('--trace-main',action='store_true',help='Continue to first unmodelled access; never invent hardware responses')
+p.add_argument('--timer-write-sink',action='store_true',help='Log only the two statically verified timer-init writes; forbid timer reads')
+p.add_argument('--serial-write-sink',action='store_true',help='Log exact A4C GRF/UART initialization sequence; forbid UART reads')
+p.add_argument('--synthetic-clock-uart',action='store_true',help='Supply explicit synthetic timer ticks and UART-ready status for control-flow discovery only')
+args=p.parse_args()
+assert not args.timer_write_sink or args.trace_main
+assert not args.serial_write_sink or args.timer_write_sink
+assert not args.synthetic_clock_uart or args.serial_write_sink
+cases=[]
+for rom,fill in itertools.product((0,0x56313030),(0,0xa5)):
+    u=Uc(UC_ARCH_ARM,UC_MODE_ARM,cpu=UC_CPU_ARM_CORTEX_A9)
+    for base,size in [(0x60000000,0x20000),(0x60080000,0x20000),(0x60200000,0x600000),(0x61000000,0x20000),(0x61200000,0x10000),(0,0x1000),(0x10080000,0x10000)]:u.mem_map(base,size)
+    u.mem_write(0x60000000,bytes([fill])*0x20000)
+    u.mem_write(0x60000000,blob)
+    u.mem_map(0x10102000,0x1000,UC_PROT_READ)
+    u.mem_write(0x101027fc,struct.pack('<I',rom))
+    u.mem_map(0x20004000,0x1000,UC_PROT_WRITE)
+    u.mem_map(0x20008000,0x1000,UC_PROT_WRITE)
+    if args.timer_write_sink:u.mem_map(0x20038000,0x1000,UC_PROT_WRITE)
+    if args.serial_write_sink:u.mem_map(0x20064000,0x1000,UC_PROT_WRITE)
+    serial_sequence=[(0x20008074,0xf0005)] if rom==0x56313030 else [(0x200080bc,0x50005)]
+    serial_sequence += [(0x20064000+offset,value) for offset,value in [(0x88,7),(4,0),(0x10,0),(0xc,0x83),(0,0xd),(4,0),(0xc,3),(0x98,1),(0x9c,3),(0xa0,1)]]
+    serial_writes=[]
+    peripheral=dict(timer_reads=0,uart_status_reads=0,uart_bytes=[])
+    if args.synthetic_clock_uart:
+        u.mem_protect(0x20038000,0x1000,UC_PROT_READ|UC_PROT_WRITE)
+        u.mem_protect(0x20064000,0x1000,UC_PROT_READ|UC_PROT_WRITE)
+        def peripheral_read(uc,access,addr,size,value,ctx):
+            assert size==4 and addr in (0x20038004,0x2006407c),('unexpected peripheral read',hex(addr),size)
+            if addr==0x20038004:
+                # Deliberately synthetic; not calibrated wall time or RF-1 data.
+                peripheral['timer_reads']+=1
+                supplied=(0xffffffff-24000*peripheral['timer_reads'])&0xffffffff
+            else:
+                peripheral['uart_status_reads']+=1
+                supplied=2
+            uc.mem_write(addr,struct.pack('<I',supplied))
+        u.hook_add(UC_HOOK_MEM_READ,peripheral_read,begin=0x20038000,end=0x20038fff)
+        u.hook_add(UC_HOOK_MEM_READ,peripheral_read,begin=0x20064000,end=0x20064fff)
+    state=dict(entries=0,phase='bootstrap',rom_reads=0,mmio_writes=[])
+    def entry(uc,pc,size,ctx):
+        state['entries']+=1
+        if state['entries']==2:
+            assert bytes(uc.mem_read(0x60000000,len(d)))==d
+            state['phase']='flashboot'
+            uc.mem_protect(0x60000000,0x20000,UC_PROT_READ|UC_PROT_EXEC)
+    def read(uc,access,addr,size,value,ctx):
+        assert addr==0x101027fc and size==4,('unapproved ROM read',hex(addr))
+        state['rom_reads']+=1
+    def write(uc,access,addr,size,value,ctx):
+        if state['phase']=='bootstrap':
+            ranges=[(0x60000000,0x60000000+len(d)),(0x61000000,0x61000000+len(blob)),(0x61010000,0x61018008),(0x61200000,0x61210000)]
+        elif state['phase']=='main':
+            # Broad data/stack ranges for boundary discovery, not a RAM safety proof.
+            ranges=[(0x60099000,0x600a0000),(0x60200000,0x60800000)]
+            if args.timer_write_sink and addr in (0x20038000,0x20038008):
+                assert size==4 and value=={0x20038000:0,0x20038008:1}[addr]
+                state['mmio_writes'].append(dict(address=hex(addr),value=hex(value)))
+                return
+            if args.serial_write_sink and len(serial_writes)<len(serial_sequence) and (addr,value)==serial_sequence[len(serial_writes)]:
+                assert size==4
+                serial_writes.append((addr,value))
+                state['mmio_writes'].append(dict(address=hex(addr),value=hex(value)))
+                return
+            if args.synthetic_clock_uart and len(serial_writes)==len(serial_sequence) and addr==0x20064000:
+                assert size==4 and value<=255 and uc.reg_read(UC_ARM_REG_PC)==0x60080000+0xad4-0xa34
+                peripheral['uart_bytes'].append(value)
+                return
+        else:
+            ranges=[(0,0x724),(0x60080000,0x6009a488)]
+            if addr in (0x10080000,0x20004008,0x20008150,0x200080a0):
+                expected={0x10080000:0x18,0x20004008:0xe,0x20008150:0x10001000,0x200080a0:0x10001000}[addr]
+                assert size==4 and value==expected
+                state['mmio_writes'].append(dict(address=hex(addr),value=hex(value)))
+                return
+        allowed=any(a<=addr and addr+size<=b for a,b in ranges)
+        if not allowed and state['phase']=='main':
+            boundary.append(dict(reason='unapproved_write',address=hex(addr),size=size,value=hex(value),pc=hex(uc.reg_read(UC_ARM_REG_PC))))
+            uc.emu_stop()
+            return
+        assert allowed,('unexpected write',hex(addr),hex(uc.reg_read(UC_ARM_REG_PC)))
+    u.hook_add(UC_HOOK_CODE,entry,begin=0x60000000,end=0x60000000)
+    u.hook_add(UC_HOOK_MEM_READ,read,begin=0x10102000,end=0x10102fff)
+    u.hook_add(UC_HOOK_MEM_WRITE,write)
+    u.emu_start(0x60000000,main,timeout=30000000,count=100000000)
+    assert u.reg_read(UC_ARM_REG_PC)==main
+    assert bytes(u.mem_read(0,0x724))==d[0x310:0xa34]
+    assert bytes(u.mem_read(0x60080000,len(d)-0xa34))==d[0xa34:]
+    assert bytes(u.mem_read(0x6009a3cc,188))==bytes([fill])*188
+    assert u.reg_read(UC_ARM_REG_SP)==0x603d426c
+    assert state['rom_reads']==1
+    assert state['mmio_writes'][-1]['address']==('0x200080a0' if rom==0x56313030 else '0x20008150')
+    cases.append(dict(synthetic_rom_word=hex(rom),tail_fill=fill,main_pc=hex(main),stack=hex(u.reg_read(UC_ARM_REG_SP)),state=state))
+    print('PASS to main',hex(rom),fill,flush=True)
+    if args.trace_main:
+        state['phase']='main'
+        u.mem_protect(0x60080000,0x19000,UC_PROT_READ|UC_PROT_EXEC)
+        recent=deque(maxlen=32)
+        boundary=[]
+        guards={0x60080000+o-0xa34 for o in (0x3b0c,0xba10,0xbc1c,0xbd5c,0x7038)}
+        def trace(uc,pc,size,ctx):
+            recent.append(hex(pc))
+            if pc in guards:
+                boundary.append(dict(reason='nand_write_guard',pc=hex(pc)))
+                uc.emu_stop()
+        def invalid(uc,access,addr,size,value,ctx):
+            boundary.append(dict(reason='unmodelled_memory',access=access,address=hex(addr),size=size,value=hex(value),pc=hex(uc.reg_read(UC_ARM_REG_PC))))
+            return False
+        def tail(uc,access,addr,size,value,ctx):
+            boundary.append(dict(reason='unknown_188_byte_tail_read',address=hex(addr),size=size,pc=hex(uc.reg_read(UC_ARM_REG_PC))))
+            uc.emu_stop()
+        u.hook_add(UC_HOOK_CODE,trace)
+        u.hook_add(UC_HOOK_MEM_INVALID,invalid)
+        u.hook_add(UC_HOOK_MEM_READ,tail,begin=0x6009a3cc,end=0x6009a487)
+        error=None
+        try:u.emu_start(main,0x6007f000,timeout=10000000,count=1000000)
+        except UcError as exc:error=str(exc)
+        assert boundary,('no classified boundary',hex(u.reg_read(UC_ARM_REG_PC)),error)
+        expected_addr=(0x20008074 if rom==0x56313030 else 0x200080bc) if args.timer_write_sink else 0x20038000
+        if args.serial_write_sink:expected_addr=0x20038004
+        if not args.synthetic_clock_uart:assert len(boundary)==1 and boundary[0]['address']==hex(expected_addr),boundary
+        assert state['rom_reads']==2
+        if args.timer_write_sink:
+            assert state['mmio_writes'][3:5]==[dict(address='0x20038000',value='0x0'),dict(address='0x20038008',value='0x1')]
+        if args.serial_write_sink:assert serial_writes==serial_sequence
+        cases[-1]['main_trace']=dict(boundary=boundary,error=error,recent_pcs=list(recent),stop_pc=hex(u.reg_read(UC_ARM_REG_PC)))
+        if args.synthetic_clock_uart:
+            cases[-1]['synthetic_peripheral']=peripheral
+            cases[-1]['uart_text']=bytes(peripheral['uart_bytes']).decode('ascii',errors='backslashreplace')
+        print('MAIN BOUNDARY',json.dumps(boundary),flush=True)
+report=dict(binary_sha256=build['binary_sha256'],cases=cases,device_access=False,limitation='ROM values are synthetic branch inputs, not RF-1 measurements. PMU/GRF writes are logged without physical effects, readback forbidden. Stops before main. Flat-memory cache limitations remain.')
+if args.trace_main:
+    report['limitation']='Main boundary discovery only. No hardware read results supplied. Synthetic ROM and write-only startup MMIO sinks as in baseline. Main data/stack write ranges are broad, not a full memory-safety proof.'
+name='bootstrap_main_first_boundary.json' if args.trace_main else 'bootstrap_to_main_replay.json'
+if args.timer_write_sink:
+    name='bootstrap_main_timer_sink_boundary.json'
+    report['timer_write_sink']=True
+    report['limitation']+=' Timer-init writes at 20038000 and 20038008 are logged only; timer counter reads remain prohibited.'
+if args.serial_write_sink:
+    name='bootstrap_main_serial_sink_boundary.json'
+    report['serial_write_sink']=True
+    report['limitation']+=' Exact A4C GRF/UART writes logged; no physical pinmux/UART effects modelled, all UART reads forbidden.'
+if args.synthetic_clock_uart:
+    name='bootstrap_main_synthetic_peripheral_boundary.json'
+    report['limitation']='Control-flow discovery ONLY. ROM synthetic; startup MMIO writes logged without effects. Timer reads return FFFFFFFF minus 24000 per read, modulo 32 bits; UART status returns 2. These are NOT RF-1 observations and do NOT prove peripheral initialization succeeds. Exact serial initialization sequence checked; UART output captured. Other hardware access stops. Broad RAM data/stack write ranges are not a complete memory-safety proof.'
+(ROOT/'outputs'/name).write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps(report,indent=2))

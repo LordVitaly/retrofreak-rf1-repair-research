@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "scope": "Current thread final USB/stock-boot stage; curated fields, no raw logs or dump bytes.",
+  "hardware_access_during_public_export": false,
+  "usb_probe": {
+    "evidence_type": "Measured preparation/arming; adapter operation reported separately by user",
+    "only_tmpfs_files_written_by_probe_preparation": true,
+    "nand_or_persistent_config_writes_by_probe": false,
+    "selftest_passed": true,
+    "armed_waiting_for_physical_cable_removal": true,
+    "mode_before_switch": 2,
+    "requested_temporary_host_mode": 1,
+    "stable_disconnection_samples_required": 8,
+    "maximum_wait_seconds": 600,
+    "armed_result_is_not_a_captured_postswitch_status": true
+  },
+  "adapter_user_observation_before_stock_return": {
+    "evidence_type": "User report after temporary RAM USB-host probe, without reboot",
+    "controller_on_cartridge_adapter_responded": true,
+    "accessory_firmware_update_reported_success": true,
+    "audible_confirmation_reported": true,
+    "game_boy_color_cartridge_detected": true,
+    "initial_save_import_reported_complete": true,
+    "game_started_and_playable_reported": true,
+    "cold_boot_with_adapter_tested": false,
+    "diagnostic_boot_was_still_installed_during_this_earlier_observation": true
+  },
+  "linux_before_stock_return": {
+    "all_read_checks_pass": true,
+    "bytes": 16777216,
+    "independent_full_md5_matches": true,
+    "diagnostic_prefix_matches": true,
+    "fresh_tail_preserved": true,
+    "nand_writes": false,
+    "new_filesystem_error_line_count": 0,
+    "four_repaired_system_blocks": [
+      {
+        "logical_block": 192,
+        "matches_official": true
+      },
+      {
+        "logical_block": 195,
+        "matches_official": true
+      },
+      {
+        "logical_block": 198,
+        "matches_official": true
+      },
+      {
+        "logical_block": 204,
+        "matches_official": true
+      }
+    ]
+  },
+  "fresh_boot_ownership_by_mode": {
+    "0": {
+      "6": 74,
+      "7": 23,
+      "8": 24,
+      "9": 77,
+      "10": 78
+    },
+    "1": {
+      "6": 74,
+      "7": 23,
+      "8": 24,
+      "9": 77,
+      "10": 78
+    }
+  },
+  "offline_writer_tests": {
+    "all_pass": true,
+    "hardware_ready": true,
+    "normal_variants": 6,
+    "error_cases": 9,
+    "handoff_variants": 6,
+    "physical_bch_nand_not_emulated": true
+  },
+  "actual_writes_in_execution_order": [
+    {
+      "physical_block": 77,
+      "logical_block": 9,
+      "all_pass": true,
+      "write_launches": 1,
+      "dry_pass": true,
+      "maps_unchanged": true,
+      "both_modes_readback_exact": true,
+      "immediate_main_and_native_aux_exact": true,
+      "native_erase_calls": 1,
+      "native_program_calls": 256,
+      "native_preflight_pages_rc0": 256,
+      "native_immediate_verified_pages": 256
+    },
+    {
+      "physical_block": 78,
+      "logical_block": 10,
+      "all_pass": true,
+      "write_launches": 1,
+      "dry_pass": true,
+      "maps_unchanged": true,
+      "both_modes_readback_exact": true,
+      "immediate_main_and_native_aux_exact": true,
+      "native_erase_calls": 1,
+      "native_program_calls": 256,
+      "native_preflight_pages_rc0": 256,
+      "native_immediate_verified_pages": 256
+    },
+    {
+      "physical_block": 74,
+      "logical_block": 6,
+      "all_pass": true,
+      "write_launches": 1,
+      "dry_pass": true,
+      "maps_unchanged": true,
+      "both_modes_readback_exact": true,
+      "immediate_main_and_native_aux_exact": true,
+      "native_erase_calls": 1,
+      "native_program_calls": 256,
+      "native_preflight_pages_rc0": 256,
+      "native_immediate_verified_pages": 256
+    }
+  ],
+  "final_verification": {
+    "all_pass": true,
+    "stock_boot_restored_and_readback_verified": true,
+    "changed_physical_blocks": [
+      77,
+      78,
+      74
+    ],
+    "native_pages_programmed": 768,
+    "native_immediate_main_and_aux_verified": true,
+    "complete_FTL_maps_unchanged_in_both_modes": true,
+    "readback_scope": "Same powered repair session; not a cold read after a new power cycle",
+    "mode_verification": [
+      {
+        "mode": 0,
+        "full_read_bytes": 10485760,
+        "official_prefix_bytes": 8781824,
+        "vendor_id_valid": true,
+        "unchanged_middle_blocks_exact": true,
+        "preserved_tail_within_read_exact": true
+      },
+      {
+        "mode": 1,
+        "full_read_bytes": 10485760,
+        "official_prefix_bytes": 8781824,
+        "vendor_id_valid": true,
+        "unchanged_middle_blocks_exact": true,
+        "preserved_tail_within_read_exact": true
+      }
+    ],
+    "power_cycle_verification_pending_at_time_of_readback": true,
+    "adapter_host_after_power_cycle_pending_at_time_of_readback": true
+  },
+  "current_status": {
+    "functional_repair_confirmed": true,
+    "cold_boot_and_adapter_after_stock_return_pending": false,
+    "confirmation_source": "functional_cold_boot_confirmation.json",
+    "confirmation_kind": "User-reported functional test; original same-session binary results remain historical evidence",
+    "new_binary_readback_after_power_cycle_performed": false
+  }
+}

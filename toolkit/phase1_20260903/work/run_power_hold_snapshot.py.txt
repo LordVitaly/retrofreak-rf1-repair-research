@@ -1,0 +1,68 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/run_power_hold_snapshot.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""One user-confirmed fresh MaskROM -> existing RAM bridge -> pure MMIO reads.
+No NAND operation, no FTL init, no PMIC write, no retries or reboot.
+"""
+import hashlib,json,os,struct,sys,time
+from pathlib import Path
+from console_completion import completed_response
+from ram_console_session import RamConsole
+assert sys.argv[1:]==['--confirmed-cold-maskrom-buttons-released']
+ROOT=Path(__file__).resolve().parents[1]
+build=json.loads((ROOT/'work/power_hold_snapshot_v1/build.json').read_text());assert build['all_pass']
+loader=ROOT/build['loader_file'];payload=(ROOT/build['file']).read_bytes()
+assert hashlib.sha256(loader.read_bytes()).hexdigest()==build['loader_sha256']
+assert hashlib.sha256(payload).hexdigest()==build['sha256'] and len(payload)==110352
+offline=json.loads((ROOT/'outputs/usb_ram_bridge_checkpoint_modefix_offline_tests.json').read_text())
+assert offline['build_sha256']==build['loader_sha256']
+assert all(offline[k] for k in ('six_NAND_entry_guards_reject_without_writes','all_256_opcodes_checked','checkpoint_roundtrip_passed'))
+OUT=ROOT/'work/power_hold_snapshot_hardware_attempt01';OUT.mkdir(exist_ok=False)
+result=dict(all_pass=False,nand_writes=0,pmic_writes=0,ftl_init=False,phase='select',payload_sha256=build['sha256'],commands=[])
+c=None
+def save(path,value):
+    with path.open('x',encoding='utf-8') as f:json.dump(value,f,indent=2);f.flush();os.fsync(f.fileno())
+try:
+    c=RamConsole(OUT)
+    intro=c.wait('Select input');assert 'Maskrom' in intro and 'Found 1 rockusb' in intro
+    result['device_intro']=intro;c.select()
+    # The only DB is the exact previously validated RAM-only bridge.
+    command='DB '+os.path.relpath(loader,OUT);assert len(command)<220
+    start=len(''.join(c.chunks));c.commands.append(command);c.send_once(command)
+    deadline=time.monotonic()+45
+    while time.monotonic()<deadline:
+        if completed_response(''.join(c.chunks),start,'Download boot ok') is not None:break
+        if c.done.is_set():raise RuntimeError('Console ended during DB; no retry')
+        time.sleep(.005)
+    else:raise RuntimeError('No DB completion; no retry')
+    marker=OUT/'marker.raw';c.command(f'RS 0x7effff 0x1 {marker}')
+    assert marker.read_bytes()==b'RF1CKP02'+struct.pack('<II',110080,<REDACTED:ARTIFACT_CRC>)+bytes(512)
+    result['phase']='ram_payload'
+    for i,off in enumerate(range(0,110080,8192)):
+        p=OUT/f'payload{i:02d}.bin'
+        with p.open('xb') as f:f.write(payload[off:min(off+8192,110080)])
+        c.command(f'WS {hex(0x7f0000+off//512)} {p}')
+    p=OUT/'before.raw';c.command(f'RS 0x7f0000 0xd1 {p}');assert p.read_bytes()==payload
+    result['phase']='execute_snapshot_once';save(OUT/'EXECUTION_ATTEMPTED_NO_RETRY.json',dict(payload_sha256=build['sha256']))
+    c.command('RD')
+    p=OUT/'after.raw';c.command(f'RS 0x7f0000 0xd1 {p}');after=p.read_bytes()
+    assert len(after)==110352 and after[:110080]==payload[:110080]
+    snap=after[110080:];assert snap[:8]==b'RF1PWR01' and struct.unpack_from('<II',snap,8)==(1,16)
+    rows=[]
+    for i,address in enumerate(build['addresses']):
+        a,v=struct.unpack_from('<II',snap,16+i*8);assert a==int(address,16)
+        rows.append(dict(address=hex(a),value=hex(v),skipped_clock_gated=v==0x534b4950))
+    assert rows[0]['value']==rows[-1]['value'] and snap[144:]==bytes(128)
+    p=OUT/'marker_after.raw';c.command(f'RS 0x7effff 0x1 {p}')
+    assert p.read_bytes()==b'RF1CKP02'+struct.pack('<IIII',110080,<REDACTED:ARTIFACT_CRC>,1,0x60000004)+bytes(504)
+    values={int(x['address'],16):int(x['value'],16) for x in rows}
+    gates=values[0x200000f0];gpio=None
+    if not gates&0x8000:
+        gpio=dict(poweronpin='GPIO6_B0',output_value=(values[0x2000a000]>>8)&1,direction_output=(values[0x2000a004]>>8)&1,input_level=(values[0x2000a050]>>8)&1)
+    result.update(all_pass=True,phase='READ_ONLY_SNAPSHOT_COMPLETE',registers=rows,gpio6_b0=gpio,pmic_registers_read=False,current_stage_sha256=hashlib.sha256(after).hexdigest())
+except BaseException as e:result['error']=repr(e);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    save(OUT/'result.json',result);print(json.dumps(result,indent=2),flush=True)

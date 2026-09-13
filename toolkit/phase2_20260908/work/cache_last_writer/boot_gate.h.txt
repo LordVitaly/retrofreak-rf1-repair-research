@@ -1,0 +1,14 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/cache_last_writer/boot_gate.h
+Role: case_specific_payload_source_not_complete_standalone_firmware
+Original repair session must not be resumed from this public copy.
+
+typedef unsigned int gate_u32;
+struct GateState {
+ volatile gate_u32 armed,fault,ready,first,end,operations,programs,erases;
+};
+#define GATE ((struct GateState*)0x61700000u)
+#define GATE_TOKEN 0x31575246u
+#define DYNAMIC_PROTECTED ((volatile unsigned char*)0x61700100u)
+int gate_prepare(gate_u32 first);

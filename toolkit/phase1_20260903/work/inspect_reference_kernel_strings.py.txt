@@ -1,0 +1,16 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/inspect_reference_kernel_strings.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Offline native kernel NAND diagnostics and probable symbol strings."""
+import re
+from pathlib import Path
+p=Path(r'<HOST_PATH>')
+data=p.read_bytes()
+strings=list(re.finditer(rb'[\x20-\x7e\t]{5,}',data))
+for i,s in enumerate(strings):
+    if any(term in s.group().lower() for term in (b'rknand',b'ftl',b'maptbl',b'flashread',b'flashinit',b'nandc')):
+        print('CONTEXT',hex(s.start()))
+        for match in strings[max(0,i-3):i+5]:
+            print(hex(match.start()),match.group().decode('ascii')[:300])

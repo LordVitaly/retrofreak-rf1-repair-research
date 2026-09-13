@@ -1,0 +1,48 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_bbt_ecc40_readonly.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Existing v10 transport/geometry, native ECC40 and unconditional write denial."""
+import hashlib,json,struct,sys
+from pathlib import Path
+from audit_ram_loader_container import rc4,crc32
+ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'work/emulator_deps'))
+from unicorn import Uc,UC_ARCH_ARM,UC_MODE_ARM
+from unicorn.arm_const import UC_ARM_REG_R0,UC_ARM_REG_LR,UC_ARM_REG_SP
+original=(ROOT/'work/idb_copy6_guard_v10/writer.bin').read_bytes()
+assert hashlib.sha256(original).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+meta=json.loads((ROOT/'work/idb_copy6_guard_v10/build.json').read_text())
+h=struct.unpack_from('<H',original,4)[0];o,n=struct.unpack_from('<II',original,h+57+45)
+usb=bytearray(rc4(original[o:o+n]));assert usb==(ROOT/'work/idb_copy6_guard_v10/usbplug.bin').read_bytes()
+patches=[]
+def patch(at,data,why):
+    patches.append(dict(offset=at,before=usb[at:at+len(data)].hex(),after=data.hex(),why=why));usb[at:at+len(data)]=data
+assert usb[0x74cc:0x74d0]==bytes.fromhex('1800a023')
+patch(0x74cc,bytes.fromhex('0400a021'),'Use current native ECC (40), not forced IDB ECC24')
+reject=bytes.fromhex('0000e0e31eff2fe1')
+targets=[]
+for off in (0x3620,0x3fa4,0x7528,0x7718):
+    patch(off,reject,'Unconditional erase/program/write denial');targets.append(0x60000000+off)
+for name in ('native_program','native_erase','native_write_loop','guarded_write'):
+    address=meta['symbols'][name];at=0xe000+address-0x60800000
+    patch(at,reject,'Disable addon write entry '+name);targets.append(address)
+# Remove WS dispatch without changing the rest of the existing allow-list.
+at=next(i for i in range(0x1850,0x18bc,8) if struct.unpack_from('<I',usb,i)[0]==0xe3500005)
+patch(at,struct.pack('<I',0xe3500cff),'Compare impossible opcode 0xff00 instead of WS5')
+assert usb[0x4230:0x4238]==reject
+for off in (0x75ac,0x7614,0x7624):assert usb[off:off+8]==reject
+u=Uc(UC_ARCH_ARM,UC_MODE_ARM);u.mem_map(0x60000000,0x10000);u.mem_map(0x60800000,0x3000)
+u.mem_write(0x60000000,bytes(usb));u.mem_write(0x60800000,bytes(usb[0xe000:0xe000+meta['files']['addon.bin']['bytes']]))
+for address in targets:
+    u.reg_write(UC_ARM_REG_R0,0xc000);u.reg_write(UC_ARM_REG_SP,0x60802000);u.reg_write(UC_ARM_REG_LR,0x60802100)
+    u.emu_start(address,0x60802100,count=3)
+    assert u.reg_read(UC_ARM_REG_R0)==0xffffffff and u.reg_read(UC_ARM_REG_SP)==0x60802000
+container=bytearray(original);container[o:o+n]=rc4(usb);struct.pack_into('<I',container,len(container)-4,crc32(container[:-4]))
+out=ROOT/'work/bbt_ecc40_readonly_v1';out.mkdir(exist_ok=False)
+for name,data in (('reader.bin',container),('usbplug.bin',usb)):
+    with (out/name).open('xb') as f:f.write(data)
+report=dict(all_pass=True,hardware_executed=False,sha256=hashlib.sha256(container).hexdigest(),source_sha256=hashlib.sha256(original).hexdigest(),patches=patches,unconditional_write_denials_tested=len(targets),scope='Same hardware-proven v10 saved-geometry startup; native ECC40 reads; all writer entries and WS dispatcher disabled. Planned host reads only BBT blocks12 and13.')
+with (out/'build.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

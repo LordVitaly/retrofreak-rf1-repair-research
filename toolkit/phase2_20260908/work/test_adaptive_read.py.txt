@@ -1,0 +1,40 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/test_adaptive_read.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Verify actual adaptive ECC selector, native status logger and read bounds."""
+from pathlib import Path
+import struct,json
+HERE=Path(__file__).resolve().parent
+source=(HERE/'test_bbt_with_idb_check.py').read_text().split('u,calls=new();assert write')[0]
+ns={'__file__':str(HERE/'test_bbt_with_idb_check.py')};exec(compile(source,'bbt_test_fixture','exec'),ns)
+globals().update({k:v for k,v in ns.items() if k not in ('__file__','__name__')})
+u,calls=new();events=[];return_code=0
+def readhook(uc,pc,size,unused):
+    if pc==B+0x2284:
+        ecc=uc.reg_read(R[0]);events.append(('ecc',ecc));uc.mem_write(G+18,bytes([ecc]));uc.reg_write(R[0],0)
+    elif pc==B+0x3cfc:
+        assert uc.reg_read(R[0])==physical
+        assert uc.reg_read(R[3])==count
+        events.append(('read',physical));uc.reg_write(R[0],return_code)
+    else:return
+    uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR))
+for pc in (B+0x2284,B+0x3cfc):u.hook_add(UC_HOOK_CODE,readhook,begin=pc,end=pc)
+for index,(physical,count,return_code) in enumerate(((0x5000,4,0),(0x5770,1,0xffffffff),(0x6770,1,0),(0xc000,16,0),(0xd000,16,0))):
+    events.clear()
+    for r,v in zip(R,(0,physical,0x600105c8,0x600205c8)):u.reg_write(r,v)
+    u.reg_write(UC_ARM_REG_SP,SP);u.mem_write(SP,struct.pack('<I',count))
+    u.emu_start(B+0x796c,B+0x7970,count=200)
+    assert u.reg_read(UC_ARM_REG_SP)==SP and u.reg_read(R[0])==(return_code&255)
+    assert events==[('ecc',24 if physical<0xc000 else 40),('read',physical),('ecc',40)],events
+    assert struct.unpack('<2I',u.mem_read(S+64,8))==(index+1,return_code&255)
+assert call(u,'guarded_read',(0,0x7effff,BUF,1))==0
+assert struct.unpack('<2I',u.mem_read(BUF+72,8))==(5,0)
+for sector,count in ((0x4fff,1),(0x5100,1),(0x6100,1),(0x7000,1),(0xbfff,1),(0xe000,1),(0x50ff,2),(0x60ff,2),(0xdfff,2)):
+    assert call(u,'guarded_read',(0,sector,BUF,count))==0xffffffff
+report=dict(all_pass=True,writer_sha256=meta['files']['writer.bin']['sha256'],cases=5,read_boundary_negatives=9,native_status_passed_to_marker=True,nand_write_calls=calls)
+assert not calls
+(HERE/'bbt_with_idb_check_v1/adaptive_read_test.json').write_text(json.dumps(report,indent=2))
+print(json.dumps(report,indent=2))

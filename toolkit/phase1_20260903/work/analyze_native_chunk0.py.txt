@@ -1,0 +1,68 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/analyze_native_chunk0.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Audit completed chunk 0 only; compare physical contiguous ranges, not FTL images."""
+import hashlib
+import json
+from pathlib import Path
+from verify_native_ecc_page import BOOT, extract
+
+ROOT = Path(__file__).parent
+DUMP = ROOT/'nand_native_ecc40'
+
+
+def ranges(values):
+    result = []
+    for value in values:
+        if result and value == result[-1][1]+1:
+            result[-1][1] = value
+        else:
+            result.append([value, value])
+    return result
+
+
+def main():
+    records = [json.loads(line) for line in (DUMP/'manifest.jsonl').read_text().splitlines()]
+    entries = [r for r in records if r['file'].upper() == 'NAND_00.RAW']
+    if len(entries) != 1:
+        raise SystemExit('Chunk 0 is not yet committed in manifest; nothing analyzed')
+    entry = entries[0]
+    raw = (DUMP/'NAND_00.RAW').read_bytes()
+    assert len(raw) == entry['bytes'] == 0x40000*528
+    assert hashlib.sha256(raw).hexdigest() == entry['sha256']
+    report = {'chunk_sha256': entry['sha256'], 'scope': 'Physical contiguous ranges only; not an L2P reconstruction', 'images': {}}
+    for name, sector, probes in [('boot',0x16000,(0,1,2,3,12)), ('recovery',0x1e000,(0,3,25))]:
+        expected = (BOOT.parent/f'{name}.img').read_bytes()
+        assert len(expected)%8192 == 0
+        exact = []
+        mismatch = []
+        compared = byte_errors = bit_errors = 0
+        for page in range(len(expected)//8192):
+            offset = (sector+page*16)*528
+            data = extract(raw[offset:offset+8448])
+            reference = expected[page*8192:(page+1)*8192]
+            deltas = [a^b for a,b in zip(data,reference) if a != b]
+            compared += 8192
+            byte_errors += len(deltas)
+            bit_errors += sum(d.bit_count() for d in deltas)
+            if deltas:
+                mismatch.append(page)
+            else:
+                exact.append(page)
+            if page in probes:
+                single = extract((ROOT/f'native_ecc40_{name}_page{page}.raw').read_bytes())
+                assert data == single, f'Bulk vs single read mismatch: {name} page {page}'
+        report['images'][name] = dict(compared_bytes=compared, exact_pages=len(exact),
+            mismatching_bytes=byte_errors, mismatching_bits=bit_errors,
+            exact_page_ranges=ranges(exact), mismatch_page_ranges=ranges(mismatch),
+            all_single_page_probes_match_bulk=True)
+    output = ROOT.parent/'outputs/native_ecc40_chunk0_audit.json'
+    with output.open('x',encoding='utf-8') as stream:
+        json.dump(report,stream,indent=2)
+    print(json.dumps(report,indent=2))
+
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,53 @@
+{
+  "scope": "Consolidated English index of the late repair evidence retained in this archive.",
+  "confirmed_stages": [
+    {
+      "stage": "early_geometry_and_bbt",
+      "evidence": [
+        "primary/work/original_boot_after_idb0_attempt01/result.json",
+        "primary/work/bbt_restore_after_copy0_attempt04/result.json"
+      ]
+    },
+    {
+      "stage": "diagnostic_boot_and_vendor_id",
+      "evidence": [
+        "primary/work/boot_header_validation_audit/report.json",
+        "primary/work/boot_final_verified/result.json"
+      ]
+    },
+    {
+      "stage": "cache_repair",
+      "evidence": [
+        "primary/work/cache_last_attempt/live_verify_result.json",
+        "primary/work/cache_last_block24_attempt01/result.json",
+        "primary/work/cache_last_block26_attempt01/result.json"
+      ]
+    },
+    {
+      "stage": "system_four_block_repair",
+      "evidence": [
+        "primary/work/live_system_audit/live_compare_report.json",
+        "primary/work/live_system_audit/repair_candidates.json",
+        "primary/work/linux_system_four_repair_attempt01/result.json",
+        "primary/work/live_system_audit/cold_boot_file_checks.json"
+      ]
+    },
+    {
+      "stage": "userdata_fsck",
+      "evidence": [
+        "primary/work/userdata_repair_trial/report.json",
+        "primary/work/userdata_native_repair_attempt01/result.json",
+        "primary/work/userdata_native_repair_attempt02/result.json"
+      ]
+    },
+    {
+      "stage": "functional_validation",
+      "evidence": [
+        "primary/work/live_adb_after_data_repair/functional_validation.json",
+        "usb_stock_final_evidence.json",
+        "functional_cold_boot_confirmation.json"
+      ]
+    }
+  ],
+  "privacy_note": "Verbatim personal statements and private images/dumps are excluded."
+}

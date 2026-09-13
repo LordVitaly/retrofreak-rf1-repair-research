@@ -1,0 +1,53 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_test_readonly_usb_allowlist.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Restrict FlashBoot USB dispatch to five necessary read-only commands."""
+import hashlib
+import json
+import struct
+from pathlib import Path
+import sys
+ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'work/emulator_deps'))
+from unicorn import Uc,UC_ARCH_ARM,UC_MODE_ARM,UC_HOOK_CODE
+from unicorn.arm_const import UC_ARM_REG_PC,UC_ARM_REG_R0
+source=(ROOT/'work/FlashBoot.readonly_errors.COVERAGE_PENDING_NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(source).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+start=0x2c58
+routes={0:0x2d24,1:0x2d2c,3:0x2d3c,4:0x2d44,0x14:0x2d5c}
+reject=0x2d10
+def branch(site,target,condition=0xe):
+    delta=target-site-8
+    assert delta%4==0
+    return struct.pack('<I',(condition<<28)|0x0a000000|((delta//4)&0xffffff))
+patch=bytearray()
+for op,destination in routes.items():
+    patch+=struct.pack('<I',0xe3500000|op) # CMP r0,#opcode
+    patch+=branch(start+len(patch),destination,0) # BEQ
+patch+=branch(start+len(patch),reject)
+assert start+len(patch)<reject
+candidate=bytearray(source);candidate[start:start+len(patch)]=patch
+def addr(off):return 0x60080000+off-0xa34
+cases=[]
+for op in range(256):
+    u=Uc(UC_ARCH_ARM,UC_MODE_ARM)
+    u.mem_map(0x60080000,0x20000)
+    u.mem_write(0x60080000,bytes(candidate[0xa34:]))
+    u.reg_write(UC_ARM_REG_R0,op)
+    stops=[]
+    def hook(uc,pc,size,ctx):
+        if not addr(start)<=pc<addr(start+len(patch)):
+            stops.append(pc);uc.emu_stop()
+    u.hook_add(UC_HOOK_CODE,hook)
+    u.emu_start(addr(start),0,count=20)
+    assert stops==[addr(routes.get(op,reject))],(op,stops)
+    cases.append(dict(opcode=op,destination=hex(stops[0]-0x60080000+0xa34)))
+for off in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):
+    assert candidate[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+name='FlashBoot.readonly_usb_allowlist.COVERAGE_PENDING_NOT_FOR_UPLOAD.bin'
+with (ROOT/'work'/name).open('xb') as f:f.write(candidate)
+report=dict(candidate=name,sha256=hashlib.sha256(candidate).hexdigest(),allowed_opcodes=list(routes),rejected_count=256-len(routes),patch_offset=hex(start),patch_hex=patch.hex(),cases=cases,device_access=False,limitation='Tests actual opcode gate only, not USB transport, packet bounds, handler internals or complete controller write coverage. Existing eight error guards preserved.')
+with (ROOT/'outputs/readonly_usb_allowlist.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps({k:v for k,v in report.items() if k!='cases'},indent=2))

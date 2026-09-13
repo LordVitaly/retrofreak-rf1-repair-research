@@ -1,0 +1,53 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/power_hold_snapshot.S
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+.syntax unified
+.arm
+.section .text,"ax",%progbits
+.global power_snapshot
+power_snapshot:
+    ldr r0, =0x6101ae00
+    ldr r1, =0x50314652 /* RF1P */
+    str r1, [r0], #4
+    ldr r1, =0x31305257 /* WR01 */
+    str r1, [r0], #4
+    mov r1, #1
+    str r1, [r0], #4
+    mov r1, #16
+    str r1, [r0], #4
+    ldr r1, =0x200000f0 /* CRU CLKGATE_CON8: no clock changes */
+    ldr r4, [r1]
+    str r1, [r0], #4
+    str r4, [r0], #4
+    .macro sample address, gate=0
+    ldr r1, =\address
+    .if \gate
+    tst r4, #\gate
+    ldrne r2, =0x534b4950 /* SKIP: clock gated; avoid stalled MMIO */
+    ldreq r2, [r1]
+    .else
+    ldr r2, [r1]
+    .endif
+    str r1, [r0], #4
+    str r2, [r0], #4
+    .endm
+    sample 0x2000a000, 0x8000 /* GPIO6 data */
+    sample 0x2000a004, 0x8000 /* GPIO6 direction */
+    sample 0x2000a050, 0x8000 /* GPIO6 physical input */
+    sample 0x20008154         /* GRF SOC_CON1: I2C controller selection */
+    sample 0x20000044         /* CPU peripheral clock configuration */
+    sample 0x2002f000, 0x20   /* I2C1 new controller CON */
+    sample 0x2002f004, 0x20   /* CLKDIV */
+    sample 0x2002f008, 0x20   /* MRXADDR */
+    sample 0x2002f00c, 0x20   /* MRXRADDR */
+    sample 0x2002f010, 0x20   /* MTXCNT */
+    sample 0x2002f014, 0x20   /* MRXCNT */
+    sample 0x2002f018, 0x20   /* IEN */
+    sample 0x2002f01c, 0x20   /* IPD; read does not W1C */
+    sample 0x2002f020, 0x20   /* FCNT */
+    sample 0x200000f0         /* gates unchanged confirmation */
+    dsb sy
+    ldr pc, =0x60800c00      /* exact existing checkpoint restore */
+    .ltorg

@@ -1,0 +1,95 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/resume_nand_geometry_trial.py
+Role: historical_device_runner_or_stateful_scenario_review_before_any_use
+Original repair session must not be resumed from this public copy.
+
+"""Resume the authenticated live RAM bridge. No DB and no NAND write commands."""
+from pathlib import Path
+import sys, os, json, struct, hashlib, zlib
+
+OLD=Path('<EXTERNAL_STAGE_03>')
+HERE=Path(__file__).resolve().parent
+sys.path.insert(0,str(OLD/'work'))
+from ram_console_session import RamConsole
+
+def sha(data): return hashlib.sha256(data).hexdigest()
+
+def main():
+    assert len(sys.argv)==3 and sys.argv[1]=='--same-live-bridge-payload-sha256'
+    digest=sys.argv[2]
+    assert len(digest)==64 and all(x in '0123456789abcdef' for x in digest)
+    payload=HERE/'nand_geometry_trial/trace.raw'
+    raw=payload.read_bytes()
+    proof=json.loads((payload.parent/'manifest.json').read_text())
+    assert proof['all_pass'] and proof['sha256']==digest
+    for key in ('all_changed_bytes_within_allowlist','capacity_original_unchanged',
+                'all_eight_denials_executed_no_writes','both_confirm_stops_executed_no_writes',
+                'all_256_opcode_routes_checked','no_external_direct_branch_to_format_carrier'):
+        assert proof[key]
+    assert proof['cut_pc']=='0x60086c6c'
+    assert sha(raw)==digest and len(raw)==110352 and raw[110080:]==bytes(272)
+    assert zlib.crc32(raw[:110080])==0xad0dadee
+    assert raw[0xb408:0xb40c]==bytes.fromhex('0101a0e3')
+    assert raw[0xaf60:0xaf64]==bytes.fromhex('8003a0e1')
+    for at in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):
+        assert raw[at:at+8]==bytes.fromhex('0000e0e31eff2fe1')
+    for at in (0xbbc8,0xbc90): assert raw[at:at+4]==bytes.fromhex('feffffea')
+    prior=HERE/'nand_init_read_trace_attempt01'
+    old=(prior/'ram_after.raw').read_bytes()
+    source=(HERE/'nand_init_read_trace/trace.raw').read_bytes()
+    assert sha(source)=='<HISTORICAL_HASH_REDACTED>'
+    assert len(old)==110352 and old[:110080]==source[:110080]
+    assert struct.unpack_from('<2I',old,110080)==(0x44475453,0x60086c6c)
+    expected_marker=b'RF1CKP02'+struct.pack('<IIII',110080,0xad0dadee,1,0x60000004)+bytes(504)
+    assert (prior/'marker_after.raw').read_bytes()==expected_marker
+    out=HERE/'nand_geometry_trial_attempt01'
+    out.mkdir(exist_ok=False)
+    result=dict(complete=False,nand_writes_enabled=False,capacity_ram_fix=False,initial_block_geometry_ram_fix=True,bbt_ram_fix=False,
+                download_boot=False,payload_sha256=digest,prior_ram_sha256=sha(old))
+    c=None
+    def save(name,data):
+        with (out/name).open('x',encoding='utf-8') as f:
+            json.dump(data,f,indent=2);f.flush();os.fsync(f.fileno())
+    def read(name,sector,count):
+        assert (sector,count) in ((0x7effff,1),(0x7f0000,209),(0x7f00d1,2))
+        p=out/(name+'.raw');c.command(f'RS {hex(sector)} {hex(count)} {p}')
+        data=p.read_bytes();assert len(data)==count*528;return data
+    try:
+        c=RamConsole(out);c.select()
+        assert read('resume_marker',0x7effff,1)==expected_marker
+        assert read('resume_ram',0x7f0000,209)==old
+        result['exact_previous_runtime_verified']=True
+        for i,offset in enumerate(range(0,110080,8192)):
+            p=out/f'part{i:02d}.bin';p.write_bytes(raw[offset:min(offset+8192,110080)])
+            c.command(f'WS {hex(0x7f0000+offset//512)} {p}')
+        assert read('ram_before',0x7f0000,209)==raw
+        save('DISPATCHED_NO_RETRY.json',result)
+        c.command('RD') # Verified bridge: execute bounded RAM stage, not a SoC reset.
+        assert read('marker_after',0x7effff,1)==expected_marker
+        data=read('ram_after',0x7f0000,209)
+        assert data[:110080]==raw[:110080] and data[110348:]==bytes(4)
+        record=struct.unpack_from('<67I',data,110080)
+        assert record[:2]==(0x44475453,0x60086c6c)
+        assert data[110204:110210].hex()=='2c44444ba900'
+        trace=read('nand_init_trace',0x7f00d1,2)
+        header=struct.unpack_from('<24I',trace)
+        assert header[0]==0x3154494e and header[2]==min(header[1],24)
+        assert header[1]<4096 and header[4]<128
+        cols=('return_pc','sector','count','read_return','main_word0','signature_word',
+              'header_signature_info_offset_or_info_version','geometry_packed',
+              'header_type_or_info_interface','header_ecc_or_info_manufacturer')
+        rows=[dict(zip(cols,struct.unpack_from('<10I',trace,96+i*40))) for i in range(header[2])]
+        info_cols=('return_pc','sector','parser_return','total_reads_at_return')
+        infos=[dict(zip(info_cols,struct.unpack_from('<4I',trace,32+i*16))) for i in range(min(header[4],4))]
+        result.update(complete=True,bridge_returned=True,record=[hex(v) for v in record],
+                      geometry_hex=data[110272:110344].hex(),nand_init_return=header[3],
+                      trace_header=list(header),total_reads=header[1],flash_info_calls=infos,read_calls=rows)
+        print(json.dumps({k:v for k,v in result.items() if k not in ('record',)},indent=2),flush=True)
+    except BaseException as exc:
+        result['error']=repr(exc);raise
+    finally:
+        if c:c.close();result['commands']=c.commands
+        save('result.json',result)
+
+if __name__=='__main__': main()

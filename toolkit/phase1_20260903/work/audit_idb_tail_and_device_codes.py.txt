@@ -1,0 +1,35 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/audit_idb_tail_and_device_codes.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Bounded byte-level audit of independent NAND loader copies. Offline only."""
+from collections import Counter
+import hashlib
+import json
+from pathlib import Path
+root=Path(__file__).resolve().parents[1]
+ref=(root/'work/FlashBoot.packet512.STATIC_ONLY.bin').read_bytes()
+copies={b:(root/f'work/IDB_old_block{b:02d}_FlashBoot.CANDIDATE.bin').read_bytes() for b in (1,3,5,6)}
+pages={}
+for b,data in copies.items():
+    diffs=[i for i,(a,c) in enumerate(zip(data,ref)) if a!=c]
+    pages[b]={'differing_bytes':len(diffs),'physical_pages':dict(Counter((28+i//512)//16 for i in diffs)),
+              'prefix_0x1a800_exact_official':data[:0x1a800]==ref[:0x1a800],
+              'prefix_sha256':hashlib.sha256(data[:0x1a800]).hexdigest()}
+codes=[]
+for i in range(34):
+    pos=0x1a8ac+i*8
+    values=[d[pos] for d in copies.values()]
+    codes.append({'entry':i,'offset':hex(pos),'code_bytes':values,'unanimous':len(set(values))==1,
+                  'official_code':ref[pos], 'could_match_observed_id44':any(v in (0x44,0x34) for v in values)})
+assert all(x['prefix_0x1a800_exact_official'] for x in pages.values())
+report={'scope':'Local copies, exact byte checks; not hardware ECC proof or full recovered image',
+        'per_copy':pages,'capacity_table_device_code_bytes':codes,
+        'unanimous_device_code_entries':sum(x['unanimous'] for x in codes),
+        'uncertain_device_code_entries':[x for x in codes if not x['unanimous']],
+        'observed_entries_matching_id44':[x for x in codes if x['could_match_observed_id44']],
+        'loader_tail_first_physical_page':15,'loader_tail_first_offset':'0x1a800',
+        'no_majority_image_written':True}
+with (root/'outputs/idb_tail_device_codes_audit.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps({k:v for k,v in report.items() if k!='capacity_table_device_code_bytes'},indent=2))

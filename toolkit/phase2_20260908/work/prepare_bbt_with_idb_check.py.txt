@@ -1,0 +1,36 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/prepare_bbt_with_idb_check.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""BBT12 writer with read-only IDB5/6 cold checks and native read status."""
+from pathlib import Path
+OLD=Path('<EXTERNAL_STAGE_03>');HERE=Path(__file__).resolve().parent
+stage=HERE/'bbt_check_sources';stage.mkdir(exist_ok=False)
+c=(OLD/'work/idb_copy6_guard.c').read_text()
+c=c.replace('if(sector<0xc000 || sector>=0xe000 || count>0xe000-sector) return -1;',
+    'if(!((sector>=0xc000 && sector<0xe000 && count<=0xe000-sector) || (sector>=0x5000 && sector<0x5100 && count<=0x5100-sector) || (sector>=0x6000 && sector<0x6100 && count<=0x6100-sector))) return -1;')
+c=c.replace('d[15]=S[13]; d[16]=S[14]; d[17]=S[15];','d[15]=S[13]; d[16]=S[14]; d[17]=S[15]; d[18]=S[16]; d[19]=S[17];')
+(stage/'idb_copy6_guard.c').write_text(c)
+s=(OLD/'work/idb_copy6_guard.S').read_text().replace('mov r2, #16','mov r2, #18')
+stub=(HERE/'read_status.S').read_text().replace('[r4,#40]','[r4,#64]').replace('[r4,#48]','[r4,#68]')
+stub=stub.replace('    ldr r6,[r4,#44]\n    cmp r0,#0\n    addne r6,r6,#1\n    str r6,[r4,#44]\n','')
+s+='\n'+stub+'\n.global ecc_instructions\necc_instructions:\n    cmp r6,#0xc000\n    mov r0,r4\n    movlo r0,#24\n    nop\n'
+(stage/'idb_copy6_guard.S').write_text(s)
+(stage/'idb_copy6_guard.ld').write_text((OLD/'work/idb_copy6_guard.ld').read_text())
+build=(OLD/'work/build_bbt_copy12_writer.py').read_text()
+build=build.replace('ROOT=Path(__file__).resolve().parents[1]','ROOT=Path('+repr(str(OLD))+')')
+build=build.replace("live=ROOT/'work/bbt_physical_ecc40_attempt01'",'live=Path('+repr(str(HERE/'bbt_cold_attempt01'))+')')
+build=build.replace("out=ROOT/'work/bbt_copy12_writer_v2'",'out=Path('+repr(str(HERE/'bbt_with_idb_check_v1'))+')')
+for name in ('idb_copy6_guard.c','idb_copy6_guard.S'):
+    build=build.replace(repr('work/'+name),repr(str(stage/name)))
+build=build.replace("'-Wl,-T,work/idb_copy6_guard.ld'",repr('-Wl,--script='+str(stage/'idb_copy6_guard.ld'))+",'-Wl,-e,idb_preinit'")
+needle='container=bytearray(known);'
+insert="ec=symbols['ecc_instructions']-0x60800000\nusb[0x74c4:0x74d4]=addon[ec:ec+16]\nusb[0x796c:0x7970]=branch(0x796c,symbols['read_status'],True)\n"
+assert needle in build;build=build.replace(needle,insert+needle)
+(HERE/'build_bbt_with_idb_check.py').write_text('import sys\nsys.path.insert(0,'+repr(str(OLD/'work'))+')\n'+build)
+test=(OLD/'work/test_bbt_copy12_writer.py').read_text()
+test=test.replace('ROOT=Path(__file__).resolve().parents[1]','ROOT=Path('+repr(str(OLD))+')')
+test=test.replace("out=ROOT/'work/bbt_copy12_writer_v2'",'out=Path('+repr(str(HERE/'bbt_with_idb_check_v1'))+')')
+(HERE/'test_bbt_with_idb_check.py').write_text(test)

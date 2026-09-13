@@ -1,0 +1,31 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_system_writer189.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Bind the hardware-proven writer to ONLY next logical portion189.
+Core, guards, service paths and return are byte-for-byte unchanged.
+"""
+import hashlib,json,struct
+from pathlib import Path
+from ram_artifact import fix_crc
+ROOT=Path(__file__).resolve().parents[1]
+original=(ROOT/'work/system_writer_write_payload_v1/write.NOT_FOR_UPLOAD.raw').read_bytes()
+assert hashlib.sha256(original).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+prior=json.loads((ROOT/'work/first_system_write188_hardware_attempt01/result.json').read_text());assert prior['all_pass'] and prior['write_launches']==1
+at=0x7098
+assert original[at:at+4]==bytes.fromhex('2f19a0e3') # MOV r1,#0xbc000, not a literal pool
+def rotated(imm,rot):return ((imm>>(2*rot))|(imm<<(32-2*rot)))&0xffffffff if rot else imm
+encodings=[(rot,imm) for rot in range(16) for imm in range(256) if rotated(imm,rot)==0xbd000]
+assert encodings
+rot,imm=encodings[0];instruction=0xe3a01000|(rot<<8)|imm
+data=bytearray(original[:110080]);struct.pack_into('<I',data,at,instruction);fix_crc(data)
+changed=[i for i,(a,b) in enumerate(zip(data,original)) if a!=b]
+assert all(at<=i<at+4 or 0x1e0<=i<0x1e4 for i in changed)
+assert data[0x2800:0x3b00]==original[0x2800:0x3b00]
+raw=bytes(data)+bytes(272)
+out=ROOT/'work/system_writer189_payload_v1';out.mkdir(exist_ok=False)
+with (out/'write.AUTHORIZED_SECOND_ONLY.raw').open('xb') as f:f.write(raw)
+report=dict(sha256=hashlib.sha256(raw).hexdigest(),parent_sha256=hashlib.sha256(original).hexdigest(),logical=189,lba=0xbd000,sectors=4096,only_target_instruction_and_crc_changed=True,target_instruction_offset=hex(at),target_instruction=hex(instruction),changed_offsets=[hex(p) for p in changed],core_and_guards_unchanged=True)
+with (out/'build.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

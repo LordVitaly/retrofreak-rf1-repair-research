@@ -1,0 +1,17 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/prepare_copy5_resume.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+from pathlib import Path
+HERE=Path(__file__).resolve().parent
+s=(HERE/'restore_copy5.py').read_text()
+s=s.replace("['--fresh-maskrom-confirmed']","['--same-untouched-writer-session']")
+s=s.replace("out=HERE/'copy5_restore_attempt01'", "previous=HERE/'copy5_restore_attempt01'\nprior=json.loads((previous/'result.json').read_text())\nassert prior['erase_dispatched'] is False and prior['program_chunks']==0\nassert prior['error']==\"AssertionError('Surviving copy6 changed; no erase')\"\nCRITICAL_END=248*512\nassert source[CRITICAL_END:]==b'\\xff'*(len(source)-CRITICAL_END)\nout=HERE/'copy5_restore_attempt02'")
+s=s.replace("c=RamConsole(out);intro=c.wait('Select input');assert 'Found 1 rockusb' in intro and 'Maskrom' in intro\n    c.select();command('DB '+os.path.relpath(builddir/'writer.bin',out),'Download boot ok');marker('loaded_marker',0,0)","c=RamConsole(out);intro=c.wait('Select input');assert 'Found 1 rockusb' in intro and 'Loader' in intro\n    c.select();marker('loaded_marker',0,0)")
+s=s.replace("before5=main(read('before_copy5',0x5000,256));before6=main(read('before_copy6',0x6000,256))", "before5raw=(previous/'before_copy5.raw').read_bytes();before6raw=(previous/'before_copy6.raw').read_bytes()\n    (out/'before_copy5.raw').write_bytes(before5raw);(out/'before_copy6.raw').write_bytes(before6raw)\n    before5=main(before5raw);before6=main(before6raw)\n    result['reused_preflight_from']='copy5_restore_attempt01; same phase0 runtime; no intervening device commands'")
+s=s.replace('130048','CRITICAL_END')
+s=s.replace("assert final5==source,'Full copy5 readback mismatch'", "assert final5[:CRITICAL_END]==source[:CRITICAL_END],'Meaningful copy5 readback mismatch'\n    result['copy5_padding_differences']=sum(a!=b for a,b in zip(final5[CRITICAL_END:],source[CRITICAL_END:]))")
+s=s.replace('copy5_full_main_exact=True','copy5_full_main_exact=(final5==source),copy5_meaningful_exact=True')
+(HERE/'restore_copy5_resume.py').write_text(s)

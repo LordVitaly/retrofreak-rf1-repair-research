@@ -1,0 +1,42 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/inventory_native_ftl_candidates.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Inventory F200 candidates using RF1 module field offsets, NOT active FTL reconstruction.
+Counter semantics: GetRemapTbl0x12cdc..0x12d04; duplicate protected-zone and exchange
+recovery rules are deliberately not replaced by a naive maximum-counter selection.
+"""
+import json
+from collections import Counter,defaultdict
+from pathlib import Path
+ROOT=Path(__file__).parent
+records={r['file']:r for r in map(json.loads,(ROOT/'nand_native_ecc40/manifest.jsonl').read_text().splitlines()) if r['file'].startswith('NAND_')}
+rows=[]
+for path in sorted((ROOT/'native_ecc40_index').glob('NAND_*.json')):
+    item=json.loads(path.read_text())
+    assert item['source_sha256']==records[item['source_file']]['sha256']
+    rows.extend(item['blocks'])
+groups=defaultdict(list)
+tags=Counter()
+for row in rows:
+    meta=row['page0_meta']
+    tags[hex(meta[0])]+=1
+    if meta[0]&0xff00!=0xf200: continue
+    groups[meta[2]].append(dict(physical_block=row['physical_block'],
+        counter=((meta[0]&255)<<16)|meta[1],metadata=meta[:8],
+        last_metadata=row['page255_meta'][:8],page_tag_counts=row['first_aux0_counts']))
+partitions={}
+for name,start,count in [('boot',6,5),('recovery',14,5),('system',186,74)]:
+    selected={str(i):groups[i] for i in range(start,start+count) if i in groups}
+    missing=[i for i in range(start,start+count) if i not in groups]
+    duplicates=[i for i in range(start,start+count) if len(groups.get(i,[]))>1]
+    partitions[name]=dict(candidates=selected,missing_logical_blocks=missing,duplicate_logical_blocks=duplicates)
+    print(name,'known',len(selected),'missing',missing,'duplicates',duplicates)
+report=dict(scope='Candidate inventory only; no active selection, cache/exchange overlay, or oracle substitution',
+    indexed_physical_blocks=len(rows),page0_tags=tags,partitions=partitions,
+    all_candidates={str(k):v for k,v in sorted(groups.items())})
+output=ROOT.parent/'outputs'/f'native_ftl_inventory_{len(rows)}blocks.json'
+if not output.exists():
+    with output.open('x') as f: json.dump(report,f,indent=2)
+print('REPORT',output)

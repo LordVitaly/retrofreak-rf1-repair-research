@@ -1,0 +1,106 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/validate_rs_partial_layout.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+from pathlib import Path
+
+
+RECORD = 528
+MAIN = 512
+RECORDS_PER_PAGE = 16
+RAW_PAGE = RECORD * RECORDS_PER_PAGE
+USER_PAGE = MAIN * RECORDS_PER_PAGE
+ECC_BYTES = 28
+
+
+def main_bytes(raw_page: bytes) -> bytes:
+    return b"".join(
+        raw_page[offset : offset + MAIN]
+        for offset in range(0, RAW_PAGE, RECORD)
+    )
+
+
+def visible_fragments(main: bytes) -> list[tuple[int, bytes]]:
+    fragments = []
+    for step in range(8):
+        source_start = step * (1024 + ECC_BYTES)
+        length = 1024 - step * ECC_BYTES
+        if length <= 0:
+            break
+        fragments.append((step * 1024, main[source_start : source_start + length]))
+    return fragments
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("raw", type=Path)
+    parser.add_argument("image", type=Path)
+    parser.add_argument("--physical-sector", type=lambda value: int(value, 0), required=True)
+    parser.add_argument("--image-offset", type=lambda value: int(value, 0), default=0)
+    parser.add_argument("--pages", type=int, required=True)
+    args = parser.parse_args()
+
+    image = args.image.read_bytes()
+    compared_pages = 0
+    exact_pages = 0
+    compared_bytes = 0
+    mismatch_bytes = 0
+    mismatching_pages = []
+    exact_sample_hashes = []
+
+    with args.raw.open("rb") as stream:
+        stream.seek(args.physical_sector * RECORD)
+        for page_index in range(args.pages):
+            raw_page = stream.read(RAW_PAGE)
+            expected = image[
+                args.image_offset + page_index * USER_PAGE :
+                args.image_offset + (page_index + 1) * USER_PAGE
+            ]
+            if len(raw_page) != RAW_PAGE or len(expected) != USER_PAGE:
+                break
+            main = main_bytes(raw_page)
+            page_mismatches = 0
+            proof = bytearray()
+            for expected_offset, fragment in visible_fragments(main):
+                reference = expected[expected_offset : expected_offset + len(fragment)]
+                page_mismatches += sum(a != b for a, b in zip(fragment, reference))
+                compared_bytes += len(fragment)
+                proof.extend(fragment)
+            mismatch_bytes += page_mismatches
+            compared_pages += 1
+            if page_mismatches == 0:
+                exact_pages += 1
+                if len(exact_sample_hashes) < 4:
+                    expected_proof = bytearray()
+                    for expected_offset, fragment in visible_fragments(main):
+                        expected_proof.extend(expected[expected_offset : expected_offset + len(fragment)])
+                    exact_sample_hashes.append(
+                        (
+                            page_index,
+                            hashlib.sha256(proof).hexdigest(),
+                            hashlib.sha256(expected_proof).hexdigest(),
+                        )
+                    )
+            elif len(mismatching_pages) < 20:
+                mismatching_pages.append((page_index, page_mismatches))
+
+    visible_per_page = sum(len(fragment) for _, fragment in visible_fragments(bytes(USER_PAGE)))
+    print(f"layout=visible fragments after cumulative 28-byte intrusions")
+    print(f"visible_per_page={visible_per_page} unavailable_per_page={USER_PAGE-visible_per_page}")
+    print(f"pages_compared={compared_pages} exact_visible_pages={exact_pages}")
+    print(f"compared_bytes={compared_bytes} mismatch_bytes={mismatch_bytes}")
+    print(f"mismatching_pages={mismatching_pages}")
+    for page_index, digest, expected_digest in exact_sample_hashes:
+        print(
+            f"exact_page={page_index} visible_sha256={digest} "
+            f"expected_visible_sha256={expected_digest}"
+        )
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,57 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/verify_readonly_container.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Read existing artifacts from disk; no rebuild or device access."""
+import hashlib,json,lzma,struct
+from pathlib import Path
+from audit_ram_loader_container import BASE,rc4,crc32
+ROOT=Path(__file__).resolve().parents[1]
+original=(BASE/'components/RetronLoader.bin').read_bytes()
+container=(ROOT/'work/readonly_ram.BOOT.NOT_FOR_UPLOAD.bin').read_bytes()
+blob=(ROOT/'work/readonly_ram.bootstrap.NOT_FOR_UPLOAD.bin').read_bytes()
+flash=(ROOT/'work/readonly_ram.FlashBoot.NOT_FOR_UPLOAD.bin').read_bytes()
+compressed=(ROOT/'work/readonly_ram.lzma.bin').read_bytes()
+assert hashlib.sha256(original).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+assert hashlib.sha256(container).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+assert container[:4]==b'BOOT'
+header=struct.unpack_from('<H',container,4)[0]
+assert container[:header]==original[:header]
+assert crc32(container[:-4])==struct.unpack_from('<I',container,len(container)-4)[0]
+entries=[];changed_record=None
+for n in range(4):
+    p=header+57*n
+    assert container[p]==57
+    kind=struct.unpack_from('<I',container,p+1)[0]
+    name=container[p+5:p+45].decode('utf-16le').split('\0')[0]
+    off,size,delay=struct.unpack_from('<III',container,p+45)
+    assert header+4*57<=off and off+size<=len(container)-4
+    if kind==2:
+        assert changed_record is None
+        changed_record=p
+        assert size==61440 and size+2<65536
+        decoded=rc4(container[off:off+size])
+        assert decoded==blob+bytes(size-len(blob))
+        assert off==len(original)-4 and off+size==len(container)-4
+    else:
+        assert container[p:p+57]==original[p:p+57]
+        assert container[off:off+size]==original[off:off+size]
+    entries.append(dict(kind=kind,name=name,offset=off,size=size,delay=delay))
+assert changed_record is not None
+assert all(changed_record+45<=n<changed_record+53 for n in range(len(original)-4) if original[n]!=container[n])
+assert blob.count(compressed)==1
+assert lzma.decompress(compressed,format=lzma.FORMAT_ALONE)==flash
+for off in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):assert flash[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+for off in (0xbbc8,0xbc90):assert flash[off:off+4]==bytes.fromhex('feffffea')
+assert flash[0x18bf8:0x18bfc]==bytes.fromhex('410000ea')
+assert flash[0x2c58:0x2c84]==bytes.fromhex('<REDACTED:HASH_OR_BYTES>')
+damaged=bytearray(container);damaged[-5]^=1
+assert crc32(damaged[:-4])!=struct.unpack_from('<I',damaged,len(damaged)-4)[0]
+delivery=json.loads((ROOT/'outputs/readonly_ram_delivery.json').read_text())
+assert delivery['bootstrap_sha256']==hashlib.sha256(blob).hexdigest()
+assert delivery['flashboot_sha256']==hashlib.sha256(flash).hexdigest()
+assert len(delivery['cases'])==2 and all(c['output_exact'] for c in delivery['cases'])
+result=dict(container_sha256=hashlib.sha256(container).hexdigest(),entries=entries,crc_valid=True,modified_prefix_limited_to_entry472_offset_and_size=True,entry472_decodes_to_exact_bootstrap=True,embedded_lzma_decodes_to_exact_guarded_flashboot=True,all_expected_guards_present=True,crc_corruption_negative_pass=True,matching_arm_execution_report=True,device_access=False,hardware_approved=False,remaining='User decision on residual risk, runtime tail policy, fresh MaskROM. This packaging verification does not prove complete write-path coverage or hardware startup.')
+(ROOT/'outputs/readonly_container_independent_verification.json').write_text(json.dumps(result,indent=2)+'\n')
+print(json.dumps(result,indent=2))

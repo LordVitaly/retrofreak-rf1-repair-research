@@ -1,0 +1,72 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_bbt_copy12_writer.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Prepare one-page BBT copy12 restore only; no hardware access."""
+import hashlib,json,struct,subprocess,zlib
+from pathlib import Path
+from audit_ram_loader_container import rc4,crc32
+ROOT=Path(__file__).resolve().parents[1]
+live=ROOT/'work/bbt_physical_ecc40_attempt01'
+assert json.loads((live/'result.json').read_text())['all_pass']
+raw=(live/'block12_full.raw').read_bytes();assert raw==(live/'block13_full.raw').read_bytes()
+with (ROOT/'work/nand_native_ecc40/NAND_00.RAW').open('rb') as f:
+    f.seek(12*4096*528);old=f.read(4096*528)
+    assert f.read(4096*528)==old
+def main(d):return b''.join(d[i:i+512] for i in range(0,len(d),528))
+assert main(raw)==main(old) and main(raw)[8192:]==b'\xff'*(2097152-8192)
+assert all(old[i+512:i+514]==b'\xff\xff' for i in range(16*528,len(old),528))
+aux=[struct.unpack_from('<H',old,j*528+512)[0] for j in range(16)]
+assert aux==[0xf000,0x438,1896,0,12,13,14,15,1896]+[65535]*7
+source=main(old)[:8192];assert hashlib.sha256(source).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+erase=b'RF1 ERASE ONLY BBT COPY12 PHYSICAL BLOCK12 ONCE; PRESERVE COPY13 AND ALL OTHER BLOCKS\0'.ljust(512,b'\0')
+info=(ROOT/'work/idb_ecc24_parameter_attempt2/block06_page15.raw').read_bytes()
+assert hashlib.sha256(info).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+out=ROOT/'work/bbt_copy12_writer_v2';out.mkdir(exist_ok=False)
+header=f'#define PAGE_CRC {hex(zlib.crc32(source))}u\n#define ERASE_CRC {hex(zlib.crc32(erase))}u\n#define BUILD_TAG {hex(zlib.crc32(source+struct.pack("<16H",*aux)))}u\n'
+header+='static const unsigned short bbt_aux[16]={'+','.join(map(str,aux))+'};\n'
+header+='static const unsigned char saved_flashinfo[512]={'+','.join(map(str,info[:512]))+'};\n'
+with (out/'bbt_copy12_source.h').open('x') as f:f.write(header)
+elf=out/'guard.elf'
+subprocess.run([str(ROOT/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe'),'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-mfloat-abi=soft','-Oz','-g','-ffreestanding','-fno-builtin','-fno-stack-protector','-ffunction-sections','-fdata-sections','-nostdlib','-DRF_BBT_COPY12=1','-I'+str(out),'work/idb_copy6_guard.c','work/idb_copy6_guard.S','-Wl,-T,work/idb_copy6_guard.ld','-o',str(elf)],check=True,cwd=ROOT)
+e=elf.read_bytes();shoff=struct.unpack_from('<I',e,32)[0];ss,sn,si=struct.unpack_from('<HHH',e,46)
+sections=[struct.unpack_from('<10I',e,shoff+i*ss) for i in range(sn)];symbols={}
+for s in sections:
+    if s[1]!=2:continue
+    st=sections[s[6]];strings=e[st[4]:st[4]+st[5]]
+    for off in range(s[4],s[4]+s[5],s[9]):
+        no,value,*_=struct.unpack_from('<IIIBBH',e,off)
+        symbols[strings[no:].split(b'\0',1)[0].decode()]=value
+phoff=struct.unpack_from('<I',e,28)[0];ps,pn=struct.unpack_from('<HH',e,42)
+segments=[struct.unpack_from('<8I',e,phoff+i*ps) for i in range(pn)]
+addon=bytearray(symbols['__addon_size']);assert len(addon)<=4096
+for typ,off,va,pa,fs,ms,flags,align in segments:
+    if typ==1 and fs:
+        assert 0x60800000<=va and va+fs<=0x60800000+len(addon)
+        addon[va-0x60800000:va-0x60800000+fs]=e[off:off+fs]
+known=(ROOT/'work/idb_copy6_guard_v10/writer.bin').read_bytes()
+assert hashlib.sha256(known).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+h=struct.unpack_from('<H',known,4)[0];o,n=struct.unpack_from('<II',known,h+57+45)
+usb=bytearray(rc4(known[o:o+n]));assert len(usb)==61440
+usb[0xe000:]=bytes(61440-0xe000);usb[0xe000:0xe000+len(addon)]=addon
+def branch(at,address,link=False):
+    delta=address-(0x60000000+at+8);assert delta%4==0 and -(1<<25)<=delta<(1<<25)
+    return struct.pack('<I',(0xeb000000 if link else 0xea000000)|((delta//4)&0xffffff))
+for off,name,link in ((0x30,'idb_preinit',False),(0x3620,'guarded_low_erase',False),(0x3fa4,'guarded_low_program',False),(0x7528,'guarded_program',False),(0x7718,'guarded_write',False),(0x787c,'guarded_read',False),(0x528c,'guarded_saved_flashinfo',True),(0x6d7c,'guarded_saved_geometry',True)):
+    # Preinit must run at its low carrier before relocation, not addon RAM.
+    target=0x6000e000 if off==0x30 else symbols[name]
+    usb[off:off+4]=branch(off,target,link)
+assert usb[0x74cc:0x74d0]==bytes.fromhex('1800a023');usb[0x74cc:0x74d0]=bytes.fromhex('0400a021')
+reject=bytes.fromhex('0000e0e31eff2fe1')
+for off in (0x4230,0x75ac,0x7614,0x7624):assert usb[off:off+8]==reject
+# Disable unused direct boot-order trampoline as well.
+at=0xe000+symbols['native_write_loop']-0x60800000;usb[at:at+8]=reject;addon[at-0xe000:at-0xe000+8]=reject
+container=bytearray(known);container[o:o+n]=rc4(usb);struct.pack_into('<I',container,len(container)-4,crc32(container[:-4]))
+files={}
+for name,d in (('writer.bin',container),('usbplug.bin',usb),('addon.bin',addon),('page0.main512.bin',source),('erase_copy12_once.bin',erase)):
+    with (out/name).open('xb') as f:f.write(d)
+    files[name]=dict(bytes=len(d),sha256=hashlib.sha256(d).hexdigest())
+report=dict(build_only=True,ready_to_write=False,files=files,symbols=symbols,aux_words=aux,target_sector=0xc000,erase_end_sector=0xd000,source_page_sha256=hashlib.sha256(source).hexdigest(),scope='One erase block12, one native ECC40 page program atc000. Copy13 and all other addresses forbidden for writes. Existing saved FlashInfo/USB startup reused; no FTL/init/service writes.')
+with (out/'build.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps({k:v for k,v in report.items() if k!='symbols'},indent=2))

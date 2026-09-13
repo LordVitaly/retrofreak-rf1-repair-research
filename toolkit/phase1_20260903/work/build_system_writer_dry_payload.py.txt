@@ -1,0 +1,44 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_system_writer_dry_payload.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Package only compiled DRY gates in proven fullmode1/v33 RAM path."""
+import hashlib,json,struct,subprocess,sys
+from pathlib import Path
+from ram_artifact import elf_code,symbols,branch,fix_crc
+assert sys.argv[1:] in ([],['--write-candidate-only'])
+write=bool(sys.argv[1:]);variant='write' if write else 'dry'
+ROOT=Path(__file__).resolve().parents[1];out=ROOT/f'work/system_writer_{variant}_payload_v1';out.mkdir(exist_ok=False)
+if write:
+    assert json.loads((ROOT/'outputs/system_gated_persistence_v3_attempt2.json').read_text())['all_pass']
+    assert json.loads((ROOT/'work/system_writer_dry_hardware_attempt01/result.json').read_text())['all_pass']
+spec=json.loads((ROOT/'outputs/system_writer_gated_v3_build.json').read_text())['variants'][variant]
+core=(ROOT/f'work/system_writer_gated_v3/{variant}.NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(core).hexdigest()==spec['sha256']
+parent=(ROOT/'work/ftl_fullmap_system_read_v1/read.raw').read_bytes()
+assert hashlib.sha256(parent).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+elf=out/'handoff.elf'
+subprocess.run([str(ROOT/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe'),'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-g','-nostdlib','-DCORE_BYTES='+str(len(core)),'work/system_writer_dry_handoff.S','-Wl,-T,work/ftl_bridge_read.ld','-Wl,-e,writer_before','-o',str(elf)],cwd=ROOT,check=True)
+helper=elf_code(elf.read_bytes(),0x60007040,0x180);syms=symbols(elf.read_bytes())
+data=bytearray(parent[:110080]);data[0x2800:0x2800+len(core)]=core;data[0x7040:0x71c0]=helper+bytes(0x180-len(helper))
+patches={4:branch(0x60000004,syms['writer_before']),0x18d18:branch(0x600982e4,syms['writer_after'])}
+gates={0x3b0c:'gate_wrapper',0x7dcc:'gate_logical',0xba10:'gate_program',0xbc1c:'gate_erase',0xbd5c:'gate_copy',0x1934:'gate_forbidden',0x5b60:'gate_forbidden',0x7038:'gate_forbidden'}
+for off,name in gates.items():
+    assert data[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+    patches[off]=branch(0x60080000+off-0xa34,int(spec['symbols'][name],16))
+if write:
+    original=(ROOT/'work/FlashBoot.packet512.STATIC_ONLY.bin').read_bytes()
+    assert hashlib.sha256(original).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+    for off in (0xbbc8,0xbc90):patches[off]=struct.unpack_from('<I',original,off)[0]
+for off,word in patches.items():struct.pack_into('<I',data,off,word)
+fix_crc(data)
+allowed=[(4,8),(0x1e0,0x1e4),(0x2800,0x2800+len(core)),(0x7040,0x71c0),(0x18d18,0x18d1c)]+[(p,p+4) for p in patches]
+assert all(any(a<=i<b for a,b in allowed) for i,(x,y) in enumerate(zip(parent,data)) if x!=y)
+if not write:
+    for off in (0xbbc8,0xbc90):assert data[off:off+4]==bytes.fromhex('feffffea')
+raw=bytes(data)+bytes(272)
+with (out/('write.NOT_FOR_UPLOAD.raw' if write else 'dry.raw')).open('xb') as f:f.write(raw)
+report=dict(nand_writes_enabled=write,hardware_ready=False,sha256=hashlib.sha256(raw).hexdigest(),core_sha256=spec['sha256'],core_bytes=len(core),helper_bytes=len(helper),helper_symbols={n:hex(syms[n]) for n in ('writer_before','writer_after')},patched_words={hex(k):hex(v) for k,v in patches.items()},physical_confirm_stops_preserved=not write,own_USB_not_called=True,fixed_logical_portion=188)
+with (ROOT/f'outputs/system_writer_{variant}_payload_build.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

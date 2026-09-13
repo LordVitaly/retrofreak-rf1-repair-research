@@ -1,0 +1,61 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/run_system_ram_window.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""One install and 2MiB RAM-only roundtrip on the already identified bridge."""
+import hashlib,json,struct,sys,time
+from pathlib import Path
+from ram_console_session import RamConsole
+assert sys.argv[1:]==['--existing-confirmed-bridge']
+ROOT=Path(__file__).resolve().parents[1]
+build=json.loads((ROOT/'outputs/system_ram_window_build.json').read_text());proof=json.loads((ROOT/'outputs/system_ram_window_offline.json').read_text())
+raw=(ROOT/'work/system_ram_window_v3/install.raw').read_bytes()
+assert hashlib.sha256(raw).hexdigest()==build['raw_sha256']==proof['raw_sha256']=='<REDACTED:HASH_OR_BYTES>'
+assert proof['all_pass'] and len(proof['cases'])==2
+out=ROOT/'work/system_ram_window_hardware_attempt01';out.mkdir(exist_ok=False)
+result=dict(all_pass=False,nand_access=False,nand_write_enabled=False,system_repair_performed=False,payload_sha256=build['raw_sha256'],commands=[])
+c=None
+try:
+    c=RamConsole(out);c.select();result['commands']=c.commands
+    marker=out/'marker_before.raw';c.command(f'RS 0x7effff 0x1 {marker}')
+    assert marker.read_bytes()==b'RF1CKP02'+struct.pack('<IIII',110080,<REDACTED:ARTIFACT_CRC>,1,0x60000004)+bytes(504)
+    previous=out/'previous.raw';c.command(f'RS 0x7f0000 0xd1 {previous}')
+    assert hashlib.sha256(previous.read_bytes()).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+    result['previous_state_exact']=True
+    for i,offset in enumerate(range(0,110080,8192)):
+        part=out/f'install{i:02d}.bin'
+        with part.open('xb') as f:f.write(raw[offset:offset+min(8192,110080-offset)])
+        c.command(f'WS {hex(0x7f0000+offset//512)} {part}')
+    before=out/'before.raw';c.command(f'RS 0x7f0000 0xd1 {before}');assert before.read_bytes()==raw
+    result['ram_payload_exact']=True;c.command('RD')
+    marker=out/'window_marker.raw';c.command(f'RS 0x7efffe 0x1 {marker}')
+    assert marker.read_bytes()==b'RF1WIN01'+struct.pack('<IIII',0x800000,4096,0x63000000,16)+bytes(504)
+    result['window_installed']=True
+    after=out/'after.raw';c.command(f'RS 0x7f0000 0xd1 {after}');assert after.read_bytes()==raw
+    pattern=hashlib.shake_256(b'RF1 bounded 2MiB transfer v1').digest(2097152)
+    with (out/'expected.bin').open('xb') as f:f.write(pattern)
+    sha=hashlib.sha256();start=time.monotonic()
+    for i in range(256):
+        part=pattern[i*8192:(i+1)*8192];source=out/f'data{i:03d}.bin';target=out/f'read{i:03d}.raw'
+        with source.open('xb') as f:f.write(part)
+        sector=0x800000+i*16;c.command(f'WS {hex(sector)} {source}')
+        c.command(f'RS {hex(sector)} 0x10 {target}')
+        data=target.read_bytes();assert len(data)==8448
+        assert all(data[j+512:j+528]==bytes(16) for j in range(0,8448,528))
+        actual=b''.join(data[j:j+512] for j in range(0,8448,528));assert actual==part
+        sha.update(actual);result['verified_bytes']=(i+1)*8192
+        if i%32==31:print('RAM verified',result['verified_bytes'],'/2097152',flush=True)
+    # Re-read distant first/last data AFTER all writes to detect address aliasing.
+    for i in (0,127,255):
+        target=out/f'late{i:03d}.raw';c.command(f'RS {hex(0x800000+i*16)} 0x10 {target}')
+        data=target.read_bytes();actual=b''.join(data[j:j+512] for j in range(0,len(data),528))
+        assert actual==pattern[i*8192:(i+1)*8192]
+    stage=out/'stage_after_data.raw';c.command(f'RS 0x7f0000 0xd1 {stage}');assert stage.read_bytes()==raw
+    result.update(all_pass=True,ram_roundtrip_sha256=sha.hexdigest(),expected_sha256=hashlib.sha256(pattern).hexdigest(),late_alias_checks_pass=True,payload_unchanged=True,elapsed_seconds=time.monotonic()-start)
+except BaseException as e:
+    result['error']=repr(e);raise
+finally:
+    if c:c.close()
+    with (out/'result.json').open('x') as f:json.dump(result,f,indent=2)
+    print(json.dumps({k:v for k,v in result.items() if k!='commands'},indent=2),flush=True)

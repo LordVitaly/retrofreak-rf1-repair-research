@@ -1,0 +1,36 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_plain_usb_control.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Minimal same-size transfer control: known USBplug, no bootstrap or LZMA."""
+import hashlib,json,struct
+from pathlib import Path
+from audit_ram_loader_container import rc4,crc32
+ROOT=Path(__file__).resolve().parents[1]
+known=(ROOT/'work/RetronLoader_READ_NATIVE_ECC_RAM_ONLY.bin').read_bytes()
+assert hashlib.sha256(known).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+header=struct.unpack_from('<H',known,4)[0]
+records=[]
+for n in range(4):
+    p=header+57*n
+    kind=struct.unpack_from('<I',known,p+1)[0]
+    off,size=struct.unpack_from('<II',known,p+45)
+    records.append((p,kind,off,size))
+targets=[r for r in records if r[1]==2];assert len(targets)==1
+p,kind,off,size=targets[0];assert size==56520
+usb=rc4(known[off:off+size])
+payload=usb+bytes(61440-len(usb))
+container=bytearray(known[:-4]);new_offset=len(container)
+container.extend(rc4(payload))
+struct.pack_into('<II',container,p+45,new_offset,len(payload))
+container.extend(struct.pack('<I',crc32(container)))
+assert new_offset==188034
+assert rc4(container[new_offset:-4])[:56520]==usb
+assert rc4(container[new_offset:-4])[56520:]==bytes(4920)
+assert all(p+45<=i<p+53 for i in range(len(known)-4) if known[i]!=container[i])
+name='work/plain_usb_61440_control.RAM_ONLY.bin'
+with (ROOT/name).open('xb') as f:f.write(container)
+report=dict(container=name,sha256=hashlib.sha256(container).hexdigest(),entry472_size=61440,entry472_offset=new_offset,known_usbplug_bytes=56520,zero_padding=4920,bootstrap=False,lzma=False,extra_cpu_code=False,entry471_unchanged=True,device_access=False,scope='Known native-ECC USBplug with larger transfer size and appended entry layout. Existing USBplug can write if commanded; hardware workflow must only send DB and read commands.')
+(ROOT/'outputs/plain_usb_control_build.json').write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps(report,indent=2))

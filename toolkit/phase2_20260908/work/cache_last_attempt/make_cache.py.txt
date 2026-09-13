@@ -1,0 +1,19 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/cache_last_attempt/make_cache.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+from pathlib import Path
+import os,subprocess,json
+out=Path('work/cache_last_attempt').resolve();portable=out/'portable';env=dict(os.environ);env['PATH']=str(portable/'usr/bin')+os.pathsep+env['PATH'];env['MKE2FS_CONFIG']=str(portable/'etc/mke2fs.conf')
+exe=portable/'usr/sbin/mke2fs.exe';print('EXISTS',exe.exists(),flush=True)
+print(subprocess.run([str(exe),'-V'],env=env,capture_output=True,text=True,timeout=10).stderr,flush=True)
+image=out/'cache64.img'
+with image.open('wb') as f:f.truncate(67108864)
+p='/cygdrive/c/'+image.as_posix()[3:]
+args=[str(exe),'-F','-t','ext4','-b','4096','-I','256','-N','4096','-m','0','-O','none,has_journal,ext_attr,resize_inode,dir_index,filetype,extent,sparse_super,large_file','-E','lazy_itable_init=0,lazy_journal_init=0','-J','size=4','-L','cache',p,'16384']
+r=subprocess.run(args,env=env,capture_output=True,text=True,timeout=30);(out/'mkfs.log').write_text(r.stdout+'\n'+r.stderr);print('MKFS',r.returncode,r.stdout,r.stderr,flush=True);assert r.returncode==0
+(out/'mkfs_command.json').write_text(json.dumps(args,indent=2))
+for binary,args in [('e2fsck.exe',['-f','-n',p]),('dumpe2fs.exe',['-h',p]),('debugfs.exe',['-R','ls -l /',p])]:
+ r=subprocess.run([str(portable/'usr/sbin'/binary),*args],env=env,capture_output=True,text=True,timeout=30);(out/(binary+'.log')).write_text(r.stdout+'\n'+r.stderr);print(binary,r.returncode,r.stdout,r.stderr,flush=True);assert r.returncode==0

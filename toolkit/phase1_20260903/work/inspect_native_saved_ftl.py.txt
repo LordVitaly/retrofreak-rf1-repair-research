@@ -1,0 +1,27 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/inspect_native_saved_ftl.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Read saved F400 state fields at offsets established from RF1 module disassembly.
+No claim that the newest record is accepted without complete read/error/BBT validation.
+"""
+import struct
+from pathlib import Path
+from verify_native_ecc_page import extract
+ROOT=Path(__file__).parent
+with (ROOT/'nand_native_ecc40/NAND_00.RAW').open('rb') as f:
+    f.seek(15*256*8448)
+    block=f.read(256*8448)
+for p in range(256):
+    raw=block[p*8448:(p+1)*8448]
+    tag=int.from_bytes(raw[512:514],'little')
+    if tag==0xffff: continue
+    main=extract(raw)
+    u16=lambda offset:struct.unpack_from('<H',main,offset)[0]
+    if tag==0xf400:
+        print('F400 page',p,'header',main[:24].hex(),'version',hex(u16(6)),
+              'page_sectors',u16(8),'block_sectors',u16(10),'capacity_blocks',u16(0x12),
+              'map_block',u16(0xd76),'map_next_sector',u16(0xd78),
+              'map_group_sectors',[u16(0xcac+2*i) for i in range(4)])
+    else: print('OTHER page',p,'tag',hex(tag),'head',main[:32].hex())

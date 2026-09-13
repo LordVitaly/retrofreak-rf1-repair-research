@@ -1,0 +1,125 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/boot_diagnostic_writer/test_offline.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Actual ARM core/gate execution with synthetic I/O; strictly no device calls."""
+import hashlib,json,struct,sys,time
+from pathlib import Path
+OUT=Path(__file__).resolve().parent;HERE=OUT.parents[1]
+sys.path.insert(0,'<EXTERNAL_STAGE_03>/work/emulator_deps')
+from unicorn import Uc,UC_ARCH_ARM,UC_MODE_ARM,UC_HOOK_CODE
+from unicorn.arm_const import UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3,UC_ARM_REG_LR,UC_ARM_REG_PC,UC_ARM_REG_SP
+REGS=[UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3]
+M=json.loads((OUT/'manifest.json').read_text());snapshot=(HERE/'work/boot_fresh_capture_attempt01/ftl_snapshot.bin').read_bytes()
+assert hashlib.sha256(snapshot).hexdigest()==M['source_snapshot_sha256']
+mapping=list(struct.unpack_from('<1896H',snapshot,0xf00));results=[];started=time.monotonic()
+def branch(pc,target):return 0xea000000|(((target-pc-8)//4)&0xffffff)
+for key,spec in M['variants'].items():
+ block=int(key.split('_')[0]);variant=key.split('_')[1];lba=block*4096
+ syms={k:int(v,16) for k,v in spec['symbols'].items()};code=(OUT/f'block{block}/{variant}.core.bin').read_bytes()
+ assert hashlib.sha256(code).hexdigest()==spec['core_sha256']
+ source=(OUT/f'block{block}.source.bin').read_bytes();assert hashlib.sha256(source).hexdigest()==spec['source_sha256']
+ u=Uc(UC_ARCH_ARM,UC_MODE_ARM)
+ for p,n in ((0x61800000,0x2000),(0x61700000,0x5000),(0x60200000,0x600000),(0x6101a000,0x3000),(0x63000000,0x210000),(0x60080000,0x10000)):u.mem_map(p,n)
+ u.mem_write(0x61800000,code);u.mem_write(0x602b3000,snapshot[:0xa6000]);u.mem_write(0x60359000,snapshot[0xa6000:])
+ u.mem_write(0x60087398,struct.pack('<I',branch(0x60087398,syms['gate_logical'])))
+ mode={'status':0,'logical':'normal','read':'normal','dry':'program'};calls=[];media={}
+ def backend(uc,pc,size,ctx):
+  args=[uc.reg_read(r) for r in REGS];calls.append((pc,args))
+  if pc==syms['original_logical']:
+   if mode['logical']=='hidden_failure':uc.mem_write(0x61700000,struct.pack('<II',0,0x3002));rc=0
+   elif variant=='dry':
+    target='gate_program' if mode['dry']=='program' else 'gate_erase'
+    for r,v in zip(REGS,(free*4096,args[3] if mode['dry']=='program' else 0x603d0000,0,1 if mode['dry']=='program' else 0)):uc.reg_write(r,v)
+    uc.reg_write(UC_ARM_REG_PC,syms[target]);return
+   else:
+    assert args[0]==0 and lba<=args[1]<lba+4096 and args[2]==128
+    assert args[3]==0x63000000+(args[1]-lba)*512
+    media[args[1]]=bytes(uc.mem_read(args[3],args[2]*512));rc=mode['status']
+  elif pc==0x600846a0:
+   assert args[0]==0 and args[3]==0x63200000 and args[2]==128
+   expected=media[args[1]]
+   assert bytes(uc.mem_read(args[3],len(expected)))==bytes(x^255 for x in expected)
+   if mode['read']!='stale':uc.mem_write(args[3],expected)
+   rc=0xffffffff if mode['read']=='error' else 0
+  else:
+   assert variant=='write','DRY reached original physical backend'
+   if pc==syms['original_erase'] and args[1]:uc.mem_write(args[1],struct.pack('<I',args[0]+4096))
+   rc=mode['status']
+  uc.reg_write(REGS[0],rc);uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR))
+ for pc in (syms['original_logical'],syms['original_program'],syms['original_erase'],syms['original_wrapper'],0x600846a0):u.hook_add(UC_HOOK_CODE,backend,begin=pc,end=pc)
+ def call(name,args=(),budget=1000000):
+  for r,v in zip(REGS,args):u.reg_write(r,v)
+  u.reg_write(UC_ARM_REG_SP,0x603df000);u.reg_write(UC_ARM_REG_LR,0x607ffffc)
+  u.emu_start(syms[name],0x607ffffc,count=budget)
+  assert u.reg_read(UC_ARM_REG_PC)==0x607ffffc,(key,name,hex(u.reg_read(UC_ARM_REG_PC)))
+  assert u.reg_read(UC_ARM_REG_SP)==0x603df000,(key,name,'unbalanced stack')
+  return u.reg_read(REGS[0])
+ assert call('gate_prepare',(lba,))==0
+ expected=set(M['baseline_protected_blocks'])|{p for n,p in enumerate(mapping) if n!=block and p}
+ bitmap=bytes(u.mem_read(0x61700100,256));assert {p for p in range(2048) if bitmap[p>>3]&(1<<(p&7))}==expected
+ assert all(p in expected for p in range(18)) and all(mapping[n] in expected for n in (6,9,10) if n!=block)
+ free=next(p for p in range(18,2048) if p not in expected and p!=mapping[block])
+ ready=bytearray(u.mem_read(0x61700000,32));struct.pack_into('<I',ready,0,0x31575246)
+ def reset():
+  u.mem_write(0x61700000,bytes(ready));calls.clear();mode.update(status=0,logical='normal',read='normal',dry='program')
+ u.mem_write(0x61700000,bytes(32));calls.clear()
+ assert call('gate_wrapper',(0,0,0,0))==0xffffffff and not calls and bytes(u.mem_read(0x61700000,32))==bytes(32)
+ for p in range(2048):
+  for name,args in [('gate_program',(p*4096,0x63000000,0,1)),('gate_erase',(p*4096,0x603d0000,0,0))]:
+   reset();rc=call(name,args);allowed=variant=='write' and p not in expected
+   assert rc==(0 if allowed else 0xffffffff) and len(calls)==int(allowed),(key,p,name)
+ negative=[('gate_program',(0x800000,0x63000000,0,1)),('gate_program',(free*4096+1,0x63000000,0,1)),('gate_program',(free*4096,0x631ff000,0,1)),('gate_program',(free*4096,0x63000000,0,2)),('gate_program',(free*4096,0,0,1)),('gate_program',(free*4096,0x63000000,0x603d4f80,1)),('gate_erase',(free*4096+1,0x603d0000,0,0)),('gate_erase',(free*4096,0x60800000,0,0)),('gate_logical',(0,lba-1,16,0x63000000)),('gate_logical',(0,lba,129,0x63000000)),('gate_logical',(0,lba+4096,16,0x63000000)),('gate_logical',(0,lba+4095,2,0x631ffe00)),('gate_logical',(1,lba,16,0x63000000)),('gate_logical',(0,lba,16,0x63000200)),('gate_copy',(0,0,1,0)),('gate_forbidden',(0,0,0,0))]
+ for name,args in negative:
+  reset();assert call(name,args)==0xffffffff and not calls,(key,name,args)
+ reset();assert call('gate_copy',(0,0,0,0))==0xffffffff and not calls and bytes(u.mem_read(0x61700004,4))==bytes(4)
+ for address,value in ((0x61700000,0),(0x61700014,512)):
+  reset();u.mem_write(address,struct.pack('<I',value));assert call('gate_program',(free*4096,0x63000000,0,1))==0xffffffff and not calls
+ for address,value in [(0x602b3188,8),(0x602b3f00+7*2,1000),(0x602b3f00+block*2,0),(0x602b3f00+block*2,mapping[7]),(0x602b3f00+block*2,2048)]:
+  prior=bytes(u.mem_read(address,2));u.mem_write(address,struct.pack('<H',value));assert call('gate_prepare',(lba,))==0xffffffff and bytes(u.mem_read(0x61700008,4))==bytes(4);u.mem_write(address,prior)
+ for invalid_lba in (0,0x5000,0x7000,0x8000,0xb000,lba+1,0xba000):
+  assert call('gate_prepare',(invalid_lba,))==0xffffffff
+ # Previous candidate remaps are admitted by stable other-map CRC, then dynamically protected.
+ other=next(n for n in (6,9,10) if n!=block);address=0x602b3f00+other*2
+ u.mem_write(address,struct.pack('<H',free));assert call('gate_prepare',(lba,))==0
+ assert bytes(u.mem_read(0x61700100+(free>>3),1))[0]&(1<<(free&7))
+ u.mem_write(address,struct.pack('<H',mapping[other]));assert call('gate_prepare',(lba,))==0
+ if variant=='write':
+  for name,args in [('gate_program',(free*4096,0x63000000,0,1)),('gate_erase',(free*4096,0x603d0000,0,0))]:
+   reset();mode['status']=0xffffffff;assert call(name,args)==0xffffffff and len(calls)==1
+   assert struct.unpack('<I',u.mem_read(0x61700000,4))[0]==0
+   if name=='gate_erase':assert struct.unpack('<I',u.mem_read(0x603d0000,4))[0]==free*4096
+   u.mem_write(0x61700000,struct.pack('<I',0x31575246));assert call(name,args)==0xffffffff and len(calls)==1
+ # Fixed source rejection and exact target ABI before expensive valid CRC.
+ for args in ((1,lba,4096,0x63000000),(0,lba+4096,4096,0x63000000),(0,lba,4095,0x63000000),(0,lba,4096,0x63000004)):
+  reset();assert call('system_write_portion',args)==0xffffffff and not calls
+ u.mem_write(0x63000000,source)
+ cases=['normal']
+ if block==6:cases+=['bad_crc','hidden_failure','stale_read','read_error'] if variant=='write' else ['dry_erase']
+ for case in cases:
+  reset()
+  if case=='bad_crc':u.mem_write(0x63000000,bytes([source[0]^1]))
+  if case=='hidden_failure':mode['logical']='hidden_failure'
+  if case=='stale_read':mode['read']='stale'
+  if case=='read_error':mode['read']='error'
+  if case=='dry_erase':mode['dry']='erase'
+  rc=call('system_write_portion',(0,lba,4096,0x63000000),budget=300000000)
+  status=struct.unpack('<7I',u.mem_read(0x6101af10,28));state=struct.unpack('<8I',u.mem_read(0x61700000,32))
+  assert state[0]==0
+  if case=='bad_crc':assert rc==0xffffffff and status[3]==2 and not calls;u.mem_write(0x63000000,source)
+  elif variant=='dry':
+   assert rc==0xffffffff and status[3:5]==(3,0) and len(calls)==1
+   assert state[1]==(0xd002 if case=='dry_erase' else 0xd001) and state[5:]==(1,0,0)
+   journal=struct.unpack('<4I',u.mem_read(0x61702000,16));assert journal==(4 if case=='dry_erase' else 3,free*4096,0xffffffff,lba)
+  elif case=='normal':assert rc==0 and status==(0x31575246,lba,4096,6,4096,lba+3968,0) and len(calls)==64
+  elif case=='hidden_failure':assert rc==0xffffffff and status[3:5]==(3,0) and len(calls)==1
+  elif case=='stale_read':assert rc==0xffffffff and status[3:5]==(5,0) and len(calls)==2
+  elif case=='read_error':assert rc==0xffffffff and status[3:5]==(4,0) and len(calls)==2
+ result=dict(variant=key,pass_test=True,physical_checks=4096,negative_cases=len(negative),all_2048_blocks_checked_program_and_erase=True,dynamic_other_candidate_protection=True,non_boot_mapping_crc=True,geometry_guards=True,latched_error_no_retry=True,core_cases=cases,stack_balanced=True)
+ results.append(result);print('PASS',key,flush=True)
+report=dict(all_pass=True,device_access=False,actual_ARM_core_and_gates=True,variants=results,elapsed_seconds=time.monotonic()-started,limits=['Native I/O is stubbed at proven original function boundary; no new controller or ECC model.','Original FTL persistence already tested in prior system writer; current boot requires live dry, once-only write, immediate readback, reopen readback and fresh map capture.'])
+(OUT/'offline_proof.json').write_text(json.dumps(report,indent=2)+'\n');M['all_pass']=True;M['offline_proof']=str(OUT/'offline_proof.json');M['hardware_ready']=False
+(OUT/'manifest.json').write_text(json.dumps(M,indent=2)+'\n')
+print(json.dumps(report,indent=2))

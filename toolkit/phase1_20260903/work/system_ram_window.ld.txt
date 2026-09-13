@@ -1,0 +1,15 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/system_ram_window.ld
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+ENTRY(window_read)
+SECTIONS {
+ . = 0x60802000;
+ .text : { KEEP(*(.text.window_read)) KEEP(*(.text.window_write)) *(.text*) *(.rodata*) }
+ .data : { *(.data*) }
+ .bss : { *(.bss*) *(COMMON) }
+ ASSERT(SIZEOF(.text)<=2048,"Extension bound")
+ ASSERT(SIZEOF(.data)==0 && SIZEOF(.bss)==0,"No hidden state")
+ /DISCARD/ : { *(.ARM.exidx*) *(.ARM.extab*) *(.comment*) }
+}

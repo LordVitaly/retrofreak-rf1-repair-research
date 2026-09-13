@@ -1,0 +1,23 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/inspect_usbplug_static.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Offline inspection of official decrypted USBplug. Never executes loader or USB commands."""
+import argparse
+import struct
+from pathlib import Path
+from capstone import Cs,CS_ARCH_ARM,CS_MODE_ARM
+P=Path(r'<HOST_PATH>')
+p=argparse.ArgumentParser()
+p.add_argument('start',type=lambda s:int(s,0))
+p.add_argument('end',type=lambda s:int(s,0))
+p.add_argument('--words',action='store_true')
+a=p.parse_args()
+d=P.read_bytes()
+assert 0<=a.start<a.end<=len(d)
+if a.words:
+    for offset in range(a.start,a.end-3,4): print(hex(offset),hex(struct.unpack_from('<I',d,offset)[0]))
+else:
+    for i in Cs(CS_ARCH_ARM,CS_MODE_ARM).disasm(d[a.start:a.end],0x60000000+a.start):
+        print(hex(i.address-0x60000000),i.mnemonic,i.op_str)

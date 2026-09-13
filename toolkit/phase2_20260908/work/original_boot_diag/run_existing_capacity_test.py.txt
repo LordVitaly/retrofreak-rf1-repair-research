@@ -1,0 +1,49 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/original_boot_diag/run_existing_capacity_test.py
+Role: historical_device_runner_or_stateful_scenario_review_before_any_use
+Original repair session must not be resumed from this public copy.
+
+"""Run prior offline original-capacity prefix test, with all writes confined here.
+
+Only the selected payload path and report path are changed in the prior harness.
+All original ARM/peripheral-contract/return assertions remain untouched.
+"""
+import hashlib
+import json
+import os
+from pathlib import Path
+import sys
+
+sys.dont_write_bytecode = True
+OLD = Path('<EXTERNAL_STAGE_03>')
+OUT = Path(__file__).resolve().parent
+original = OLD / 'work/test_startup_reloc_slices.py'
+result = OUT / 'existing_original_capacity_offline.json'
+assert not result.exists(), 'Preserve prior test report'
+
+def audit(event, args):
+    if event == 'open':
+        path, mode, flags = args
+        writing = (mode is not None and any(c in mode for c in 'wax+')) or flags & (os.O_WRONLY | os.O_RDWR | os.O_CREAT | os.O_TRUNC | os.O_APPEND)
+        if writing and not isinstance(path, int):
+            assert Path(path).resolve().is_relative_to(OUT), ('Write outside owned directory denied', path, mode, flags)
+    if event in {'subprocess.Popen', 'os.system', 'socket.connect'}:
+        raise AssertionError(('External execution / network forbidden', event))
+    if event in {'os.mkdir', 'os.remove', 'os.rmdir', 'os.rename'}:
+        assert Path(args[0]).resolve().is_relative_to(OUT), ('Mutation outside owned directory denied', event, args)
+
+sys.addaudithook(audit)
+source = original.read_text()
+old_loop = "for case in build['cases']:\n"
+new_loop = "build['cases'] = [case for case in build['cases'] if case['name'] == 'ftl_capacity_original']\nassert len(build['cases']) == 1\nbuild['cases'][0]['file'] = " + repr(str(OUT / 'ftl_capacity_original.raw')) + "\nfor case in build['cases']:\n"
+assert source.count(old_loop) == 1
+source = source.replace(old_loop, new_loop)
+old_output = "(ROOT/'outputs/startup_ftl_capacity_offline.json')"
+assert source.count(old_output) == 1
+source = source.replace(old_output, '(h.Path(' + repr(str(result)) + '))')
+sys.path.insert(0, str(OLD / 'work'))
+sys.argv = [str(original), '--ftl-capacity-slices']
+report = {'original_test': str(original), 'original_test_sha256': hashlib.sha256(original.read_bytes()).hexdigest(), 'adapted_source_sha256': hashlib.sha256(source.encode()).hexdigest(), 'adjustments': ['Select only original-capacity case and use identical owned payload copy', 'Redirect final report to owned directory'], 'writes_outside_owned_directory_blocked': True, 'subprocesses_and_network_blocked': True, 'device_access': False}
+(OUT / 'existing_capacity_test_adaptation.json').write_text(json.dumps(report, indent=2) + '\n')
+exec(compile(source, str(original), 'exec'), {'__name__': '__main__', '__file__': str(original)})

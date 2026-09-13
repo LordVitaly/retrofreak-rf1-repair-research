@@ -1,0 +1,27 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/inspect_flashboot_static.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Disassemble local FlashBoot only. Never execute device code."""
+import argparse
+import hashlib
+import struct
+from pathlib import Path
+from capstone import Cs, CS_ARCH_ARM, CS_MODE_ARM, CS_MODE_THUMB
+
+p = argparse.ArgumentParser()
+p.add_argument('start', type=lambda x: int(x, 0))
+p.add_argument('end', type=lambda x: int(x, 0))
+p.add_argument('--arm', action='store_true')
+p.add_argument('--words', action='store_true')
+a = p.parse_args()
+d = Path(__file__).with_name('FlashBoot.packet512.STATIC_ONLY.bin').read_bytes()
+assert hashlib.sha256(d).hexdigest() == '<REDACTED:HASH_OR_BYTES>'
+assert 0 <= a.start < a.end <= len(d)
+if a.words:
+    for o in range(a.start, a.end-3, 4):
+        print(hex(o), hex(struct.unpack_from('<I', d, o)[0]))
+else:
+    for i in Cs(CS_ARCH_ARM, CS_MODE_ARM if a.arm else CS_MODE_THUMB).disasm(d[a.start:a.end], a.start):
+        print(hex(i.address), i.mnemonic, i.op_str)

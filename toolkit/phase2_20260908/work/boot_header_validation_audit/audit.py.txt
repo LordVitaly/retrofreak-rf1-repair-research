@@ -1,0 +1,81 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/boot_header_validation_audit/audit.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Offline original FlashBoot ANDROID! digest verifier; no device access."""
+from pathlib import Path
+import hashlib,json,struct,sys,time
+HERE=Path(__file__).resolve().parent
+WORK=HERE.parent
+OLD=Path('<EXTERNAL_STAGE_03>/work')
+OFF=Path('<EXTERNAL_STAGE_01>/work')
+sys.path.insert(0,str(OLD/'emulator_deps'))
+from unicorn import Uc,UC_ARCH_ARM,UC_MODE_ARM
+from unicorn.arm_const import UC_ARM_REG_R0,UC_ARM_REG_SP,UC_ARM_REG_LR,UC_ARM_REG_PC
+original=(OLD/'FlashBoot.packet512.STATIC_ONLY.bin').read_bytes()
+assert hashlib.sha256(original).hexdigest()=='ed820d1c51ab4b75b9b6758cfac378732cdfaa9cbc12d7cfe3f24b57c70615f5'
+def runtime(off):return 0x60080000+off-0xa34
+def digest_image(b):
+    ks,ka,rs,ra,ss,sa,tags,page=struct.unpack_from('<8I',b,8)
+    ro=page+((ks+page-1)//page)*page
+    so=ro+((rs+page-1)//page)*page
+    h=hashlib.sha1()
+    parts=[b[page:page+ks],b[8:12],b[ro:ro+rs],b[16:20],b[so:so+ss],b[24:28],b[32:36],b[36:40],b[40:48],b[48:64],b[64:576]]
+    for part in parts:h.update(part)
+    return h.digest()+bytes(12),dict(kernel_size=ks,kernel_addr=ka,ramdisk_size=rs,ramdisk_addr=ra,second_size=ss,second_addr=sa,tags_addr=tags,page_size=page,ramdisk_offset=ro)
+def actual_arm(b):
+    _,p=digest_image(b)
+    assert not p['second_size']
+    m=Uc(UC_ARCH_ARM,UC_MODE_ARM)
+    m.mem_map(0x60000000,0x08000000)
+    m.mem_write(runtime(0xa34),original[0xa34:])
+    header=0x61000000
+    m.mem_write(header,b[:16384])
+    m.mem_write(p['kernel_addr'],b[p['page_size']:p['page_size']+p['kernel_size']])
+    m.mem_write(p['ramdisk_addr'],b[p['ramdisk_offset']:p['ramdisk_offset']+p['ramdisk_size']])
+    m.reg_write(UC_ARM_REG_SP,0x67e00000)
+    m.reg_write(UC_ARM_REG_LR,0x67fff000)
+    m.reg_write(UC_ARM_REG_R0,header)
+    started=time.monotonic()
+    m.emu_start(runtime(0x179c4),0x67fff000,timeout=55000000)
+    pc=m.reg_read(UC_ARM_REG_PC)
+    assert pc==0x67fff000,hex(pc)
+    result=dict(return_code=m.reg_read(UC_ARM_REG_R0),elapsed_seconds=round(time.monotonic()-started,3),return_pc=hex(pc))
+    m.reg_write(UC_ARM_REG_SP,0x67e00000)
+    m.reg_write(UC_ARM_REG_LR,0x67fff000)
+    m.reg_write(UC_ARM_REG_R0,header)
+    m.emu_start(runtime(0x17ae8),0x67fff000,timeout=1000000)
+    assert m.reg_read(UC_ARM_REG_PC)==0x67fff000
+    result['address_validator_return_code']=m.reg_read(UC_ARM_REG_R0)
+    assert result['address_validator_return_code']==0
+    return result
+files={'stock':OFF/'rkfw_contents/components/boot.img','candidate':WORK/'adb_boot_diagnostic/boot_early_adb.DIAGNOSTIC_CANDIDATE.img'}
+report=dict(device_access=False,original_flashboot_sha256=hashlib.sha256(original).hexdigest(),verifier_file_offset='0x179c4',verifier_runtime=hex(runtime(0x179c4)),images={})
+report['loader_path']={'format_dispatch_file':'0x17e78','android_magic_compare_file':'0x17ec4..0x17ed8','android_load_file':'0x17b78','address_validator_file':'0x17ae8','digest_call_file':'0x17c2c','digest_compare_file':'0x17ab0..0x17adc','digest_mismatch_file':'0x17c58','mismatch_message':'SHA ERROR','mismatch_return_signed':-4,'linux_jump_call_file':'0x17c4c','linux_jump_function_file':'0x17644','read_alignment_bytes':16384,'initial_header_read_bytes':2048}
+report['digest_parts_in_order']=['kernel[kernel_size]','kernel_size LE32','ramdisk[ramdisk_size]','ramdisk_size LE32','second[second_size] (current second_size=0)','second_size LE32','tags_addr LE32','page_size LE32','dt_size+unused 8 bytes','name 16 bytes','cmdline 512 bytes']
+report['signature_and_crc']={'stock_and_candidate_header_0x400_SIGN_absent':True,'SIGN_branch_file':'0x17ef0..0x17f30','SIGN_condition':'global enable !=0 AND u32(header+0x400)==0x4e474953','KRNL_CRC_file':'0x17fa4..0x17fc8','ANDROID_path_uses_SHA1_not_KRNL_CRC':True}
+expected_hashes={'stock':'416c84c67be71e89d63530c1902112ebbe54845aca3e377a79506ce5c90b090d','candidate':'<HISTORICAL_HASH_REDACTED>'}
+for name,path in files.items():
+    b=path.read_bytes(); computed,fields=digest_image(b)
+    assert hashlib.sha256(b).hexdigest()==expected_hashes[name]
+    assert b[1024:1028]==bytes(4)
+    r=dict(path=str(path),sha256=hashlib.sha256(b).hexdigest(),fields=fields,stored_id=b[576:608].hex(),computed_id=computed.hex(),python_pass=b[576:608]==computed)
+    r['actual_arm']=actual_arm(b)
+    assert r['actual_arm']['return_code']==int(r['python_pass'])
+    report['images'][name]=r
+    print(json.dumps({name:r}),flush=True)
+candidate=files['candidate'].read_bytes(); corrected=bytearray(candidate); corrected[576:608]=digest_image(candidate)[0]
+report['candidate_correct_id_in_memory_only']=actual_arm(bytes(corrected))
+assert report['candidate_correct_id_in_memory_only']['return_code']==1
+assert len(corrected)==len(candidate)
+assert corrected[:576]==candidate[:576] and corrected[608:]==candidate[608:]
+changed=[i for i,(a,b) in enumerate(zip(candidate,corrected)) if a!=b]
+assert changed and all(576<=i<608 for i in changed)
+fixed_path=HERE/'candidate_fixed_id.img'
+fixed_path.write_bytes(corrected)
+report['fixed_candidate']=dict(path=str(fixed_path),bytes=len(corrected),sha256=hashlib.sha256(corrected).hexdigest(),id32=bytes(corrected[576:608]).hex(),changed_offsets=[hex(i) for i in changed],all_other_bytes_exact=True)
+report['all_expected_results_pass']=True
+(HERE/'report.json').write_text(json.dumps(report,indent=2))
+print(json.dumps(report,indent=2),flush=True)

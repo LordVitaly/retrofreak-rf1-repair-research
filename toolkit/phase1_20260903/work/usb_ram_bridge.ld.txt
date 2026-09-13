@@ -1,0 +1,19 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/usb_ram_bridge.ld
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+ENTRY(_start)
+_start = bridge_preinit;
+SECTIONS {
+ . = 0x60800000;
+ .text : { KEEP(*(.text.preinit)) KEEP(*(.text.bridge_read)) KEEP(*(.text.bridge_write)) KEEP(*(.text.bridge_execute)) KEEP(*(.text.handoff)) *(.text*) *(.rodata*) }
+ . = ALIGN(4);
+ __addon_size = . - 0x60800000;
+ .data : { *(.data*) }
+ .bss (NOLOAD) : { *(.bss*) *(COMMON) }
+ /DISCARD/ : { *(.ARM.exidx*) *(.ARM.extab*) *(.comment*) }
+ ASSERT(SIZEOF(.data) == 0, "No initialized writable state")
+ ASSERT(SIZEOF(.bss) == 0, "No implicit initialization")
+ ASSERT(__addon_size < 4096, "RAM bridge must fit below 61440 transferred bytes")
+}

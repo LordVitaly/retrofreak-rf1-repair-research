@@ -1,0 +1,57 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/direct_winpty_console.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Small nonblocking adapter over installed winpty.PTY, with no socket relay."""
+import os
+import subprocess
+import time
+from winpty import PTY
+
+
+class DirectConsole:
+    @classmethod
+    def spawn(cls, argv, cwd=None, env=None, dimensions=(40,160), backend=1):
+        instance=cls()
+        instance.backend=backend
+        instance.pty=PTY(dimensions[1],dimensions[0],backend=backend)
+        environment='\0'.join(f'{k}={v}' for k,v in (env or os.environ).items())+'\0'
+        arguments=' '+subprocess.list2cmdline(argv[1:]) if len(argv)>1 else None
+        if not instance.pty.spawn(argv[0],cmdline=arguments,cwd=cwd,env=environment):
+            raise RuntimeError('PTY spawn failed')
+        instance.pid=instance.pty.pid
+        return instance
+
+    def read(self,size=4096):
+        value=self.pty.read(blocking=False)
+        if not value and self.pty.iseof():
+            raise EOFError('PTY EOF')
+        if not value:
+            time.sleep(.002)
+        return value or ''
+
+    def write(self,text):
+        written=self.pty.write(text)
+        # Installed ConPTY backend returns 0 even after delivering the complete
+        # input (test_conpty_input_contract.py). WinPTY returns a byte count.
+        # This only normalizes the API; command success still needs its reply.
+        if self.backend==0 and written==0:return len(text.encode('utf-8'))
+        return written
+
+    def isalive(self):
+        return self.pty.isalive()
+
+    def wait(self):
+        while self.isalive():
+            time.sleep(.05)
+        return self.pty.get_exitstatus()
+
+    def terminate(self,force=True):
+        # Only the exact child PID created and owned by this adapter.
+        if self.isalive():
+            result=subprocess.run(['taskkill','/PID',str(self.pid),'/F'],check=False,
+                           stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,
+                           creationflags=subprocess.CREATE_NO_WINDOW)
+            if result.returncode and self.isalive():
+                raise RuntimeError('Could not stop owned console process')

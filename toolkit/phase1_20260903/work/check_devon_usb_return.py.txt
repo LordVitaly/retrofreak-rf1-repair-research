@@ -1,0 +1,36 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/check_devon_usb_return.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""After user-confirmed USB-only disconnect: two RAM reads, no execution/write."""
+import hashlib,json,os
+from pathlib import Path
+from ram_console_session import RamConsole
+ROOT=Path(__file__).resolve().parents[1]
+prior=ROOT/'work/pmic_devon_hardware_attempt01'
+old=json.loads((prior/'result.json').read_text())
+assert old['all_pass'] and old['devctrl_after']==4
+expected=(prior/'after.raw').read_bytes()
+assert hashlib.sha256(expected).hexdigest()==old['current_stage_sha256']=='<REDACTED:HASH_OR_BYTES>'
+out=ROOT/'work/pmic_devon_usb_return_attempt01';out.mkdir(exist_ok=False)
+result=dict(all_pass=False,nand_writes=0,pmic_writes=0,ram_writes=0,execution_commands=0,user_reports_led_stayed_on=True,phase='select')
+c=None
+try:
+    c=RamConsole(out)
+    intro=c.wait('Select input');result['intro']=intro
+    assert 'Found 1 rockusb' in intro and 'Vid=0x2207,Pid=0x300a' in intro
+    c.select()
+    p=out/'marker.raw';c.command(f'RS 0x7effff 0x1 {p}')
+    result['marker_exact']=p.read_bytes()==(prior/'marker_after.raw').read_bytes()
+    assert result['marker_exact'],'Bridge marker changed; no write/reset/retry'
+    p=out/'stage.raw';c.command(f'RS 0x7f0000 0xd1 {p}')
+    actual=p.read_bytes()
+    result.update(stage_sha256=hashlib.sha256(actual).hexdigest(),stage_bytes=len(actual),stage_exact=actual==expected)
+    assert result['stage_exact'],'RAM state changed; no write/reset/retry'
+    result.update(all_pass=True,phase='RAM_STATE_PRESERVED_ACROSS_USB_DISCONNECT',pmic_registers_reread=False,normal_boot_verified=False)
+except BaseException as e:result['error']=repr(e);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    with (out/'result.json').open('x',encoding='utf-8') as f:json.dump(result,f,indent=2);f.flush();os.fsync(f.fileno())
+    print(json.dumps(result,indent=2),flush=True)

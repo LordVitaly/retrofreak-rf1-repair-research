@@ -1,0 +1,35 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/system_writer_dry_hardware_attempt01/result.json",
+  "interpretation": "Dry-run with NAND writes disabled; not a system write.",
+  "data": {
+    "all_pass": true,
+    "nand_writes_enabled": false,
+    "system_repair_performed": false,
+    "payload_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "source_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "commands": "<REDACTED:RAW_LOG_OR_IDENTIFIER>",
+    "source_hardware_roundtrip_exact": true,
+    "rd_sent": true,
+    "rd_seconds": 0.046999999998661224,
+    "after_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "bridge_returned": true,
+    "writer_status": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+    "gate_state": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+    "journal": [
+      {
+        "kind": 4,
+        "physical_sector": "0x230000",
+        "status": "0xffffffff",
+        "portion": "0xbc000"
+      }
+    ],
+    "map_changes": [
+      {
+        "logical": 188,
+        "before": 0,
+        "after": 312
+      }
+    ]
+  }
+}

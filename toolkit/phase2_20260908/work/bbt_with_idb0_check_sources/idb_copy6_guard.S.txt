@@ -1,0 +1,93 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/bbt_with_idb0_check_sources/idb_copy6_guard.S
+Role: case_specific_payload_source_not_complete_standalone_firmware
+Original repair session must not be resumed from this public copy.
+
+.syntax unified
+.arm
+.section .text.preinit,"ax",%progbits
+.global idb_preinit
+idb_preinit:
+    ldr r0, =0x6000e000
+    ldr r1, =0x60800000
+    ldr r2, =__addon_size
+1:  ldr r3, [r0], #4
+    str r3, [r1], #4
+    subs r2, r2, #4
+    bne 1b
+    ldr r0, =0x60801000
+    mov r1, #0
+    mov r2, #18
+2:  str r1, [r0], #4
+    subs r2, r2, #1
+    bne 2b
+    ldr r0, =0x60801000
+    ldr r1, =0x31424449
+    str r1, [r0]
+#ifdef RF_BBT_COPY12
+    ldr r1, =0x0c000102
+#else
+    ldr r1, =0x06000103
+#endif
+    str r1, [r0, #4]
+#ifdef RF_BBT_COPY12
+    mov r1, #0xc000
+#else
+    mov r1, #0x6000
+#endif
+    str r1, [r0, #32]
+    dsb sy
+    mov r0, #0
+    mcr p15, 0, r0, c7, c5, 0
+    mcr p15, 0, r0, c7, c5, 6
+    dsb sy
+    isb sy
+    ldr r0, =0x101027fc
+    ldr pc, =0x60000034
+    .ltorg
+.text
+.global native_program
+native_program:
+    push {r0-r11,lr}
+    ldr pc, =0x60003fa8
+.global native_erase
+native_erase:
+    push {r0,r4-r9,lr}
+    ldr pc, =0x60003624
+.global native_write_loop
+native_write_loop:
+    push {r0-r11,lr}
+    ldr pc, =0x6000771c
+.global native_read_loop
+native_read_loop:
+    /* Original first instruction at 0x787c, pinned by builder. */
+    push {r0-r11,lr}
+    ldr pc, =0x60007880
+    .ltorg
+
+.syntax unified
+.arm
+.global read_status
+read_status:
+    push {r4,r5,r6,lr}
+    sub sp,sp,#8
+    ldr r4,[sp,#24]
+    str r4,[sp]
+    ldr ip,=0x60007498
+    blx ip
+    ldr r4,=0x60801000
+    ldr r5,[r4,#64]
+    add r5,r5,#1
+    str r5,[r4,#64]
+    str r0,[r4,#68]
+    add sp,sp,#8
+    pop {r4,r5,r6,pc}
+    .ltorg
+
+.global ecc_instructions
+ecc_instructions:
+    cmp r6,#0xc000
+    mov r0,r4
+    movlo r0,#24
+    nop

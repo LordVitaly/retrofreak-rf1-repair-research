@@ -1,0 +1,80 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/run_system_writer_dry.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""ONE write-disabled hardware rehearsal via current proven RAM bridge. NO DB."""
+import hashlib,json,struct,sys,time
+from pathlib import Path
+from ram_console_session import RamConsole
+assert sys.argv[1:]==['--dry-only-after-ftl-capture']
+ROOT=Path(__file__).resolve().parents[1]
+build=json.loads((ROOT/'outputs/system_writer_dry_payload_build.json').read_text())
+raw=(ROOT/'work/system_writer_dry_payload_v1/dry.raw').read_bytes()
+assert hashlib.sha256(raw).hexdigest()==build['sha256']=='<REDACTED:HASH_OR_BYTES>'
+for file in ('system_writer_dry_handoff_offline.json','system_writer_gates_v3_offline.json','system_dry_original_ftl_v3_init.json'):
+    assert json.loads((ROOT/'outputs'/file).read_text())['all_pass']
+assert not build['nand_writes_enabled'] and build['physical_confirm_stops_preserved']
+for off in (0xbbc8,0xbc90):assert raw[off:off+4]==bytes.fromhex('feffffea')
+donor=(ROOT.parent.parent/'2026-09-01/retro-freak-retrofreak-systemupdate-0-2/work/rkfw_contents/components/system.img').read_bytes()
+assert hashlib.sha256(donor).hexdigest()=='b9ca511124e6c3d9ee2a1e31220f6bf5a858f06d88f9003f5fd7f7e25cf5676a'
+source=donor[2*2097152:3*2097152];assert len(source)==2097152
+baseline=json.loads((ROOT/'work/ftl_capture_hardware_attempt01/result.json').read_text())
+assert baseline['all_pass']
+out=ROOT/'work/system_writer_dry_hardware_attempt01';out.mkdir(exist_ok=False)
+result=dict(all_pass=False,nand_writes_enabled=False,system_repair_performed=False,payload_sha256=build['sha256'],source_sha256=hashlib.sha256(source).hexdigest(),commands=[]);c=None
+def read_window(first,sectors,prefix):
+    data=bytearray()
+    for i,off in enumerate(range(0,sectors,16)):
+        count=min(16,sectors-off);file=out/f'{prefix}{i:03d}.raw'
+        c.command(f'RS {hex(0x800000+first+off)} {hex(count)} {file}')
+        block=file.read_bytes();assert len(block)==count*528
+        assert all(block[j+512:j+528]==bytes(16) for j in range(0,len(block),528))
+        data.extend(b''.join(block[j:j+512] for j in range(0,len(block),528)))
+    return bytes(data)
+try:
+    c=RamConsole(out);c.select();result['commands']=c.commands
+    marker=out/'window_before.raw';c.command(f'RS 0x7efffe 0x1 {marker}')
+    assert marker.read_bytes()==b'RF1WIN01'+struct.pack('<IIII',0x800000,4096,0x63000000,16)+bytes(504)
+    previous=out/'previous.raw';c.command(f'RS 0x7f0000 0xd1 {previous}')
+    assert hashlib.sha256(previous.read_bytes()).hexdigest()==baseline['after_sha256']=='<REDACTED:HASH_OR_BYTES>'
+    for i,off in enumerate(range(0,len(source),8192)):
+        file=out/f'donor{i:03d}.bin'
+        with file.open('xb') as f:f.write(source[off:off+8192])
+        c.command(f'WS {hex(0x800000+off//512)} {file}')
+    assert read_window(0,4096,'donor_read')==source
+    result['source_hardware_roundtrip_exact']=True
+    print('Hardware donor RAM 2097152/2097152 exact; preparing dry-only RD',flush=True)
+    for i,off in enumerate(range(0,110080,8192)):
+        file=out/f'payload{i:02d}.bin'
+        with file.open('xb') as f:f.write(raw[off:min(off+8192,110080)])
+        c.command(f'WS {hex(0x7f0000+off//512)} {file}')
+    before=out/'before.raw';c.command(f'RS 0x7f0000 0xd1 {before}');assert before.read_bytes()==raw
+    start=time.monotonic();result['rd_sent']=True;c.command('RD');result['rd_seconds']=time.monotonic()-start
+    after=out/'after.raw';c.command(f'RS 0x7f0000 0xd1 {after}');data=after.read_bytes()
+    result['after_sha256']=hashlib.sha256(data).hexdigest()
+    assert len(data)==110352 and data[:110080]==raw[:110080] and data[110348:]==bytes(4)
+    assert struct.unpack_from('<II',data,110080)==(0x44475453,0x600982e4)
+    assert struct.unpack_from('<I',data,110344)[0]==0x6009a1f8
+    result['bridge_returned']=True
+    export=out/'result_record.raw';c.command(f'RS 0x7f00d1 0x1 {export}')
+    record=export.read_bytes();assert len(record)==528
+    status=struct.unpack_from('<8I',record);result['writer_status']=[hex(v) for v in status]
+    snapshot=read_window(0,32,'gate_export')
+    with (out/'gate_export.bin').open('xb') as f:f.write(snapshot)
+    state=struct.unpack_from('<8I',snapshot);result['gate_state']=[hex(v) for v in state]
+    assert state[5]<=512
+    journal=[struct.unpack_from('<4I',snapshot,0x1000+i*16) for i in range(state[5])]
+    result['journal']=[dict(kind=a,physical_sector=hex(b),status=hex(c),portion=hex(d)) for a,b,c,d in journal]
+    mapping=list(struct.unpack_from('<1896H',snapshot,0x3000))
+    result['map_changes']=[dict(logical=i,before=a,after=b) for i,(a,b) in enumerate(zip(baseline['logical_to_physical'],mapping)) if a!=b]
+    assert status==(0x31575246,0xbc000,4096,3,0,0xbc000,0xffffffff,0xffffffff)
+    assert state[0]==0 and state[1] in (0xd001,0xd002) and state[2:]==(0x31504752,0xbc000,0xbd000,1,0,0)
+    assert len(journal)==1 and journal[0][0] in (3,4) and journal[0][2:]==(0xffffffff,0xbc000)
+    assert not any(not 186<=v['logical']<=259 for v in result['map_changes'])
+    result['all_pass']=True
+except BaseException as e:result['error']=repr(e);raise
+finally:
+    if c:c.close()
+    with (out/'result.json').open('x') as f:json.dump(result,f,indent=2)
+    print(json.dumps({k:v for k,v in result.items() if k!='commands'},indent=2),flush=True)

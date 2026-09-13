@@ -1,0 +1,58 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/prepare_copy0_writer.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Prepare strictly bounded IDB0 writer from the already exercised IDB5 writer.
+
+Offline file preparation only. Source IDB payload remains byte-for-byte native.
+"""
+from pathlib import Path
+import re
+
+HERE = Path(__file__).resolve().parent
+stage = HERE / 'copy0_sources'
+stage.mkdir(exist_ok=False)
+
+def retarget(text):
+    # Literal tokens only. Never touches runtime addresses or saved 0x5770.
+    return re.sub(r'0x(?:5000|5100|6000)(?=u?\b)',
+                  lambda m: {'0x5000': '0x0000', '0x5100': '0x0100',
+                             '0x6000': '0x1000'}[m[0]], text)
+
+for name in ('idb_copy6_guard.c', 'idb_copy6_guard.S', 'idb_copy6_guard.ld'):
+    text = (HERE / 'copy5_sources' / name).read_text()
+    if not name.endswith('.ld'):
+        text = retarget(text).replace('0x05000101', '0x00000101')
+    if name.endswith('.c'):
+        text = text.replace('d[15]=S[13]; d[16]=S[14]; d[17]=S[15];',
+                            'd[15]=S[13]; d[16]=S[14]; d[17]=S[15]; d[18]=S[16]; d[19]=S[17];')
+        assert text.count('0x5770') == 2
+    if name.endswith('.S'):
+        text = text.replace('mov r2, #16', 'mov r2, #18')
+        tested = (HERE / 'bbt_check_sources' / name).read_text()
+        status = tested[tested.index('.syntax unified', 1):tested.index('.global ecc_instructions')]
+        text += '\n' + status
+    (stage / name).write_text(text)
+
+build = (HERE / 'build_copy5_writer.py').read_text()
+build = build.replace('copy5_sources', 'copy0_sources').replace('copy5_writer_v1', 'copy0_writer_v1')
+build = build.replace('COPY 5 ONCE', 'COPY 0 ONCE').replace('erase_copy5_once', 'erase_copy0_once')
+build = build.replace('physical_block=5', 'physical_block=0').replace("['0x5000','0x5100']", "['0x0000','0x0100']")
+needle = "assert usb[0x528c:0x5290]=="
+at = build.index(needle)
+build = build[:at] + "assert usb[0x796c:0x7970]==struct.pack('<I',0xeb000000|(((0x7498-0x796c-8)//4)&0xffffff))\npatch(0x796c,struct.pack('<I',struct.unpack('<I',branch(0x796c,symbols['read_status']))[0]|0x01000000),'Observe original native read result only; no ECC, main or auxiliary changes')\n" + build[at:]
+build = build.replace("state_address='0x60801000',next=", "state_address='0x60801000',marker_version='0x00000101',read_count_marker_word=18,read_status_marker_word=19,saved_geometry_sector='0x5770',next=")
+(HERE / 'build_copy0_writer.py').write_text(build)
+
+test = (HERE / 'test_copy5_writer.py').read_text()
+test = retarget(test).replace('0x05000101', '0x00000101')
+test = test.replace('copy5_writer_v1', 'copy0_writer_v1').replace('erase_copy5_once', 'erase_copy0_once')
+test = test.replace("fallback=sys.argv[1:]==['--saved-geometry-v10']", "fallback=True")
+test = test.replace("assert sys.argv[1:] in ([],['--saved-flashinfo-v9'],['--saved-geometry-v10'])", "assert sys.argv[1:] in ([],['--saved-geometry-v10'])")
+test = test.replace("('outside5',0x4000,source[:8192],True),('outside7',0x1000,source[:8192],True)", "('adjacent_block1',0x1000,source[:8192],True),('unsigned_wrap',0xfffffff0,source[:8192],True),('after_bootorder',0x0100,source[:8192],True)")
+test = test.replace("('wrong_offset',0x6004", "('wrong_offset',0x0004")
+test = test.replace("report=dict(all_pass=True", "assert calls == [], 'Dispatcher must not touch NAND'\nreport=dict(all_pass=True")
+(HERE / 'test_copy0_writer.py').write_text(test)
+print('Prepared IDB0 sources, builder and ARM test fixture. No hardware access.')

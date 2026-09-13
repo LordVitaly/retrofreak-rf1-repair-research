@@ -1,0 +1,110 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/run_idb_copy6_restore.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Authorized ONE physical IDB copy6 restoration. Requires fresh MaskROM.
+No retries, no other copy/FTL/system writes, no automatic reboot.
+"""
+import hashlib,json,os,struct,sys,time
+from pathlib import Path
+from ram_console_session import RamConsole
+from console_completion import ANSI,completed_response
+ROOT=Path(__file__).resolve().parents[1]
+assert sys.argv[1:]==['--authorized-copy6-saved-geometry-after-fresh-maskrom']
+builddir=ROOT/'work/idb_copy6_guard_v10'
+build=json.loads((builddir/'build.json').read_text());proof=json.loads((builddir/'offline_test.json').read_text())
+PIN='<REDACTED:HASH_OR_BYTES>'
+assert proof['all_pass'] and proof['writer_sha256']==PIN and proof['saved_flashinfo_accepted_by_original_parser_without_nand_calls']
+assert proof['actual_fallback_call_and_native_geometry_continuation_tested']
+for name,info in build['files'].items():
+    data=(builddir/name).read_bytes();assert len(data)==info['bytes'] and hashlib.sha256(data).hexdigest()==info['sha256']
+assert build['files']['writer.bin']['sha256']==PIN
+source=(ROOT/'work/idb_restore_material_v1/copy6.BOOT_ORDER_MAIN512.NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(source).hexdigest()==build['source_sha256']=='<REDACTED:HASH_OR_BYTES>'
+out=ROOT/'work/idb_copy6_restore_hardware_attempt03';out.mkdir(exist_ok=False)
+result=dict(all_pass=False,writer_sha256=PIN,target_physical_block=6,authorized='Latest user explicitly permits NAND write if necessary; single-copy6 scope',erase_control_dispatched=False,program_chunks_dispatched=0,automatic_reset=False,ftl_init=False,phase='preflight')
+c=None
+def save(name,obj):
+    with (out/name).open('x',encoding='utf-8') as f:json.dump(obj,f,indent=2);f.flush();os.fsync(f.fileno())
+def main(raw):
+    assert len(raw)%528==0
+    return b''.join(raw[i:i+512] for i in range(0,len(raw),528))
+def cmd(value,token):
+    assert value in ('RID','RFI') or value=='DB '+os.path.relpath(builddir/'writer.bin',out)
+    start=len(''.join(c.chunks));c.commands.append(value);c.send_once(value)
+    deadline=time.monotonic()+45
+    while time.monotonic()<deadline:
+        text=''.join(c.chunks);response=completed_response(text,start,token)
+        if response is not None:return response
+        plain=ANSI.sub('',text[start:])
+        if 'Error:' in plain and 'Rockusb>' in plain:raise RuntimeError(plain)
+        if c.done.is_set():break
+        time.sleep(.005)
+    raise RuntimeError('Missing command completion; no retry: '+value)
+def rs(name,sector,count):
+    assert (sector==0x7effff and count==1) or (0<=sector<0x12000 and 0<count<=4096 and sector+count<=0x12000)
+    path=out/(name+'.raw');assert not path.exists()
+    c.command(f'RS {hex(sector)} {hex(count)} {path}')
+    raw=path.read_bytes();assert len(raw)==count*528
+    return raw
+def marker(name,phase,programs,next_sector,erases):
+    raw=rs(name,0x7effff,1);w=list(struct.unpack('<18I',raw[:72]))
+    save(name+'.json',dict(words=w))
+    assert w[0:4]==[0x31424449,0x06000103,phase,0],w
+    assert w[4:10]==[erases,0,programs,0,next_sector,0],w
+    assert w[13:]==[1,build['build_tag'],1,0x5770,1],w
+    return w
+def ws_once(name,sector,filename):
+    assert (sector==0x7f0100 and filename=='erase_copy6_once.bin') or (0x6000<=sector<0x6100 and filename==f'part{sector-0x6000:03d}.main512.bin' and not(sector&15))
+    save(name+'.DISPATCHED_NO_RETRY.json',dict(command='WS',sector=hex(sector),file=filename,sha256=build['files'][filename]['sha256']))
+    if sector==0x7f0100:result['erase_control_dispatched']=True
+    else:result['program_chunks_dispatched']+=1
+    c.command(f'WS {hex(sector)} {builddir/filename}')
+try:
+    c=RamConsole(out);intro=c.wait('Select input');result['intro']=intro
+    assert all(t in intro for t in ('Found 1 rockusb','Maskrom','Vid=0x2207,Pid=0x300a'));c.select()
+    cmd('DB '+os.path.relpath(builddir/'writer.bin',out),'Download boot ok')
+    result['identity']=cmd('RID','2C 44 44 4B A9')
+    result['loaded_marker']=marker('loaded_marker',0,0,0x6000,0)
+    result['flash_info']=cmd('RFI','Flash Info:')
+    assert all(s in result['flash_info'] for s in ('MICRON','4096MB','2048KB','8KB','ECC Bits: 40'))
+    result['phase']='before_read_snapshots'
+    before={}
+    # Below block12 RS addresses BOOT records via a 128-entry low-page table.
+    # Only 512 boot records fit that table; 4096 there would run past it.
+    counts={b:512 if b<12 else 4096 for b in range(18)}
+    for b in range(18):
+        before[b]=main(rs(f'before_block{b:02d}',b*4096,counts[b]))
+    old5=main((ROOT/'work/early_boot_ecc24_attempt01/block05.raw').read_bytes())
+    # Header/native init must still be available before touching any other copy.
+    assert before[5][:28*512]==old5[:28*512],'Copy5 header/init changed; no write'
+    marker('before_erase_marker',0,0,0x6000,0)
+    save('PREWRITE.json',dict(writer_sha256=PIN,source_sha256=build['source_sha256'],protected_main_hashes={str(b):hashlib.sha256(data).hexdigest() for b,data in before.items() if b!=6},target_before_main_sha256=hashlib.sha256(before[6]).hexdigest(),physical_erase_range=['0x6000','0x7000'],boot_order_write_range=['0x6000','0x6100'],no_retry=True))
+    result['phase']='erase_copy6_once'
+    ws_once('erase',0x7f0100,'erase_copy6_once.bin')
+    marker('erased_marker',1,0,0x6000,1)
+    # One read of the intended boot records must show an erased target.
+    assert main(rs('erased_target',0x6000,256))==b'\xff'*(256*512),'Erase readback mismatch; stop without programming'
+    result['phase']='program_copy6'
+    for i in range(0,256,16):
+        ws_once(f'program_{i:03d}',0x6000+i,f'part{i:03d}.main512.bin')
+        marker(f'program_{i:03d}_marker',3 if i==240 else 1,(i+16)//4,0x6000+i+16,1)
+        assert main(rs(f'program_{i:03d}_readback',0x6000+i,16))==source[i*512:(i+16)*512],'Immediate readback mismatch; no retry'
+        print(f'COPY6 records {i}..{i+15}: exact readback, status OK',flush=True)
+    result['phase']='final_target_and_protected_readback'
+    final=main(rs('copy6_final',0x6000,256));assert final==source
+    result['final_target_sha256']=hashlib.sha256(final).hexdigest()
+    protected=[]
+    for b in range(18):
+        if b==6:continue
+        observed=main(rs(f'after_block{b:02d}',b*4096,counts[b]))
+        assert observed==before[b],f'Protected block {b} readout differs; stop, no retry'
+        protected.append(b)
+    result['final_marker']=marker('final_marker',3,64,0x6100,1)
+    result.update(all_pass=True,phase='COPY6_RESTORED_READBACK_EXACT_WAIT_FOR_COLD_NORMAL_BOOT',protected_read_views_exact=protected,protected_view_scope='blocks0..11:512 boot-order records per block; blocks12..17:4096 physical records per block. Not a full physical NAND comparison.',system_not_rewritten=True,physical_erase_calls=1,physical_program_calls=64,normal_boot_verified=False)
+except BaseException as e:
+    result['error']=repr(e);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    save('result.json',result);print(json.dumps(result,indent=2),flush=True)

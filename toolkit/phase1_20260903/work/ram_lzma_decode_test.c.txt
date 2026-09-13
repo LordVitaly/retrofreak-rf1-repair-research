@@ -1,0 +1,55 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/ram_lzma_decode_test.c
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+/* Offline ARM decoder prototype. No peripheral operations or branch to output. */
+#include "LzmaDec.h"
+static unsigned char arena[32768] __attribute__((aligned(8)));
+static int allocated;
+static void *alloc_mem(ISzAllocPtr p, size_t n) {
+    (void)p;
+    if (allocated || n > sizeof(arena)) return 0;
+    allocated = 1;
+    return arena;
+}
+static void free_mem(ISzAllocPtr p, void *q) { (void)p; (void)q; }
+void *memcpy(void *d, const void *s, size_t n) {
+    unsigned char *a = d; const unsigned char *b = s;
+    while (n--) *a++ = *b++;
+    return d;
+}
+void *memset(void *d, int c, size_t n) {
+    unsigned char *a = d; while (n--) *a++ = c; return d;
+}
+void *memmove(void *d, const void *s, size_t n) {
+    unsigned char *a=d; const unsigned char *b=s;
+    if (a < b) return memcpy(d,s,n);
+    while(n) { --n; a[n]=b[n]; } return d;
+}
+static unsigned crc32(const unsigned char *p, unsigned n) {
+    unsigned v=~0u;
+    while(n--) { v ^= *p++; for(unsigned j=0;j<8;j++) v=(v>>1)^(0xedb88320u & (0u-(v&1))); }
+    return ~v;
+}
+__attribute__((section(".text.entry")))
+#ifndef RF_DECODER_ENTRY
+#define RF_DECODER_ENTRY _start
+#endif
+#ifndef RF_PAYLOAD_SIZE
+#define RF_PAYLOAD_SIZE 51974
+#endif
+int RF_DECODER_ENTRY(const unsigned char *src, unsigned len, unsigned char *dst, unsigned expected_crc) {
+    if(len != RF_PAYLOAD_SIZE) return 1;
+    /* Python's fixed default LZMA1 properties: lc=3, lp=0, pb=2, 8MiB dict. */
+    if(src[0]!=0x5d || src[1] || src[2] || src[3]!=0x80 || src[4]) return 2;
+    for(unsigned i=5;i<13;i++) if(src[i]!=0xff) return 3;
+    SizeT out=110080, in=len-13;
+    ELzmaStatus status;
+    ISzAlloc alloc={alloc_mem,free_mem};
+    allocated=0;
+    SRes result=LzmaDecode(dst,&out,src+13,&in,src,5,LZMA_FINISH_END,&status,&alloc);
+    if(result || out!=110080 || in!=len-13 || status!=LZMA_STATUS_FINISHED_WITH_MARK) return 4;
+    if(crc32(dst,out)!=expected_crc) return 5;
+    return 0;
+}

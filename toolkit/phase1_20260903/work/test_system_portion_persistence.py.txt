@@ -1,0 +1,80 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_system_portion_persistence.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Bounded model test of the NEW return/reinitialize-after-portion workflow.
+No device access. Never writes dump files; original FTL, virtual program/erase.
+"""
+import hashlib,json,struct,time
+from emulate_flashboot_overlay import OverlayReplay
+from emulate_flashboot_offline import ROOT,FLASH,FTL,REGS,address
+record=(ROOT/'work/idb_ecc24_parameter_attempt2/block05_page15.raw').read_bytes()[:512]
+donor=(ROOT.parent.parent/'2026-09-01/retro-freak-retrofreak-systemupdate-0-2/work/rkfw_contents/components/system.img').read_bytes()
+assert hashlib.sha256(donor).hexdigest()=='b9ca511124e6c3d9ee2a1e31220f6bf5a858f06d88f9003f5fd7f7e25cf5676a'
+out=ROOT/'outputs/system_portion_persistence_attempt4.json';assert not out.exists()
+def initialize(pages,erased):
+    emu=OverlayReplay(record);emu.allow_statistics_data();emu.allow_zero_length_copy=True
+    assert emu.call(0xa158,0x50f4)==0
+    emu.uc.mem_write(FLASH+0xa0,struct.pack('<H',12));emu.call(0x74e0);emu.dump_mode=True
+    emu.pages=dict(pages);emu.erased=set(erased);emu.enabled=True
+    emu.write_entries.remove(address(0x3b0c))
+    assert emu.call(0x6a24)==0
+    assert emu.call(0x6050,1,instruction_limit=10_000_000,timeout_us=30_000_000)==0
+    return emu
+def read(emu,lba,data):
+    for offset in range(0,len(data),65536):
+        expected=data[offset:offset+65536]
+        emu.uc.mem_write(0x60600000,bytes(x^255 for x in expected))
+        for r,v in zip(REGS[1:],(lba+offset//512,len(expected)//512,0x60600000)):emu.uc.reg_write(r,v)
+        assert emu.call(0x50d4,0,instruction_limit=3_000_000,timeout_us=10_000_000)==0
+        assert bytes(emu.uc.mem_read(0x60600000,len(expected)))==expected,hex(lba+offset//512)
+start=time.monotonic();report=dict(all_pass=False,device_access=False,remap_mode=1,cases=[],scope='Existing exact saved-parameter model, original FTL, virtual NAND; no hardware programming/ECC proof')
+emu=None
+try:
+    emu=initialize({},set())
+    before_map=list(struct.unpack('<1896H',emu.uc.mem_read(FTL+0xd80,3792)))
+    saved=[]
+    for logical in (186,188,231,259):
+        data=donor[(logical-186)*2097152:(logical-185)*2097152]
+        if logical==259:
+            for r,v in zip(REGS[1:],(0x103ff0,16,0x60600000)):emu.uc.reg_write(r,v)
+            assert emu.call(0x50d4,0)==0
+            preserved_tail=bytes(emu.uc.mem_read(0x60601000,4096))
+            report['preserved_tail_sha256']=hashlib.sha256(preserved_tail).hexdigest()
+            data+=preserved_tail
+        operations_start=len(emu.operations)
+        for offset in range(0,len(data),65536):
+            part=data[offset:offset+65536];lba=logical*4096+offset//512
+            report['current_write']={'logical_block':logical,'offset':offset,'lba':hex(lba),'sectors':len(part)//512}
+            emu.uc.mem_write(0x60600000,part)
+            for r,v in zip(REGS[1:],(lba,len(part)//512,0x60600000)):emu.uc.reg_write(r,v)
+            assert emu.call(0x7dcc,0,instruction_limit=3_000_000,timeout_us=10_000_000)==0
+            read(emu,lba,part)
+        operations=emu.operations[operations_start:]
+        pages,erased=dict(emu.pages),set(emu.erased)
+        del emu
+        emu=initialize(pages,erased) # NO previous RAM or FTL context survives.
+        recovery=list(emu.operations)
+        saved.append((logical*4096,data))
+        for lba,expected in saved:read(emu,lba,expected)
+        entry=dict(logical_block=logical,bytes=len(data),immediate_readback_exact=True,reinitialized_readback_exact=True,prior_portions_still_exact=True,recovery_operations=recovery,program_erase_operations=operations)
+        report['cases'].append(entry)
+        print('PASS portion',logical,'bytes',len(data),'restart_ops',len(recovery),flush=True)
+    touched=set(emu.erased)|{p//256 for p in emu.pages}
+    owners={str(b):[i for i,p in enumerate(before_map) if p==b] for b in sorted(touched)}
+    assert all(all(186<=i<=259 for i in own) for own in owners.values())
+    report.update(all_pass=True,baseline_owners_of_touched_blocks=owners,virtual_pages=len(emu.pages),erased_blocks=sorted(emu.erased))
+except BaseException as e:
+    report['error']=repr(e)
+    report['stop']=emu.stopped if emu else None
+    if emu:
+        report['failure_pc']=hex(emu.uc.reg_read(__import__('emulate_flashboot_offline').UC_ARM_REG_PC))
+        report['failure_args']=[hex(emu.uc.reg_read(r)) for r in REGS]
+        report['last_operations']=emu.operations[-12:]
+        report['ftl_header']=bytes(emu.uc.mem_read(FTL,20)).hex()
+    raise
+finally:
+    report['elapsed_seconds']=time.monotonic()-start
+    with out.open('x') as f:json.dump(report,f,indent=2)
+    print(json.dumps({k:v for k,v in report.items() if k!='cases'},indent=2),flush=True)

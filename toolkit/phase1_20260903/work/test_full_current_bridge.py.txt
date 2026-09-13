@@ -1,0 +1,23 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_full_current_bridge.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Bounded delivery test: stop before full FlashBoot entry, not USB emulation."""
+import hashlib,json,struct,sys
+import startup_slice_test_harness as h
+from unicorn.arm_const import UC_ARM_REG_CPSR
+cache_off='--usb-cache-off' in sys.argv
+report=json.loads((h.ROOT/('outputs/usb_cache_off_build.json' if cache_off else 'outputs/capacity_fixed_current_bridge_build.json')).read_text())
+raw=(h.ROOT/'work'/report['payload']).read_bytes()
+assert hashlib.sha256(raw).hexdigest()==report['sha256']
+u=h.machine();u.mem_write(h.STAGE,raw)
+u.reg_write(UC_ARM_REG_CPSR,0xd2);h.SP=0x60022220 # Exact observed masked IRQ caller
+rc,writes=h.call(u,h.symbols['bridge_execute'],ranges=((0x60000000,0x60030000),(0x60800000,0x60802000),(0x61200000,0x61220000),(0x62000000,0x62001000)),stop=0x60000000,budget=18000000)
+assert bytes(u.mem_read(0x60000000,110080))==raw[:110080]
+assert bytes(u.mem_read(0x60000000+110080,188))==bytes(188)
+assert not any(a>=0x10000000 and a<0x60000000 for a,n in writes)
+assert u.reg_read(UC_ARM_REG_CPSR)&0xff==0xd3,hex(u.reg_read(UC_ARM_REG_CPSR))
+result=dict(all_pass=True,payload_sha256=report['sha256'],exact_copy=True,no_bridge_mmio_writes=True,stop='60000000 before FlashBoot entry',guards_checked=report['eight_error_guards_executed_no_writes'],limits=['No peripheral emulation; hardware prefix already proved through600982e4','USB completion requires hardware test; current bridge leaves EOI to original FlashBoot init'])
+with (h.ROOT/('outputs/usb_cache_off_transport.json' if cache_off else 'outputs/full_current_bridge_offline.json')).open('x') as f:json.dump(result,f,indent=2)
+print(json.dumps(result,indent=2))

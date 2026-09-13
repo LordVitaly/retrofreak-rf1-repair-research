@@ -1,0 +1,66 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/emulate_flashboot_logical_reads.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Original logical reader over dump-backed FTL. Missing mapping must stop at write.
+
+All device code runs in Unicorn on the host, with no hardware interface.
+"""
+import hashlib
+import json
+import struct
+from emulate_flashboot_remap import RemapReplay
+from emulate_flashboot_offline import ROOT, FTL, FLASH, REGS
+from native_system_view import NativeSystemView
+
+def main():
+    record=(ROOT/'work/idb_ecc24_parameter_attempt2/block05_page15.raw').read_bytes()[:512]
+    emu=RemapReplay(record)
+    assert emu.call(0xa158,0x50f4)==0
+    emu.uc.mem_write(FLASH+0xa0,struct.pack('<H',12))
+    emu.call(0x74e0)
+    emu.dump_mode=True
+    assert emu.call(0x6a24)==0
+    assert emu.call(0x6050,1,instruction_limit=10_000_000,timeout_us=30_000_000)==0
+    destination=0x60600000
+    reports=[]
+    reference_boot=ROOT/'outputs/boot.from_nand.verified.img'
+    with reference_boot.open('rb') as f: boot_page=f.read(8192)
+    system=NativeSystemView()
+    system.seek(0)
+    system_page=system.read(8192)
+    bad_sector=231*4096+243*16+12
+    system.seek((bad_sector-186*4096)*512)
+    vold_indirect=system.read(1024)
+    cases=[('boot_first_page',6*4096,16,boot_page),
+           ('system_first_page_with_cache',186*4096,16,system_page),
+           ('vold_indirect_block',bad_sector,2,vold_indirect),
+           ('system_missing_mapping_188',188*4096,1,None)]
+    for name,sector,count,expected in cases:
+        emu.uc.mem_write(destination,b'\xa5'*(count*512))
+        for reg,value in zip(REGS[1:],(sector,count,destination)): emu.uc.reg_write(reg,value)
+        start=len(emu.reads)
+        result=None
+        error=None
+        try: result=emu.call(0x50d4,0)
+        except RuntimeError as exc: error=str(exc)
+        data=bytes(emu.uc.mem_read(destination,count*512))
+        item=dict(case=name,logical_sector=sector,count=count,return_value=result,error=error,
+                  stop=emu.stopped,physical_reads=emu.reads[start:],output_sha256=hashlib.sha256(data).hexdigest())
+        if expected is not None:
+            item['matches_independent_nand_view']=data==expected
+            assert result==0 and error is None and data==expected,item
+            if name=='vold_indirect_block':
+                assert data==b'\xff'*1024
+                item['entire_indirect_block_is_ff']=True
+        else:
+            assert emu.stopped and emu.stopped['reason']=='write_or_format_entry',item
+            item['destination_untouched']=data==b'\xa5'*512
+            assert item['destination_untouched']
+        reports.append(item)
+    report=dict(scope='Actual FlashBoot logical read after full map replay; optimistic ECC/read assumption; no device access',tests=reports)
+    with (ROOT/'outputs/flashboot_logical_read_replay.json').open('x') as f: json.dump(report,f,indent=2)
+    print(json.dumps(report,indent=2))
+
+if __name__=='__main__': main()

@@ -1,0 +1,47 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/cache_last_writer/boot_core.c
+Role: case_specific_payload_source_not_complete_standalone_firmware
+Original repair session must not be resumed from this public copy.
+
+/* Fixed complete boot block, source constructed from candidate + fresh backup.
+ * Native FTL owns relocation; every physical operation is separately gated. */
+typedef unsigned int u32;
+typedef unsigned char u8;
+#include "boot_gate.h"
+#include "boot_manifest.h"
+#define SOURCE ((const u8*)0x63000000u)
+#define VERIFY ((u8*)0x63200000u)
+#define STATUS ((volatile u32*)0x6101af10u)
+typedef int (*io_fn)(u32,u32,u32,void*);
+static u32 crc32(const u8 *p,u32 n) {
+ u32 c=~0u;
+ for(u32 i=0;i<n;i++) { c^=p[i]; for(u32 j=0;j<8;j++) c=(c>>1)^((0u-(c&1u))&0xedb88320u); }
+ return ~c;
+}
+__attribute__((used)) int system_write_portion(u32 chip,u32 lba,u32 sectors,u32 source) {
+ GATE->armed=0;
+ STATUS[0]=GATE_TOKEN;STATUS[1]=lba;STATUS[2]=sectors;
+ STATUS[3]=0;STATUS[4]=0;STATUS[5]=0;STATUS[6]=0;
+ if(chip || lba!=TARGET_LBA || sectors!=4096u || source!=0x63000000u) { STATUS[3]=1;return -1; }
+ if(crc32(SOURCE,2097152u)!=SOURCE_CRC) { STATUS[3]=2;return -1; }
+ if(gate_prepare(lba)) { STATUS[3]=8;return -1; }
+ io_fn write=(io_fn)0x60087398u,read=(io_fn)0x600846a0u;
+ for(u32 done=0;done<4096u;done+=128u) {
+  STATUS[5]=lba+done;
+  GATE->armed=GATE_TOKEN;
+  int rc=write(0,lba+done,128u,(void*)(SOURCE+done*512u));
+  GATE->armed=0;
+  if(GATE->fault) rc=-1;
+  STATUS[6]=(u32)rc;
+  if(rc) { STATUS[3]=3;return -1; }
+  for(u32 i=0;i<65536u;i++) VERIFY[i]=(u8)~SOURCE[done*512u+i];
+  rc=read(0,lba+done,128u,VERIFY);
+  if(GATE->fault) rc=-1;
+  STATUS[6]=(u32)rc;
+  if(rc) { STATUS[3]=4;return -1; }
+  for(u32 i=0;i<65536u;i++) if(VERIFY[i]!=SOURCE[done*512u+i]) { STATUS[3]=5;return -1; }
+  STATUS[4]=done+128u;
+ }
+ STATUS[3]=6;return 0;
+}

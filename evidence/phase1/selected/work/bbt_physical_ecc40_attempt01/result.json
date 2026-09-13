@@ -1,0 +1,43 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/bbt_physical_ecc40_attempt01/result.json",
+  "interpretation": "all_pass=true means successful measurement of two DAMAGED BBT copies.",
+  "data": {
+    "all_pass": true,
+    "nand_writes_enabled": false,
+    "reset_commands": 0,
+    "ftl_init": false,
+    "blocks": [
+      {
+        "block": 12,
+        "raw_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "main_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "first_page_main_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "main_differences": 0,
+        "first_main_offsets": [],
+        "metadata_differences": 3,
+        "first_metadata_differences": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+        "first_page_meta": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+        "backup_first_page_meta": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+        "first_page_repeat_exact": true
+      },
+      {
+        "block": 13,
+        "raw_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "main_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "first_page_main_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "main_differences": 0,
+        "first_main_offsets": [],
+        "metadata_differences": 3,
+        "first_metadata_differences": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+        "first_page_meta": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+        "backup_first_page_meta": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+        "first_page_repeat_exact": true
+      }
+    ],
+    "loaded_marker": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+    "flash_info": "<REDACTED:RAW_LOG_OR_IDENTIFIER>",
+    "final_marker": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+    "commands": "<REDACTED:RAW_LOG_OR_IDENTIFIER>"
+  }
+}

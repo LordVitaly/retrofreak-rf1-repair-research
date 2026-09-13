@@ -1,0 +1,14 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/system_writer_core.ld
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+ENTRY(system_write_portion)
+SECTIONS {
+ . = 0x61800000;
+ .text : { *(.text*) *(.rodata*) }
+ .data : { *(.data*) }
+ .bss : { *(.bss*) *(COMMON) }
+ ASSERT(SIZEOF(.data)==0 && SIZEOF(.bss)==0,"No hidden mutable state")
+ /DISCARD/ : { *(.ARM.exidx*) *(.ARM.extab*) *(.comment*) }
+}

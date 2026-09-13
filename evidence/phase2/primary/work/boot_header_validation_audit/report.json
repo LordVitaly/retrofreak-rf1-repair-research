@@ -1,0 +1,126 @@
+{
+  "device_access": false,
+  "original_flashboot_sha256": "ed820d1c51ab4b75b9b6758cfac378732cdfaa9cbc12d7cfe3f24b57c70615f5",
+  "verifier_file_offset": "0x179c4",
+  "verifier_runtime": "0x60096f90",
+  "images": {
+    "stock": {
+      "path": "<EXTERNAL_STAGE_01>\\work\\rkfw_contents\\components\\boot.img",
+      "sha256": "416c84c67be71e89d63530c1902112ebbe54845aca3e377a79506ce5c90b090d",
+      "fields": {
+        "kernel_size": 6971428,
+        "kernel_addr": 1614839808,
+        "ramdisk_size": 1780185,
+        "ramdisk_addr": 1644167168,
+        "second_size": 0,
+        "second_addr": 1626341376,
+        "tags_addr": 1611169792,
+        "page_size": 16384,
+        "ramdisk_offset": 6995968
+      },
+      "stored_id": "<HISTORICAL_HASH_REDACTED>",
+      "computed_id": "<HISTORICAL_HASH_REDACTED>",
+      "python_pass": true,
+      "actual_arm": {
+        "return_code": 1,
+        "elapsed_seconds": 1.954,
+        "return_pc": "0x67fff000",
+        "address_validator_return_code": 0
+      }
+    },
+    "candidate": {
+      "path": "<THREAD_ROOT>\\work\\adb_boot_diagnostic\\boot_early_adb.DIAGNOSTIC_CANDIDATE.img",
+      "sha256": "<HISTORICAL_HASH_REDACTED>",
+      "fields": {
+        "kernel_size": 6971428,
+        "kernel_addr": 1614839808,
+        "ramdisk_size": 1776840,
+        "ramdisk_addr": 1644167168,
+        "second_size": 0,
+        "second_addr": 1626341376,
+        "tags_addr": 1611169792,
+        "page_size": 16384,
+        "ramdisk_offset": 6995968
+      },
+      "stored_id": "<HISTORICAL_HASH_REDACTED>",
+      "computed_id": "<HISTORICAL_HASH_REDACTED>",
+      "python_pass": false,
+      "actual_arm": {
+        "return_code": 0,
+        "elapsed_seconds": 1.906,
+        "return_pc": "0x67fff000",
+        "address_validator_return_code": 0
+      }
+    }
+  },
+  "loader_path": {
+    "format_dispatch_file": "0x17e78",
+    "android_magic_compare_file": "0x17ec4..0x17ed8",
+    "android_load_file": "0x17b78",
+    "address_validator_file": "0x17ae8",
+    "digest_call_file": "0x17c2c",
+    "digest_compare_file": "0x17ab0..0x17adc",
+    "digest_mismatch_file": "0x17c58",
+    "mismatch_message": "SHA ERROR",
+    "mismatch_return_signed": -4,
+    "linux_jump_call_file": "0x17c4c",
+    "linux_jump_function_file": "0x17644",
+    "read_alignment_bytes": 16384,
+    "initial_header_read_bytes": 2048
+  },
+  "digest_parts_in_order": [
+    "kernel[kernel_size]",
+    "kernel_size LE32",
+    "ramdisk[ramdisk_size]",
+    "ramdisk_size LE32",
+    "second[second_size] (current second_size=0)",
+    "second_size LE32",
+    "tags_addr LE32",
+    "page_size LE32",
+    "dt_size+unused 8 bytes",
+    "name 16 bytes",
+    "cmdline 512 bytes"
+  ],
+  "signature_and_crc": {
+    "stock_and_candidate_header_0x400_SIGN_absent": true,
+    "SIGN_branch_file": "0x17ef0..0x17f30",
+    "SIGN_condition": "global enable !=0 AND u32(header+0x400)==0x4e474953",
+    "KRNL_CRC_file": "0x17fa4..0x17fc8",
+    "ANDROID_path_uses_SHA1_not_KRNL_CRC": true
+  },
+  "candidate_correct_id_in_memory_only": {
+    "return_code": 1,
+    "elapsed_seconds": 2.266,
+    "return_pc": "0x67fff000",
+    "address_validator_return_code": 0
+  },
+  "fixed_candidate": {
+    "path": "<THREAD_ROOT>\\work\\boot_header_validation_audit\\candidate_fixed_id.img",
+    "bytes": 8781824,
+    "sha256": "3e9556dc6195a7d6616685f9d58a439c23fe55dbe760ba9254f4d233ba79df0f",
+    "id32": "<HISTORICAL_HASH_REDACTED>",
+    "changed_offsets": [
+      "0x240",
+      "0x241",
+      "0x242",
+      "0x243",
+      "0x245",
+      "0x246",
+      "0x247",
+      "0x248",
+      "0x249",
+      "0x24a",
+      "0x24b",
+      "0x24c",
+      "0x24d",
+      "0x24e",
+      "0x24f",
+      "0x250",
+      "0x251",
+      "0x252",
+      "0x253"
+    ],
+    "all_other_bytes_exact": true
+  },
+  "all_expected_results_pass": true
+}

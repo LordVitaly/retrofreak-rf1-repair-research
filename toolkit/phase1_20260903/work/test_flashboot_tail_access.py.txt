@@ -1,0 +1,68 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_flashboot_tail_access.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Watch the unknown 188-byte relocated tail during known dump-backed FTL paths."""
+import hashlib
+import json
+import struct
+from emulate_flashboot_remap import RemapReplay
+from emulate_flashboot_offline import ROOT,FTL,FLASH,REGS,address,UC_ARM_REG_PC
+from unicorn import UC_HOOK_MEM_READ,UC_HOOK_MEM_WRITE,UC_HOOK_CODE
+candidate=(ROOT/'work/FlashBoot.machine_guards_usb_only.UNPACKAGED_NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(candidate).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+record=(ROOT/'work/idb_ecc24_parameter_attempt2/block05_page15.raw').read_bytes()[:512]
+lo,hi=0x6009a3cc,0x6009a488
+class Replay(RemapReplay):
+    def __init__(self,fill):
+        super().__init__(record)
+        self.write_entries.clear()
+        self.guard_hits={address(o):0 for o in (0x3b0c,0xba10,0xbc1c,0xbd5c,0x7038)}
+        self.uc.mem_write(0x60080000,candidate[0xa34:])
+        self.uc.mem_write(lo,bytes([fill])*(hi-lo))
+        self.tail_access=[]
+        def memory(uc,access,addr,size,value,ctx):
+            if addr<hi and addr+size>lo:
+                self.tail_access.append(dict(access=access,address=hex(addr),size=size,pc=hex(uc.reg_read(UC_ARM_REG_PC))))
+                self.stopped=dict(reason='unknown_tail_access');uc.emu_stop()
+        self.uc.hook_add(UC_HOOK_MEM_READ|UC_HOOK_MEM_WRITE,memory,begin=lo-8,end=hi-1)
+        def fetch(uc,pc,size,ctx):
+            self.tail_access.append(dict(fetch=hex(pc)));self.stopped=dict(reason='unknown_tail_fetch');uc.emu_stop()
+        self.uc.hook_add(UC_HOOK_CODE,fetch,begin=lo,end=hi-1)
+    def code_hook(self,uc,pc,size,ctx):
+        if pc in self.guard_hits:
+            self.guard_hits[pc]+=1
+            if self.guard_hits[pc]==8:
+                self.stopped=dict(reason='machine_write_guard',pc=hex(pc));uc.emu_stop();return
+        super().code_hook(uc,pc,size,ctx)
+
+cases=[]
+for fill in (0,0xa5):
+    emu=Replay(fill)
+    assert emu.call(0xa158,0x50f4)==0
+    emu.uc.mem_write(FLASH+0xa0,struct.pack('<H',12))
+    emu.call(0x74e0);emu.dump_mode=True
+    assert emu.call(0x6a24)==0
+    assert emu.call(0x6050,1,instruction_limit=10000000,timeout_us=30000000)==0
+    mapping=bytes(emu.uc.mem_read(FTL+0xd80,1896*2))
+    reads=[]
+    for sector,count in ((6*4096,16),(186*4096,16),(188*4096,1)):
+        for reg,value in zip(REGS[1:],(sector,count,0x60600000)):emu.uc.reg_write(reg,value)
+        result=None;error=None
+        try:result=emu.call(0x50d4,0)
+        except RuntimeError as exc:error=str(exc)
+        if sector==188*4096:assert emu.stopped and emu.stopped['reason']=='machine_write_guard'
+        else:assert result==0 and not error
+        data=bytes(emu.uc.mem_read(0x60600000,count*512))
+        if sector==6*4096:
+            with (ROOT/'outputs/boot.from_nand.verified.img').open('rb') as f:assert data==f.read(8192)
+        reads.append(dict(lba=sector,count=count,result=result,stop=emu.stopped,data_sha256=hashlib.sha256(data).hexdigest()))
+    assert not emu.tail_access
+    cases.append(dict(fill=fill,tail_access=emu.tail_access,map_sha256=hashlib.sha256(mapping).hexdigest(),reads=reads,physical_read_count=len(emu.reads)))
+    print('PASS tail fill',fill,flush=True)
+assert cases[0]['map_sha256']==cases[1]['map_sha256']
+assert cases[0]['reads']==cases[1]['reads']
+report=dict(candidate_sha256=hashlib.sha256(candidate).hexdigest(),watched=[hex(lo),hex(hi)],cases=cases,device_access=False,limitation='Only saved-info/FtlVarInit/BBT/full remap and selected logical reads. No main/MMIO/USB startup. No observed tail access does not prove globally unused or select BootROM padding.')
+(ROOT/'outputs/flashboot_tail_access_replay.json').write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps(report,indent=2))

@@ -1,0 +1,41 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/prepare_bbt_run.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+from pathlib import Path
+OLD=Path('<EXTERNAL_STAGE_03>');HERE=Path(__file__).resolve().parent
+s=(OLD/'work/run_bbt_copy12_restore.py').read_text()
+s=s.replace('from ram_console_session import RamConsole','sys.path.insert(0,'+repr(str(OLD/'work'))+')\nfrom ram_console_session import RamConsole')
+s=s.replace('ROOT=Path(__file__).resolve().parents[1]','ROOT=Path('+repr(str(OLD))+')\nHERE=Path('+repr(str(HERE))+')')
+s=s.replace("['--authorized-bbt-copy12-fresh-maskrom']","['--fresh-maskrom-confirmed']")
+s=s.replace("builddir=ROOT/'work/bbt_copy12_writer_v2'","builddir=HERE/'bbt_with_idb_check_v1'")
+s=s.replace('<HISTORICAL_HASH_REDACTED>','<HISTORICAL_HASH_REDACTED>')
+s=s.replace("baseline=ROOT/'work/bbt_physical_ecc40_attempt01'","baseline=HERE/'bbt_cold_attempt01'\nassert json.loads((builddir/'adaptive_read_test.json').read_text())['all_pass']\nassert json.loads((HERE/'copy5_restore_attempt01/result.json').read_text())['all_pass']\nsource=(ROOT/'work/idb_restore_material_v1/copy6.BOOT_ORDER_MAIN512.NOT_FOR_UPLOAD.bin').read_bytes()")
+s=s.replace("out=ROOT/'work/bbt_copy12_restore_attempt01'","out=HERE/'bbt_restore_after_copy5_attempt01'")
+s=s.replace("assert (sector,count) in ((0x7effff,1),(0xc000,4096),(0xd000,4096),(0xc000,16))", "assert (sector,count) in ((0x7effff,1),(0xc000,4096),(0xd000,4096),(0xc000,16)) or (0x5000<=sector<0x5100 and count in (1,4,256) and sector+count<=0x5100) or (sector==0x6000 and count==256)")
+s=s.replace("'<18I'","'<20I'").replace('w[15:]==[1,0x5770,1]','w[15:18]==[1,0x5770,1]')
+needle="    before={b:read(f'before_block{b}',b*4096,4096) for b in (12,13)}"
+addition='''    cold5=main(read('copy5_cold_full',0x5000,256))
+    assert cold5[:130048]==source[:130048], 'IDB5 cold persistence failure; no BBT write'
+    result['copy5_cold_padding_differences']=sum(a!=b for a,b in zip(cold5[130048:],source[130048:]))
+    cold6=main(read('copy6_cold_full',0x6000,256))
+    assert cold6[:130048]==source[:130048], 'Protected IDB6 cold change; no BBT write'
+    result['copy5_native_status_checks']=[]
+    prev=marker('before_idb_status',0,0,0)
+    for offset,count in [(i,4) for i in range(0,244,4)]+[(244,1)]:
+        sample=main(read(f'copy5_sector_{offset:03d}',0x5000+offset,count))
+        state=marker(f'copy5_status_{offset:03d}',0,0,0)
+        assert state[18]==prev[18]+1 and state[19]==0, 'IDB5 native read failure; no BBT write'
+        assert sample==source[offset*512:(offset+count)*512], 'IDB5 data mismatch; no BBT write'
+        result['copy5_native_status_checks'].append(dict(offset=offset,count=count,native_return=state[19]))
+        prev=state
+        if offset%32==0:print(f'Cold IDB5 code and native status verified through record {offset+count}',flush=True)
+    result['copy5_cold_code_and_flashinfo_verified']=True
+'''
+assert needle in s;s=s.replace(needle,addition+needle)
+s=s.replace("page=read('immediate_page0',0xc000,16);assert same(page,expected[:8448]),'Immediate page readback mismatch; stop'", "page=read('immediate_page0',0xc000,16);assert same(page,expected[:8448]),'Immediate page readback mismatch; stop'\n    assert marker('immediate_page0_status',3,1,1)[19]==0,'BBT native read failed'")
+s=s.replace("result['final_marker']=marker('final_marker',3,1,1)","assert main(read('copy5_final_full',0x5000,256))[:130048]==source[:130048], 'Protected IDB5 changed'\n    result['final_marker']=marker('final_marker',3,1,1)")
+s=s.replace("if k!='commands'","if k not in ('commands','copy5_native_status_checks')")
+(HERE/'restore_bbt_after_copy5.py').write_text(s)

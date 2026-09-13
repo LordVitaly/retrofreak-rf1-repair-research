@@ -1,0 +1,32 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/check_flashboot_cache_call_edges.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Offline exact-instruction checks, not execution or whole-program safety proof."""
+import hashlib
+import json
+from pathlib import Path
+from capstone import Cs, CS_ARCH_ARM, CS_MODE_ARM
+
+root = Path(__file__).resolve().parents[1]
+data = (root/'work/FlashBoot.packet512.STATIC_ONLY.bin').read_bytes()
+digest = hashlib.sha256(data).hexdigest()
+assert digest == '<REDACTED:HASH_OR_BYTES>'
+decoder = Cs(CS_ARCH_ARM, CS_MODE_ARM)
+edges = {0x6a18:0x5708, 0x5874:0x54c0, 0x55ec:0x5278,
+         0x5610:0x5278, 0x52c0:0x50d4, 0x52e4:0x4fc8,
+         0x513c:0x3bf4, 0x3c80:0x3b0c, 0x3c9c:0x3b0c,
+         0x3b70:0xbc1c, 0x3be4:0xba10}
+checked = []
+for source, target in edges.items():
+    instruction = next(decoder.disasm(data[source:source+4], source))
+    assert instruction.mnemonic == 'bl'
+    assert int(instruction.op_str.removeprefix('#'), 16) == target
+    checked.append(dict(call_file_offset=hex(source), target_file_offset=hex(target)))
+report = dict(loader_sha256=digest, checked_call_edges=checked,
+              scope='Static conditional call edges only; no claim that cache eviction occurs on this NAND',
+              safety_conclusion='Cache recovery must not be classified read-only solely from its immediate read calls. The slot acquisition helper can reach eviction and logical reads with allocation side effects.')
+with (root/'outputs/flashboot_cache_call_edges.json').open('x') as output:
+    json.dump(report, output, indent=2)
+print(json.dumps(report, indent=2))

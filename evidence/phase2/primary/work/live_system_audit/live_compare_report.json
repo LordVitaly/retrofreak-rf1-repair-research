@@ -1,0 +1,489 @@
+{
+  "hardware_access": false,
+  "all_chunks_complete": true,
+  "source_path": "<EXTERNAL_STAGE_01>\\work\\rkfw_contents\\components\\system.img",
+  "source_sha256": "b9ca511124e6c3d9ee2a1e31220f6bf5a858f06d88f9003f5fd7f7e25cf5676a",
+  "source_md5": "04130d8d95d155dc377569b06e750b4b",
+  "live_sha256": "<HISTORICAL_HASH_REDACTED>",
+  "live_md5": "<HISTORICAL_HASH_REDACTED>",
+  "live_matches_root_md5": true,
+  "total_bytes": 155185152,
+  "bad_1KiB_blocks": 8173,
+  "bad_1KiB_bytes": 8369152,
+  "classification": {
+    "mixed": 65,
+    "all_FF": 8108
+  },
+  "ranges": [
+    {
+      "first_fsblock": 1,
+      "last_fsblock": 1,
+      "kind": "mixed",
+      "offset": 1024,
+      "bytes": 1024,
+      "first_ftl_logical_block": 186,
+      "last_ftl_logical_block": 186
+    },
+    {
+      "first_fsblock": 12288,
+      "last_fsblock": 12295,
+      "kind": "mixed",
+      "offset": 12582912,
+      "bytes": 8192,
+      "first_ftl_logical_block": 192,
+      "last_ftl_logical_block": 192
+    },
+    {
+      "first_fsblock": 12296,
+      "last_fsblock": 12793,
+      "kind": "all_FF",
+      "offset": 12591104,
+      "bytes": 509952,
+      "first_ftl_logical_block": 192,
+      "last_ftl_logical_block": 192
+    },
+    {
+      "first_fsblock": 12795,
+      "last_fsblock": 12806,
+      "kind": "all_FF",
+      "offset": 13102080,
+      "bytes": 12288,
+      "first_ftl_logical_block": 192,
+      "last_ftl_logical_block": 192
+    },
+    {
+      "first_fsblock": 12810,
+      "last_fsblock": 12810,
+      "kind": "all_FF",
+      "offset": 13117440,
+      "bytes": 1024,
+      "first_ftl_logical_block": 192,
+      "last_ftl_logical_block": 192
+    },
+    {
+      "first_fsblock": 12813,
+      "last_fsblock": 12816,
+      "kind": "all_FF",
+      "offset": 13120512,
+      "bytes": 4096,
+      "first_ftl_logical_block": 192,
+      "last_ftl_logical_block": 192
+    },
+    {
+      "first_fsblock": 12818,
+      "last_fsblock": 12818,
+      "kind": "all_FF",
+      "offset": 13125632,
+      "bytes": 1024,
+      "first_ftl_logical_block": 192,
+      "last_ftl_logical_block": 192
+    },
+    {
+      "first_fsblock": 12820,
+      "last_fsblock": 12820,
+      "kind": "all_FF",
+      "offset": 13127680,
+      "bytes": 1024,
+      "first_ftl_logical_block": 192,
+      "last_ftl_logical_block": 192
+    },
+    {
+      "first_fsblock": 12825,
+      "last_fsblock": 12826,
+      "kind": "all_FF",
+      "offset": 13132800,
+      "bytes": 2048,
+      "first_ftl_logical_block": 192,
+      "last_ftl_logical_block": 192
+    },
+    {
+      "first_fsblock": 12830,
+      "last_fsblock": 12831,
+      "kind": "all_FF",
+      "offset": 13137920,
+      "bytes": 2048,
+      "first_ftl_logical_block": 192,
+      "last_ftl_logical_block": 192
+    },
+    {
+      "first_fsblock": 12833,
+      "last_fsblock": 12833,
+      "kind": "all_FF",
+      "offset": 13140992,
+      "bytes": 1024,
+      "first_ftl_logical_block": 192,
+      "last_ftl_logical_block": 192
+    },
+    {
+      "first_fsblock": 12835,
+      "last_fsblock": 14327,
+      "kind": "all_FF",
+      "offset": 13143040,
+      "bytes": 1528832,
+      "first_ftl_logical_block": 192,
+      "last_ftl_logical_block": 192
+    },
+    {
+      "first_fsblock": 14328,
+      "last_fsblock": 14335,
+      "kind": "mixed",
+      "offset": 14671872,
+      "bytes": 8192,
+      "first_ftl_logical_block": 192,
+      "last_ftl_logical_block": 192
+    },
+    {
+      "first_fsblock": 18432,
+      "last_fsblock": 18439,
+      "kind": "mixed",
+      "offset": 18874368,
+      "bytes": 8192,
+      "first_ftl_logical_block": 195,
+      "last_ftl_logical_block": 195
+    },
+    {
+      "first_fsblock": 18440,
+      "last_fsblock": 20471,
+      "kind": "all_FF",
+      "offset": 18882560,
+      "bytes": 2080768,
+      "first_ftl_logical_block": 195,
+      "last_ftl_logical_block": 195
+    },
+    {
+      "first_fsblock": 20472,
+      "last_fsblock": 20479,
+      "kind": "mixed",
+      "offset": 20963328,
+      "bytes": 8192,
+      "first_ftl_logical_block": 195,
+      "last_ftl_logical_block": 195
+    },
+    {
+      "first_fsblock": 24576,
+      "last_fsblock": 24583,
+      "kind": "mixed",
+      "offset": 25165824,
+      "bytes": 8192,
+      "first_ftl_logical_block": 198,
+      "last_ftl_logical_block": 198
+    },
+    {
+      "first_fsblock": 24584,
+      "last_fsblock": 26615,
+      "kind": "all_FF",
+      "offset": 25174016,
+      "bytes": 2080768,
+      "first_ftl_logical_block": 198,
+      "last_ftl_logical_block": 198
+    },
+    {
+      "first_fsblock": 26616,
+      "last_fsblock": 26623,
+      "kind": "mixed",
+      "offset": 27254784,
+      "bytes": 8192,
+      "first_ftl_logical_block": 198,
+      "last_ftl_logical_block": 198
+    },
+    {
+      "first_fsblock": 36864,
+      "last_fsblock": 36871,
+      "kind": "mixed",
+      "offset": 37748736,
+      "bytes": 8192,
+      "first_ftl_logical_block": 204,
+      "last_ftl_logical_block": 204
+    },
+    {
+      "first_fsblock": 36872,
+      "last_fsblock": 38873,
+      "kind": "all_FF",
+      "offset": 37756928,
+      "bytes": 2050048,
+      "first_ftl_logical_block": 204,
+      "last_ftl_logical_block": 204
+    },
+    {
+      "first_fsblock": 38875,
+      "last_fsblock": 38876,
+      "kind": "all_FF",
+      "offset": 39808000,
+      "bytes": 2048,
+      "first_ftl_logical_block": 204,
+      "last_ftl_logical_block": 204
+    },
+    {
+      "first_fsblock": 38878,
+      "last_fsblock": 38878,
+      "kind": "all_FF",
+      "offset": 39811072,
+      "bytes": 1024,
+      "first_ftl_logical_block": 204,
+      "last_ftl_logical_block": 204
+    },
+    {
+      "first_fsblock": 38880,
+      "last_fsblock": 38903,
+      "kind": "all_FF",
+      "offset": 39813120,
+      "bytes": 24576,
+      "first_ftl_logical_block": 204,
+      "last_ftl_logical_block": 204
+    },
+    {
+      "first_fsblock": 38904,
+      "last_fsblock": 38911,
+      "kind": "mixed",
+      "offset": 39837696,
+      "bytes": 8192,
+      "first_ftl_logical_block": 204,
+      "last_ftl_logical_block": 204
+    }
+  ],
+  "bad_2MiB_chunks": [
+    {
+      "offset": 0,
+      "logical_ftl_block": 186,
+      "bytes": 2097152,
+      "bad_1k_blocks": 1,
+      "live_all_FF": false,
+      "live_all_zero": false,
+      "live_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "source_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "matches_other_source_offset": null
+    },
+    {
+      "offset": 12582912,
+      "logical_ftl_block": 192,
+      "bytes": 2097152,
+      "bad_1k_blocks": 2031,
+      "live_all_FF": false,
+      "live_all_zero": false,
+      "live_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "source_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "matches_other_source_offset": null
+    },
+    {
+      "offset": 18874368,
+      "logical_ftl_block": 195,
+      "bytes": 2097152,
+      "bad_1k_blocks": 2048,
+      "live_all_FF": false,
+      "live_all_zero": false,
+      "live_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "source_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "matches_other_source_offset": null
+    },
+    {
+      "offset": 25165824,
+      "logical_ftl_block": 198,
+      "bytes": 2097152,
+      "bad_1k_blocks": 2048,
+      "live_all_FF": false,
+      "live_all_zero": false,
+      "live_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "source_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "matches_other_source_offset": null
+    },
+    {
+      "offset": 37748736,
+      "logical_ftl_block": 204,
+      "bytes": 2097152,
+      "bad_1k_blocks": 2045,
+      "live_all_FF": false,
+      "live_all_zero": false,
+      "live_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "source_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "matches_other_source_offset": null
+    }
+  ],
+  "metadata": {
+    "superblock": {
+      "offset": 1024,
+      "bytes": 1024,
+      "exact": false,
+      "live_all_FF": false,
+      "live_all_zero": false,
+      "different_bytes": 58,
+      "live_head32": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "group_descriptors": {
+      "offset": 2048,
+      "bytes": 1024,
+      "exact": true,
+      "live_all_FF": false,
+      "live_all_zero": false,
+      "different_bytes": 0,
+      "live_head32": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "inode225": {
+      "offset": 24532992,
+      "bytes": 128,
+      "exact": true,
+      "live_all_FF": false,
+      "live_all_zero": false,
+      "different_bytes": 0,
+      "live_head32": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "inode234": {
+      "offset": 24534144,
+      "bytes": 128,
+      "exact": true,
+      "live_all_FF": false,
+      "live_all_zero": false,
+      "different_bytes": 0,
+      "live_head32": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "fsblock25585": {
+      "offset": 26199040,
+      "bytes": 1024,
+      "exact": false,
+      "live_all_FF": true,
+      "live_all_zero": false,
+      "different_bytes": 1023,
+      "live_head32": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "fsblock25597": {
+      "offset": 26211328,
+      "bytes": 1024,
+      "exact": false,
+      "live_all_FF": true,
+      "live_all_zero": false,
+      "different_bytes": 1023,
+      "live_head32": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "fsblock28058": {
+      "offset": 28731392,
+      "bytes": 1024,
+      "exact": true,
+      "live_all_FF": false,
+      "live_all_zero": false,
+      "different_bytes": 0,
+      "live_head32": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "fsblock38883": {
+      "offset": 39816192,
+      "bytes": 1024,
+      "exact": false,
+      "live_all_FF": true,
+      "live_all_zero": false,
+      "different_bytes": 1023,
+      "live_head32": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "fsblock38931": {
+      "offset": 39865344,
+      "bytes": 1024,
+      "exact": true,
+      "live_all_FF": false,
+      "live_all_zero": false,
+      "different_bytes": 0,
+      "live_head32": "<HISTORICAL_HASH_REDACTED>"
+    }
+  },
+  "chunks": [
+    {
+      "path": "<THREAD_ROOT>\\work\\live_adb_after_cache\\system_raw\\0.bin",
+      "offset": 0,
+      "bytes": 33554432,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    {
+      "path": "<THREAD_ROOT>\\work\\live_adb_after_cache\\system_raw\\8192.bin",
+      "offset": 33554432,
+      "bytes": 33554432,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    {
+      "path": "<THREAD_ROOT>\\work\\live_adb_after_cache\\system_raw\\16384.bin",
+      "offset": 67108864,
+      "bytes": 33554432,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    {
+      "path": "<THREAD_ROOT>\\work\\live_adb_after_cache\\system_raw\\24576.bin",
+      "offset": 100663296,
+      "bytes": 33554432,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    {
+      "path": "<THREAD_ROOT>\\work\\live_adb_after_cache\\system_raw\\32768.bin",
+      "offset": 134217728,
+      "bytes": 20967424,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    }
+  ],
+  "patterns": [
+    {
+      "logical_ftl_block": 192,
+      "system_relative_byte_offset": 12582912,
+      "system_relative_4KiB_seek": 3072,
+      "bytes": 2097152,
+      "source_path": "<THREAD_ROOT>\\work\\live_system_audit\\logical192.official.bin",
+      "source_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "source_md5": "<HISTORICAL_HASH_REDACTED>",
+      "old_live_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "old_live_md5": "<HISTORICAL_HASH_REDACTED>",
+      "old_first_last_8192_equal": true,
+      "old_interior_all_FF": true,
+      "old_header_magic": "6465790a30333600",
+      "old_first8192_sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    {
+      "logical_ftl_block": 195,
+      "system_relative_byte_offset": 18874368,
+      "system_relative_4KiB_seek": 4608,
+      "bytes": 2097152,
+      "source_path": "<THREAD_ROOT>\\work\\live_system_audit\\logical195.official.bin",
+      "source_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "source_md5": "<HISTORICAL_HASH_REDACTED>",
+      "old_live_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "old_live_md5": "<HISTORICAL_HASH_REDACTED>",
+      "old_first_last_8192_equal": true,
+      "old_interior_all_FF": true,
+      "old_header_magic": "5041524d69020000",
+      "old_first8192_sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    {
+      "logical_ftl_block": 198,
+      "system_relative_byte_offset": 25165824,
+      "system_relative_4KiB_seek": 6144,
+      "bytes": 2097152,
+      "source_path": "<THREAD_ROOT>\\work\\live_system_audit\\logical198.official.bin",
+      "source_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "source_md5": "<HISTORICAL_HASH_REDACTED>",
+      "old_live_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "old_live_md5": "<HISTORICAL_HASH_REDACTED>",
+      "old_first_last_8192_equal": true,
+      "old_interior_all_FF": true,
+      "old_header_magic": "5041524d69020000",
+      "old_first8192_sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    {
+      "logical_ftl_block": 204,
+      "system_relative_byte_offset": 37748736,
+      "system_relative_4KiB_seek": 9216,
+      "bytes": 2097152,
+      "source_path": "<THREAD_ROOT>\\work\\live_system_audit\\logical204.official.bin",
+      "source_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "source_md5": "<HISTORICAL_HASH_REDACTED>",
+      "old_live_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "old_live_md5": "<HISTORICAL_HASH_REDACTED>",
+      "old_first_last_8192_equal": true,
+      "old_interior_all_FF": true,
+      "old_header_magic": "5041524d69020000",
+      "old_first8192_sha256": "<HISTORICAL_HASH_REDACTED>"
+    }
+  ],
+  "superblock_error_summary": {
+    "changed_bytes": 58,
+    "state_before": 1,
+    "state_live": 3,
+    "error_count": 18279,
+    "first_error_inode": 671,
+    "last_error_inode": 225,
+    "first_error_func": "ext4_get_branch",
+    "last_error_func": "ext4_map_blocks",
+    "bad_block_value": "0xffffffff"
+  }
+}

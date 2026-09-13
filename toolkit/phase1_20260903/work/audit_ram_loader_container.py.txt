@@ -1,0 +1,110 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/audit_ram_loader_container.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Offline only: validate the official BOOT container and a read-path patch.
+
+No USB access. No source files are changed. CRC follows Rockchip's
+tools/rockchip/boot_merger.c (next-dev): polynomial 0x04c10db7, init 0.
+"""
+import argparse
+import hashlib
+import struct
+from pathlib import Path
+from capstone import Cs, CS_ARCH_ARM, CS_MODE_ARM
+
+BASE = Path(r'<HOST_PATH>')
+KEY = bytes.fromhex('<REDACTED:HASH_OR_BYTES>')
+
+
+def rc4(data, key=KEY):
+    state = list(range(256))
+    j = 0
+    for i in range(256):
+        j = (j + state[i] + key[i % len(key)]) & 255
+        state[i], state[j] = state[j], state[i]
+    i = j = 0
+    result = bytearray()
+    for b in data:
+        i = (i + 1) & 255
+        j = (j + state[i]) & 255
+        state[i], state[j] = state[j], state[i]
+        result.append(b ^ state[(state[i] + state[j]) & 255])
+    return bytes(result)
+
+
+def crc32(data):
+    table = []
+    for i in range(256):
+        value = i << 24
+        for _ in range(8):
+            value = ((value << 1) ^ (0x04c10db7 if value & 0x80000000 else 0)) & 0xffffffff
+        table.append(value)
+    value = 0
+    for b in data:
+        value = ((value << 8) & 0xffffffff) ^ table[(value >> 24) ^ b]
+    return value
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--output', type=Path, help='Optional NEW PC-side candidate file; never uploads')
+    args = parser.parse_args()
+    original = (BASE / 'components/RetronLoader.bin').read_bytes()
+    assert original[:4] == b'BOOT'
+    header_size = struct.unpack_from('<H', original, 4)[0]
+    stored_crc = struct.unpack_from('<I', original, len(original)-4)[0]
+    actual_crc = crc32(original[:-4])
+    print('container', len(original), 'header', header_size,
+          'sha256', hashlib.sha256(original).hexdigest())
+    print('CRC stored/calculated', hex(stored_crc), hex(actual_crc))
+    assert actual_crc == stored_crc, 'Original CRC must validate before any patch'
+    matches = []
+    for i in range(4):
+        pos = header_size + i * 57
+        record_size, kind = struct.unpack_from('<BI', original, pos)
+        name = original[pos+5:pos+45].decode('utf-16le').split('\0')[0]
+        offset, size, delay = struct.unpack_from('<III', original, pos+45)
+        assert record_size == 57 and offset + size <= len(original)-4
+        print('record', i, kind, name, hex(offset), size, delay)
+        if name == 'rk30usbplug':
+            matches.append((offset, size))
+    assert len(matches) == 1
+    offset, size = matches[0]
+    assert rc4(b'Plaintext', b'Key').hex() == 'bbf316e8d940af0ad3'
+    decoded = rc4(original[offset:offset+size])
+    assert decoded == (BASE / 'rkboot/rk30usbplug').read_bytes()
+    assert rc4(decoded) == original[offset:offset+size]
+    location = 0x74cc
+    before = bytes.fromhex('1800a023')  # movhs r0, #24
+    after = bytes.fromhex('0400a021')   # movhs r0, r4 (saved native ECC)
+    assert decoded[location:location+4] == before
+    patched = bytearray(decoded)
+    patched[location:location+4] = after
+    md = Cs(CS_ARCH_ARM, CS_MODE_ARM)
+    for label, code in [('before', before), ('candidate', after)]:
+        ins = list(md.disasm(code, 0x60000000+location))
+        assert len(ins) == 1
+        print(label, ins[0].mnemonic, ins[0].op_str)
+    candidate = bytearray(original)
+    candidate[offset:offset+size] = rc4(bytes(patched))
+    struct.pack_into('<I', candidate, len(candidate)-4, crc32(candidate[:-4]))
+    differences = [i for i, (a, b) in enumerate(zip(original, candidate)) if a != b]
+    assert all(offset+location <= i < offset+location+4 or i >= len(candidate)-4 for i in differences)
+    assert rc4(candidate[offset:offset+size]) == bytes(patched)
+    print('candidate byte differences', [hex(i) for i in differences])
+    print('candidate sha256', hashlib.sha256(candidate).hexdigest())
+    assert hashlib.sha256(candidate).hexdigest() == '<REDACTED:HASH_OR_BYTES>'
+    if args.output:
+        with args.output.open('xb') as stream:
+            stream.write(candidate)
+        assert args.output.read_bytes() == candidate
+        print('PASS: verified PC-side candidate saved to', args.output.resolve())
+    else:
+        print('PASS: candidate constructed and verified in PC memory only; NOT saved')
+    print('No USB access or device upload performed')
+
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,78 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/system_next32_attempt01/result.json",
+  "interpretation": "32-MiB batch write with verification.",
+  "data": {
+    "all_pass": true,
+    "authorization": "User increased next batch to32MiB conditional on batch2 success; ONLY logical204..219, first error STOP",
+    "batch_mib": 32,
+    "batches": [
+      [
+        204,
+        205,
+        206,
+        207,
+        208,
+        209,
+        210,
+        211,
+        212,
+        213,
+        214,
+        215,
+        216,
+        217,
+        218,
+        219
+      ]
+    ],
+    "range_binding_pass": true,
+    "already_written": [
+      186,
+      187,
+      188,
+      189,
+      190,
+      191,
+      192,
+      193,
+      194,
+      195,
+      196,
+      197,
+      198,
+      199,
+      200,
+      201,
+      202,
+      203
+    ],
+    "write_attempts": [
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210,
+      211,
+      212,
+      213,
+      214,
+      215,
+      216,
+      217,
+      218,
+      219
+    ],
+    "completed_batches": [
+      3
+    ],
+    "executions": {
+      "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+      "original_items": 50
+    },
+    "phase": "NEXT32MIB_VERIFIED_STOP",
+    "current_stage_sha256": "<REDACTED:HASH_OR_BYTES>"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/bbt_copy12_restore_attempt01/result.json",
+  "interpretation": "Copy12 immediate main/meaningful-aux exact and copy13 unchanged; subsequent normal boot failed.",
+  "data": {
+    "all_pass": true,
+    "erase_dispatched": true,
+    "program_dispatched": true,
+    "target_block": 12,
+    "other_writes_authorized": false,
+    "automatic_reboot": false,
+    "ftl_init": false,
+    "writer_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "flash_info": "<REDACTED:RAW_LOG_OR_IDENTIFIER>",
+    "final_marker": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+    "block12_main_and_valid_aux_exact": true,
+    "copy13_main_and_valid_aux_unchanged": true,
+    "erase_calls": 1,
+    "program_calls": 1,
+    "program_erase_return_codes": [
+      0,
+      0
+    ],
+    "normal_boot_verified": false,
+    "phase": "COPY12_RESTORED_NEEDS_SEPARATE_COLD_READ_OR_BOOT",
+    "commands": "<REDACTED:RAW_LOG_OR_IDENTIFIER>"
+  }
+}

@@ -1,0 +1,24 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_ftl_capture.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Add only bounded RAM snapshot to hardware-proven full-map read payload."""
+import hashlib,json,struct,subprocess
+from pathlib import Path
+from ram_artifact import elf_code,fix_crc
+ROOT=Path(__file__).resolve().parents[1];out=ROOT/'work/ftl_capture_v1';out.mkdir(exist_ok=False)
+old=(ROOT/'work/ftl_fullmap_system_read_v1/read.raw').read_bytes()
+assert hashlib.sha256(old).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+elf=out/'capture.elf'
+subprocess.run([str(ROOT/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe'),'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-nostdlib','-DRF_FULLMAP','-DRF_EXPORT_FTL','work/ftl_bridge_read.S','-Wl,-T,work/ftl_bridge_read.ld','-Wl,-e,ftl_bridge_read','-o',str(elf)],cwd=ROOT,check=True)
+code=elf_code(elf.read_bytes(),0x60007040,0x180)
+data=bytearray(old[:110080]);data[0x7040:0x7040+len(code)]=code;fix_crc(data)
+assert all(0x7040<=i<0x7040+len(code) or 0x1e0<=i<0x1e4 for i,(a,b) in enumerate(zip(data,old)) if a!=b)
+for off in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):assert data[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+for off in (0xbbc8,0xbc90):assert data[off:off+4]==bytes.fromhex('feffffea')
+raw=bytes(data)+bytes(272)
+with (out/'capture.raw').open('xb') as f:f.write(raw)
+report=dict(device_access=False,sha256=hashlib.sha256(raw).hexdigest(),parent_sha256=hashlib.sha256(old).hexdigest(),new_code_bytes=len(code),capture_bytes=0xa8000,scope='Original fullmap startup and logical reader unchanged; only RAM state copy before existing return',nand_writes_enabled=False)
+with (ROOT/'outputs/ftl_capture_build.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

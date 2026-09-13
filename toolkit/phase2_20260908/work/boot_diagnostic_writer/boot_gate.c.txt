@@ -1,0 +1,131 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/boot_diagnostic_writer/boot_gate.c
+Role: case_specific_payload_source_not_complete_standalone_firmware
+Original repair session must not be resumed from this public copy.
+
+/* No direct NAND/MMIO here. All original physical calls require validated
+ * context AND a physical block not owned by a other logical block.
+ * Controller failures latch permanently for this portion; never blind retry. */
+#include "boot_gate.h"
+typedef unsigned int u32;
+typedef unsigned short u16;
+typedef unsigned char u8;
+#include "boot_protection.h"
+#include "boot_manifest.h"
+extern int original_program(u32,u32,u32,u32);
+extern int original_erase(u32,u32,u32,u32);
+extern int original_logical(u32,u32,u32,u32);
+extern int original_wrapper(u32,u32,u32,u32);
+static int deny(u32 error) {
+    if(!GATE->fault) GATE->fault=error;
+    GATE->armed=0;
+    return -1;
+}
+static u32 crc_byte(u32 c,u32 b) {
+    c^=b;
+    for(u32 j=0;j<8u;j++) c=(c>>1)^((0u-(c&1u))&0xedb88320u);
+    return c;
+}
+static int protected(u32 block) {
+    return block>=2048u || (DYNAMIC_PROTECTED[block>>3]&(1u<<(block&7u)));
+}
+static int buffer(u32 p,u32 bytes) {
+    return (p>=0x602b3000u && p<=0x603d5000u && bytes<=0x603d5000u-p) ||
+           (p>=0x63000000u && p<=0x63200000u && bytes<=0x63200000u-p);
+}
+static int live(void) {
+    return GATE->ready==0x31504752u && GATE->armed==GATE_TOKEN && !GATE->fault;
+}
+static int journal(u32 kind,u32 sector,u32 status) {
+    if(GATE->operations>=512u) return deny(0x1006u);
+    volatile u32 *record=(volatile u32 *)(0x61702000u+GATE->operations*16u);
+    record[0]=kind;record[1]=sector;record[2]=status;record[3]=GATE->first;
+    GATE->operations++;
+    return 0;
+}
+int gate_prepare(u32 first) {
+    GATE->armed=0;GATE->fault=0;GATE->ready=0;GATE->first=first;GATE->end=first+4096u;
+    GATE->operations=0;GATE->programs=0;GATE->erases=0;
+    if(first!=TARGET_LBA) return deny(0x1001u);
+    const volatile u16 *header=(const volatile u16 *)0x602b3180u;
+    if(header[4]!=16u || header[5]!=4096u || header[6]!=12u || header[7]!=2048u || header[8]!=1896u) return deny(0x1002u);
+    const volatile u16 *map=(const volatile u16 *)0x602b3f00u;
+    for(u32 i=0;i<256u;i++) DYNAMIC_PROTECTED[i]=baseline_protected[i];
+    u32 crc=~0u, target=first/4096u;
+    for(u32 logical=0;logical<1896u;logical++) {
+        u32 p=map[logical];
+        if(p>=2048u) return deny(0x1003u);
+        /* Each invocation protects ALL current other owners, including the
+         * other two candidate blocks after any earlier relocation. */
+        if(p && logical!=target) DYNAMIC_PROTECTED[p>>3]|=1u<<(p&7u);
+        if(logical!=6u && logical!=9u && logical!=10u) {
+            crc=crc_byte(crc,p&255u);crc=crc_byte(crc,p>>8);
+        }
+    }
+    if(~crc!=NON_BOOT_MAP_CRC) return deny(0x1005u);
+    if(!map[target] || protected(map[target])) return deny(0x1004u);
+    GATE->ready=0x31504752u;
+    return 0;
+}
+int gate_logical(u32 chip,u32 lba,u32 count,u32 src) {
+    if(!live() || chip || !count || count>128u || lba<GATE->first || lba>=GATE->end ||
+       count>GATE->end-lba || src!=0x63000000u+(lba-GATE->first)*512u) return deny(0x2001u);
+    int rc=original_logical(chip,lba,count,src);
+    if(GATE->fault) return -1;
+    if(rc) return deny(0x2002u);
+    return 0;
+}
+int gate_wrapper(u32 a,u32 b,u32 c,u32 d) {
+    /* Preserve the previously proven init stub while the writer is inactive. */
+    if(!live()) return -1;
+    int rc=original_wrapper(a,b,c,d);
+    return GATE->fault ? -1 : rc;
+}
+int gate_program(u32 sector,u32 main,u32 spare,u32 flag) {
+    if(!live() || sector>=8388608u || (sector&15u) || protected(sector/4096u) ||
+       (main && !buffer(main,8192u)) || (spare && !buffer(spare,256u)) ||
+       (!main && !spare) || flag>1u || GATE->operations>=512u) return deny(0x3001u);
+#ifdef RF_DRY_RUN
+    journal(3,sector,0xffffffffu);
+    return deny(0xd001u);
+#else
+    int rc=original_program(sector,main,spare,flag);
+    GATE->programs++;
+    journal(1,sector,(u32)rc);
+    if(rc) return deny(0x3002u);
+    return 0;
+#endif
+}
+int gate_erase(u32 sector,u32 out,u32 unused2,u32 unused3) {
+    /* The original wrapper retries if error outptr differs. A refusal or
+     * controller failure writes SAME sector so it cannot silently retry. */
+    if(out && !buffer(out,4u)) return deny(0x4001u);
+    if(!live() || sector>=8388608u || (sector&4095u) || protected(sector/4096u) || GATE->operations>=512u) {
+        if(out) *(volatile u32 *)out=sector;
+        return deny(0x4002u);
+    }
+#ifdef RF_DRY_RUN
+    if(out) *(volatile u32 *)out=sector;
+    journal(4,sector,0xffffffffu);
+    return deny(0xd002u);
+#else
+    int rc=original_erase(sector,out,unused2,unused3);
+    GATE->erases++;
+    journal(2,sector,(u32)rc);
+    if(rc) {
+        if(out) *(volatile u32 *)out=sector;
+        return deny(0x4003u);
+    }
+    return 0;
+#endif
+}
+int gate_copy(u32 a,u32 b,u32 count,u32 d) {
+    (void)a;(void)b;(void)d;
+    if(!count) return -1; /* Proven original zero-count behavior; no operation. */
+    return deny(0x5001u);
+}
+int gate_forbidden(u32 a,u32 b,u32 c,u32 d) {
+    (void)a;(void)b;(void)c;(void)d;
+    return deny(0x5002u);
+}

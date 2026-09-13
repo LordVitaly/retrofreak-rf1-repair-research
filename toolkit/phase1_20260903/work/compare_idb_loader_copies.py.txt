@@ -1,0 +1,34 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/compare_idb_loader_copies.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Independent copy voting diagnostics; no synthesized loader output or NAND writes."""
+from collections import Counter
+import hashlib
+import json
+from pathlib import Path
+root=Path(__file__).resolve().parents[1]
+ref=(root/'work/FlashBoot.packet512.STATIC_ONLY.bin').read_bytes()
+copies=[(root/f'work/IDB_old_block{b:02d}_FlashBoot.CANDIDATE.bin').read_bytes()[:len(ref)] for b in (1,3,5,6)]
+unresolved=[]
+voted=bytearray()
+differences=[]
+for i,values in enumerate(zip(*copies)):
+    value,count=Counter(values).most_common(1)[0]
+    if count<3: unresolved.append(i)
+    voted.append(value)
+    if len(set(values))>1:
+        differences.append(dict(offset=hex(i),values=list(values),reference=ref[i],maximum_agreement=count))
+report=dict(scope='Offline copy comparison only; majority is evidence, not hardware ECC validation',
+            size=len(ref),blocks=[1,3,5,6],
+            all_four_common_differences_from_official=[hex(i) for i in range(len(ref)) if len({d[i] for d in copies})==1 and copies[0][i]!=ref[i]],
+            unresolved_less_than_three_agree=[hex(i) for i in unresolved],
+            majority_sha256=hashlib.sha256(voted).hexdigest(),
+            reference_sha256=hashlib.sha256(ref).hexdigest(),
+            majority_mismatched_bytes=sum(a!=b for a,b in zip(voted,ref)),
+            capacity_table_majority_matches_official=voted[0x1a8ac:0x1a9bc]==ref[0x1a8ac:0x1a9bc],
+            disagreements=differences,
+            warning='No executable consensus image exported. Block16 excluded because simple contiguous extraction does not yield matching code.')
+with (root/'outputs/idb_loader_copy_comparison.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps({k:v for k,v in report.items() if k!='disagreements'},indent=2))

@@ -1,0 +1,9 @@
+{
+  "all_pass": true,
+  "backup_sha256": "<HISTORICAL_HASH_REDACTED>",
+  "write_attempted": true,
+  "partition": "/dev/block/mtdblock6",
+  "system_writes": false,
+  "repair_exit": 1,
+  "verify_exit": 0
+}

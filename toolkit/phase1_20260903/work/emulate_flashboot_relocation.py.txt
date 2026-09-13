@@ -1,0 +1,46 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/emulate_flashboot_relocation.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Execute only original RAM-copy/reset-vector code; no BootROM or MMIO model."""
+import hashlib
+import json
+import struct
+from emulate_flashboot_offline import ROOT,Uc,UC_ARCH_ARM,UC_MODE_ARM,UC_PROT_READ,UC_PROT_WRITE,UC_PROT_EXEC,UC_ARM_REG_PC,UC_ARM_REG_SP
+
+data=(ROOT/'work/FlashBoot.packet512.STATIC_ONLY.bin').read_bytes()
+assert hashlib.sha256(data).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+word=lambda off:struct.unpack_from('<I',data,off)[0]
+vector_source,vector_dest,vector_end=[word(x) for x in (0x2f8,0x2fc,0x300)]
+main_source,main_dest,main_end=[word(x) for x in (0x304,0x308,0x30c)]
+target=word(0x3d8)
+required_source_end=main_source-0x60000000+main_end-main_dest
+padding=required_source_end-len(data)
+assert padding==188
+cases=[]
+for fill in (0,0xa5):
+    uc=Uc(UC_ARCH_ARM,UC_MODE_ARM)
+    uc.mem_map(0x60000000,0x20000,UC_PROT_READ|UC_PROT_EXEC)
+    uc.mem_write(0x60000000,data+bytes([fill])*padding)
+    uc.mem_map(0,0x1000,UC_PROT_READ|UC_PROT_WRITE|UC_PROT_EXEC)
+    uc.mem_map(0x60080000,0x20000,UC_PROT_READ|UC_PROT_WRITE|UC_PROT_EXEC)
+    # Start AFTER the unaudited hardware setup. Run both copies and vector entry.
+    uc.emu_start(0x6000028c,target,timeout=5_000_000,count=500_000)
+    assert uc.reg_read(UC_ARM_REG_PC)==target
+    vectors=bytes(uc.mem_read(vector_dest,vector_end-vector_dest))
+    assert vectors==data[0x310:0xa34]
+    copied=bytes(uc.mem_read(main_dest,main_end-main_dest))
+    assert copied[:len(data)-0xa34]==data[0xa34:]
+    assert copied[-padding:]==bytes([fill])*padding
+    assert uc.reg_read(UC_ARM_REG_SP)==word(0x3dc)+0x58000
+    cases.append(dict(source_tail_fill=fill,entry_pc=hex(target),supervisor_sp=hex(uc.reg_read(UC_ARM_REG_SP)),
+                      known_main_sha256=hashlib.sha256(copied[:-padding]).hexdigest(),
+                      beyond_file_bytes_copied=padding))
+report=dict(scope='Executed original copies and reset-vector stack setup only; no hardware setup or BootROM transfer',
+            vector_source=hex(vector_source),vector_destination=hex(vector_dest),vector_size=vector_end-vector_dest,
+            main_source=hex(main_source),main_destination=hex(main_dest),main_size=main_end-main_dest,
+            file_size=len(data),required_source_extent=required_source_end,
+            tests=cases,limits=['DDR/USB/BootROM handoff untested','188 trailing source bytes not present in decoded file','C-runtime initialization not yet executed','No NAND write guard package or device upload created'])
+with (ROOT/'outputs/flashboot_relocation_replay.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

@@ -1,0 +1,87 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/build_copy0_writer.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+import sys
+sys.path.insert(0,'<EXTERNAL_STAGE_03>\\work')
+"""Build a narrowly gated existing USBplug. Offline only; never opens hardware."""
+import hashlib,json,struct,subprocess,zlib
+from pathlib import Path
+from audit_ram_loader_container import rc4,crc32
+ROOT=Path('<EXTERNAL_STAGE_03>')
+out=Path('<THREAD_ROOT>\\work\\copy0_writer_v1');out.mkdir(exist_ok=False)
+source=(ROOT/'work/idb_restore_material_v1/copy6.BOOT_ORDER_MAIN512.NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(source).hexdigest()=='<HISTORICAL_HASH_REDACTED>'
+erase=(b'RF1 ERASE ONLY PHYSICAL IDB COPY 0 ONCE; PRESERVE ALL OTHERS\0').ljust(512,b'\0')
+pages=[0,1,2,3]+[i for n in range(6,128,4) for i in (n,n+1)]
+assert len(pages)>=65 and pages[60:65]==[118,119,122,123,126]
+crc=[zlib.crc32(source[i:i+2048]) for i in range(0,len(source),2048)]
+tag=zlib.crc32(source)
+# Generated mechanical input tables, not handwritten source edits.
+header='#define ERASE_CRC '+hex(zlib.crc32(erase))+'u\n#define BUILD_TAG '+hex(tag)+'u\n'
+header+='static const u32 page_crc[64]={'+','.join(hex(v)+'u' for v in crc)+'};\n'
+header+='static const u8 low_pages[65]={'+','.join(str(v) for v in pages[:65])+'};\n'
+flashinfo=(ROOT/'work/idb_ecc24_parameter_attempt2/block06_page15.raw').read_bytes()
+assert hashlib.sha256(flashinfo).hexdigest()=='<HISTORICAL_HASH_REDACTED>'
+assert flashinfo==(ROOT/'work/idb_ecc24_parameter_attempt2/block05_page15.raw').read_bytes()
+header+='static const u8 saved_flashinfo[512]={'+','.join(str(v) for v in flashinfo[:512])+'};\n'
+(out/'idb_copy6_crc.h').write_text(header)
+cmd=[str(ROOT/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe'),'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-mfloat-abi=soft','-Oz','-ffreestanding','-fno-builtin','-fno-stack-protector','-ffunction-sections','-fdata-sections','-nostdlib','-g','-I'+str(out),'<THREAD_ROOT>\\work\\copy0_sources\\idb_copy6_guard.c','<THREAD_ROOT>\\work\\copy0_sources\\idb_copy6_guard.S','-Wl,--script=<THREAD_ROOT>\\work\\copy0_sources\\idb_copy6_guard.ld','-Wl,-e,idb_preinit','-o',str(out/'guard.elf')]
+subprocess.run(cmd,cwd=ROOT,check=True)
+elf=(out/'guard.elf').read_bytes();shoff=struct.unpack_from('<I',elf,32)[0];shsize,shnum=struct.unpack_from('<HH',elf,46)
+sections=[struct.unpack_from('<10I',elf,shoff+n*shsize) for n in range(shnum)];symbols={}
+for s in sections:
+    if s[1]!=2:continue
+    st=sections[s[6]];strings=elf[st[4]:st[4]+st[5]]
+    for o in range(s[4],s[4]+s[5],s[9]):
+        name,value,sz,info,other,index=struct.unpack_from('<IIIBBH',elf,o)
+        if name:symbols[strings[name:strings.find(b'\0',name)].decode()]=value
+phoff=struct.unpack_from('<I',elf,28)[0];phsize,phnum=struct.unpack_from('<HH',elf,42)
+segments=[struct.unpack_from('<8I',elf,phoff+n*phsize) for n in range(phnum)]
+segments=[s for s in segments if s[0]==1 and s[4]]
+addon=bytearray(max(s[2]+s[4] for s in segments)-0x60800000)
+for typ,o,va,pa,fs,ms,flags,align in segments:addon[va-0x60800000:va-0x60800000+fs]=elf[o:o+fs]
+assert len(addon)==symbols['__addon_size'] and len(addon)<=4096 and not len(addon)%4
+known=(ROOT/'work/idb_ecc24_reader_v1/reader.bin').read_bytes()
+assert hashlib.sha256(known).hexdigest()=='<HISTORICAL_HASH_REDACTED>'
+h=struct.unpack_from('<H',known,4)[0];pos=h+57;o,n=struct.unpack_from('<II',known,pos+45)
+usb=bytearray(rc4(known[o:o+n]));assert len(usb)==56520
+for at,pinned in [(0x3620,0xe92d43f1),(0x3fa4,0xe92d4fff),(0x7718,0xe92d4fff),(0x787c,0xe92d4fff)]:
+    assert struct.unpack_from('<I',usb,at)[0]==pinned,(hex(at),usb[at:at+4].hex())
+usb.extend(bytes(0xe000-len(usb)));usb.extend(addon);usb.extend(bytes(61440-len(usb)))
+patches=[]
+def branch(at,target,cond=14):
+    delta=target-(0x60000000+at+8);assert delta%4==0 and -(1<<25)<=delta<(1<<25)
+    return struct.pack('<I',(cond<<28)|0x0a000000|((delta//4)&0xffffff))
+def patch(at,data,why):
+    patches.append(dict(offset=hex(at),before=usb[at:at+len(data)].hex(),after=data.hex(),why=why));usb[at:at+len(data)]=data
+assert usb[0x30:0x34].hex()=='64009fe5'
+patch(0x30,branch(0x30,0x6000e000),'Same proved pre-BSS relocation as working RAM bridge')
+for at,name in [(0x3620,'guarded_low_erase'),(0x3fa4,'guarded_low_program'),(0x7528,'guarded_program'),(0x7718,'guarded_write'),(0x787c,'guarded_read')]:patch(at,branch(at,symbols[name]),name)
+assert usb[0x796c:0x7970]==struct.pack('<I',0xeb000000|(((0x7498-0x796c-8)//4)&0xffffff))
+patch(0x796c,struct.pack('<I',struct.unpack('<I',branch(0x796c,symbols['read_status']))[0]|0x01000000),'Observe original native read result only; no ECC, main or auxiliary changes')
+assert usb[0x528c:0x5290]==struct.pack('<I',0xeb000000|(((0x3cfc-0x528c-8)//4)&0xffffff))
+patch(0x528c,struct.pack('<I',struct.unpack('<I',branch(0x528c,symbols['guarded_saved_flashinfo']))[0]|0x01000000),'Only saved FlashInfo for native parser; BL preserves parser return. No NAND write or changed normal read data.')
+assert usb[0x6d7c:0x6d80]==struct.pack('<I',0xeb000000|(((0x4230-0x6d7c-8)//4)&0xffffff))
+patch(0x6d7c,struct.pack('<I',struct.unpack('<I',branch(0x6d7c,symbols['guarded_saved_geometry']))[0]|0x01000000),'Replace actual destructive geometry autodetect with known FlashInfo through the native parser')
+patch(0x4230,bytes.fromhex('0000e0e31eff2fe1'),'Destructive autodetect entry disabled even if another caller reaches it')
+for at in (0x75ac,0x7614,0x7624):patch(at,bytes.fromhex('0000e0e31eff2fe1'),'Disable native erase wrapper and its retry/adjacent fallback')
+dispatch=bytearray();allowed={0:0x18d0,1:0x18d8,4:0x18f0,5:0x18f8,0x1a:0x1908,0x1b:0x1928}
+for op,dest in allowed.items():
+    dispatch.extend(struct.pack('<I',0xe3500000|op));dispatch.extend(branch(0x1850+len(dispatch),0x60000000+dest,0))
+dispatch.extend(branch(0x1850+len(dispatch),0x600018bc));dispatch.extend(bytes.fromhex('00f020e3')*((0x18bc-0x1850-len(dispatch))//4))
+assert len(dispatch)==0x6c
+patch(0x1850,dispatch,'Only identity/read/gated WS; EB, UL, format, logical writes and reset disallowed')
+container=bytearray(known[:-4]);newoff=len(container);container.extend(rc4(usb));struct.pack_into('<II',container,pos+45,newoff,len(usb));container.extend(struct.pack('<I',crc32(container)))
+for i in (0,2,3):
+    p=h+57*i;a,s=struct.unpack_from('<II',known,p+45)
+    assert container[p:p+57]==known[p:p+57] and container[a:a+s]==known[a:a+s]
+files={'writer.bin':container,'usbplug.bin':usb,'addon.bin':addon,'erase_copy0_once.bin':erase}
+for i in range(0,256,16):files[f'part{i:03d}.main512.bin']=source[i*512:(i+16)*512]
+for name,data in files.items():
+    with (out/name).open('xb') as f:f.write(data)
+report=dict(build_only=True,device_access=False,ready_to_write=False,files={name:dict(bytes=len(data),sha256=hashlib.sha256(data).hexdigest()) for name,data in files.items()},addon_bytes=len(addon),symbols=symbols,patches=patches,build_tag=tag,source_sha256=hashlib.sha256(source).hexdigest(),physical_block=0,pages=pages[:64],native_program_calls=64,erase_calls=1,marker_sector='0x7effff',erase_control_sector='0x7f0100',write_sector_range=['0x0000','0x0100'],state_address='0x60801000',marker_version='0x00000101',read_count_marker_word=18,read_status_marker_word=19,saved_geometry_sector='0x5770',next='Bounded actual ARM wrapper test including error/negative cases; fresh MaskROM required before this different USBplug can be installed')
+with (out/'build.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps({k:v for k,v in report.items() if k not in ('symbols','patches','files')},indent=2));print('writer',report['files']['writer.bin'])

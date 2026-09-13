@@ -1,0 +1,27 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/export_verified_nand_flashboot.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Assemble from two acquisitions of the SAME physical copy; no oracle fill."""
+import hashlib
+import json
+from pathlib import Path
+from idb_ecc24_targeted_read import decode_page
+root=Path(__file__).resolve().parents[1]
+ref=(root/'work/FlashBoot.packet512.STATIC_ONLY.bin').read_bytes()
+rows=[]
+for b in (3,6):
+    prior=root/f'work/IDB_old_block{b:02d}_FlashBoot.CANDIDATE.bin'
+    fresh=root/f'work/idb_ecc24_targeted_attempt1/block{b:02d}_page15.raw'
+    d=prior.read_bytes()[:0x1a800]+decode_page(fresh.read_bytes())[:1536]
+    assert len(d)==110080 and d==ref
+    out=root/f'outputs/FlashBoot.from_NAND_block{b:02d}.verified_STATIC_ONLY.bin'
+    with out.open('xb') as f:f.write(d)
+    rows.append(dict(block=b,sha256=hashlib.sha256(d).hexdigest(),bytes=len(d),
+                     prefix_source=str(prior),prefix_bytes=0x1a800,
+                     tail_source=str(fresh),tail_bytes=1536,
+                     source_sessions_differ=True,official_used_only_for_equality_check=True))
+with (root/'outputs/verified_nand_flashboot_provenance.json').open('x') as f:
+    json.dump(dict(scope='Static artifacts only; no NAND writes or executable upload',copies=rows),f,indent=2)
+print(json.dumps(rows,indent=2))

@@ -1,0 +1,46 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/prepare_header_secondary_host.py
+Role: historical_unexecuted_superseded_boot1028
+Original repair session must not be resumed from this public copy.
+
+"""Offline-only fixed1028 writer host; verified fullmap read, fresh map baselines."""
+from pathlib import Path
+import py_compile
+p=Path(__file__).resolve().parent
+s=(p/'run_boot_header_repair.py').read_text()
+def replace(old,new):
+    global s
+    assert old in s,old
+    s=s.replace(old,new)
+replace('physical == 22','physical == 1028')
+replace("build = HERE / 'boot_header_repair'", "build = HERE / 'boot_header_secondary'")
+replace('<HISTORICAL_HASH_REDACTED>','PENDING_SECONDARY_FINAL_MANIFEST_NO_HARDWARE')
+replace('boot_header_cold_backup_attempt01','boot_header_secondary_backup_attempt01')
+replace("assert {22: 6, 25: 9, 26: 10}[physical] == logical", "assert physical == 1028 and logical == 6")
+start=s.index("verify = getjson(HERE / 'boot_visibility_verify/manifest.json')")
+end=s.index("maps = getjson(HERE / 'boot_map_compare/manifest.json')",start)
+s=s[:start]+"""profile = getjson(HERE / 'white_screen_ftl_read/boot_block6.json')
+assert profile['all_pass'] and profile['fullmap_mode'] == 1 and profile['all8guards_2stops_retained']
+assert profile['lba'] == 6*4096 and profile['sectors'] == 4096
+payloads['reopen'] = (HERE / 'white_screen_ftl_read/boot_block6.raw').read_bytes()
+assert sha(payloads['reopen']) == profile['sha256'] == '<HISTORICAL_HASH_REDACTED>'
+"""+s[end:]
+replace('boot_visibility_compare_attempt01','boot_header_map_recheck_attempt01')
+replace("assert before_maps[kind][logical] == (physical if mode == 0 else {22:1028,25:1032,26:1036}[physical])", "assert before_maps[kind][logical] == (22 if mode == 0 else 1028)")
+start=s.index('if physical != 22:')
+end=s.index("statefile = HERE / 'white_screen_read_state.json'",start)
+s=s[:start]+"""primary = getjson(HERE / 'boot_header_block22_attempt01/result.json')
+assert primary['write_launches'] == 1 and primary['immediate_main_and_native_aux_exact'] and primary['reopened_readback_exact']
+assert primary['reopened_readback_sha256'] == sha(source)
+"""+s[end:]
+replace("out = HERE / f'boot_header_block{physical}_attempt01'", "out = HERE / f'boot_header_secondary_block{physical}_attempt01'")
+replace("batch=f'boot_header_block{physical}'", "batch=f'boot_header_secondary_block{physical}'")
+replace('Only physical22; mode1 copy1028 deliberately retains prior header until a separate repair.', 'Only physical1028; primary22 already has corrected header and is denied here.')
+replace('reopening in mode0','reopening in mode1')
+replace('mode0 full read differs','mode1 full read differs')
+replace('mode0 full 2097152-byte readback exact','mode1 full 2097152-byte readback exact')
+t=p/'run_header_secondary_repair.py'
+with t.open('x') as f:f.write(s)
+py_compile.compile(str(t),doraise=True)
+print('Prepared with deliberately unrunnable manifest placeholder: '+str(t))

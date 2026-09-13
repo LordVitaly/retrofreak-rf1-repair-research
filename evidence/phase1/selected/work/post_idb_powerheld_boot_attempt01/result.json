@@ -1,0 +1,47 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/post_idb_powerheld_boot_attempt01/result.json",
+  "interpretation": "Second DEV_ON change from 0 to 4 and post-IDB reset; not a successful HDMI boot.",
+  "data": {
+    "nand_commands": 0,
+    "ftl_init": false,
+    "pmic_write_attempted": true,
+    "normal_reset_sent": true,
+    "phase": "AWAIT_USER_LED_AND_HDMI_OBSERVATION",
+    "pmic_snapshot": {
+      "status": 0,
+      "count": 3,
+      "bus": [
+        0,
+        6,
+        393222,
+        0,
+        6,
+        393222
+      ],
+      "rows": [
+        [
+          63,
+          0,
+          0,
+          27
+        ],
+        [
+          63,
+          0,
+          4,
+          5
+        ],
+        [
+          63,
+          0,
+          4,
+          27
+        ]
+      ]
+    },
+    "devon_verified": true,
+    "console_after_reset": "<REDACTED:RAW_LOG_OR_IDENTIFIER>",
+    "commands": "<REDACTED:RAW_LOG_OR_IDENTIFIER>"
+  }
+}

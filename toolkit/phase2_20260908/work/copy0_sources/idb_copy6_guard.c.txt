@@ -1,0 +1,175 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/copy0_sources/idb_copy6_guard.c
+Role: case_specific_payload_source_not_complete_standalone_firmware
+Original repair session must not be resumed from this public copy.
+
+/* One-copy IDB restoration. Reuse original USB/NAND/page-order code only. */
+typedef unsigned int u32;
+typedef unsigned char u8;
+typedef int (*fn4)(u32,u32,u32,u32);
+typedef int (*fn1)(u32);
+#define G ((volatile u8 *)0x60020e48u)
+#define S ((volatile u32 *)0x60801000u)
+#define TABLE ((volatile u8 *)0x60020dc8u)
+#define MAIN ((volatile u8 *)0x600105c8u)
+#define AUX ((volatile u8 *)0x600205c8u)
+/* magic,version,phase,error,eraseAttempts,eraseRC,programAttempts,programRC,
+   nextSector,lowGate,expectedPhysical,lastPhysical,lastInputCRC */
+extern int native_program(u32,u32,u32,u32);
+extern int native_erase(u32);
+extern int native_write_loop(u32,u32,u32,u32);
+extern int native_read_loop(u32,u32,u32,u32);
+#ifdef RF_BBT_COPY12
+#include "bbt_copy12_source.h"
+#define TARGET_SECTOR 0xc000u
+#else
+#include "idb_copy6_crc.h"
+#define TARGET_SECTOR 0x0000u
+#endif
+static __attribute__((noinline)) int fail(u32 code) { if (!S[3]) S[3]=code; S[9]=0; return -1; }
+static __attribute__((noinline)) int geometry(u32 ecc) {
+    return *(volatile u32 *)G==6 && G[8]==1 && G[9]==0 && G[10]==0 &&
+        G[12]==1 && G[13]==1 && G[14]==1 && G[16]==1 && G[17]==1 &&
+        G[18]==ecc && G[20]==4 && G[21]==16 && G[22]==16 &&
+        *(volatile u32 *)(G+24)==4096 && *(volatile u32 *)(G+28)==4096 &&
+        *(volatile unsigned short *)(G+160)>=12;
+}
+static __attribute__((noinline)) int buffer_ok(u32 p,u32 n) { return p>=0x60000000u && p<=0x60800000u && n<=0x60800000u-p; }
+static __attribute__((noinline)) void fill(volatile u8 *p,u32 n,u8 value) { while(n--) *p++=value; }
+static __attribute__((noinline)) u32 crc(const volatile u8 *p,u32 records) {
+    u32 c=~0u;
+    for(u32 j=0;j<records;j++,p+=528)
+        for(u32 i=0;i<512;i++) { c^=p[i]; for(u32 k=0;k<8;k++) c=(c>>1)^((0u-(c&1u))&0xedb88320u); }
+    return ~c;
+}
+/* Only the existing FlashInfo parser's ONE read call at0x528c is redirected.
+   Regular NAND reads still read NAND. Feed saved board-specific metadata to
+   that unmodified parser; do not enable its destructive auto-detection path. */
+__attribute__((used)) int guarded_saved_flashinfo(u32 physical,u32 buffer,u32 aux,u32 count) {
+    if(S[2] || S[3] || physical!=0x5770 || aux || count!=1 ||
+       !buffer_ok(buffer,512) || S[13]) return -1;
+    volatile u8 *p=(volatile u8 *)buffer;
+    for(u32 i=0;i<512;i++) p[i]=saved_flashinfo[i];
+    S[13]++; S[14]=physical;
+    return 0;
+}
+/* Replace the actual destructive auto-detect CALL at0x6d7c. The original
+   post-detect continuation still configures timing/ECC/page tables normally. */
+__attribute__((used)) int guarded_saved_geometry(void) {
+    if(S[3] || S[2] || S[13] || *(volatile u32 *)G!=6 || G[12]!=1 || G[20]!=4) return fail(0x401);
+    int rc=((fn1)0x60005250u)(0x5770);
+    if(rc || !geometry(40) || S[13]!=1) return fail(0x402);
+    S[15]=1;
+    return 0;
+}
+__attribute__((used)) int guarded_low_erase(u32 physical) {
+    if(S[3] || !geometry(40) || S[2]!=2 || S[9]!=1 || physical!=TARGET_SECTOR || S[4]) return fail(0x101);
+    S[4]++; S[11]=physical;
+    int rc=native_erase(physical); S[5]=(u32)rc;
+    if(rc) return fail(0x102);
+    return 0;
+}
+__attribute__((used)) int guarded_low_program(u32 physical,u32 main,u32 aux,u32 mode) {
+#ifdef RF_BBT_COPY12
+    if(S[3] || !geometry(40) || S[2]!=1 || S[9]!=2 || physical!=0xc000 ||
+       S[4]!=1 || S[5] || S[6] || main!=(u32)MAIN || aux!=(u32)AUX || mode) return fail(0x201);
+#else
+    if(S[3] || !geometry(24) || S[2]!=1 || S[9]!=2 || physical!=S[10] ||
+       physical<0x0000 || physical>=0x1000 || (physical&15) ||
+       main!=(u32)MAIN || aux!=(u32)AUX || mode) return fail(0x201);
+#endif
+    /* Consume the gate before touching NAND: no repeated low-level call. */
+    S[9]=0; S[6]++; S[11]=physical;
+    int rc=native_program(physical,main,aux,0); S[7]=(u32)rc;
+    if(rc) return fail(0x202);
+    return 0;
+}
+__attribute__((used)) int guarded_program(u32 chip,u32 physical,u32 main,u32 aux) {
+#ifdef RF_BBT_COPY12
+    return fail(0x203); /* No boot-order or generic program path. */
+#else
+    if(chip || S[3] || !geometry(40) || S[9]!=2 || physical!=S[10]) return fail(0x203);
+    ((fn1)0x60002284u)(24);
+    int rc=((fn4)0x60003fa4u)(physical,main,aux,0);
+    ((fn1)0x60002284u)(40);
+    return rc;
+#endif
+}
+__attribute__((used)) int guarded_write(u32 chip,u32 sector,u32 buffer,u32 count) {
+    if(chip || !count || count>16 || !buffer_ok(buffer,count*528) || S[3] || !geometry(40)) return fail(0x301);
+#ifdef RF_BBT_COPY12
+    if(buffer<0x600206c8u && buffer+count*528>0x600105c8u) return fail(0x309);
+    if(sector==0x7f0100 && count==1) {
+        if(S[2] || S[4] || S[6] || crc((const u8 *)buffer,1)!=ERASE_CRC) return fail(0x302);
+        S[2]=2; S[9]=1;
+        int rc=((fn1)0x60003620u)(0xc000);
+        S[9]=0;
+        if(rc || S[3] || S[4]!=1) return fail(0x303);
+        S[2]=1; return 0;
+    }
+    if(S[2]!=1 || S[8]!=0xc000 || sector!=0xc000 || count!=16 ||
+       S[4]!=1 || S[5] || S[6] || crc((const u8 *)buffer,16)!=PAGE_CRC) return fail(0x304);
+    fill(MAIN,8192,255); fill(AUX,256,255);
+    for(u32 j=0;j<16;j++) {
+        for(u32 k=0;k<512;k++) MAIN[j*512+k]=((volatile u8 *)buffer)[j*528+k];
+        AUX[j*16]=(u8)bbt_aux[j]; AUX[j*16+1]=(u8)(bbt_aux[j]>>8);
+    }
+    S[10]=0xc000; S[9]=2;
+    int rc=((fn4)0x60003fa4u)(0xc000,(u32)MAIN,(u32)AUX,0);
+    S[9]=0;
+    if(rc || S[3] || S[6]!=1) return fail(0x308);
+    S[8]=0xc010; S[2]=3; return 0;
+#else
+    if(sector==0x7f0100 && count==1) {
+        if(S[2] || S[4] || S[6] || crc((const u8 *)buffer,1)!=ERASE_CRC) return fail(0x302);
+        S[2]=2; S[9]=1;
+        int rc=((fn1)0x60003620u)(0x0000);
+        S[9]=0;
+        if(rc || S[3] || S[4]!=1) return fail(0x303);
+        S[2]=1; return 0;
+    }
+    if(S[2]!=1 || sector!=S[8] || sector<0x0000 || sector>=0x0100 ||
+       count>0x0100-sector || (count&3) || (sector&3)) return fail(0x304);
+    /* Validate entire host chunk before any program operation. */
+    for(u32 j=0;j<count;j+=4) {
+        u32 actual=crc((const u8 *)(buffer+j*528),4);
+        S[12]=actual;
+        if(actual!=page_crc[(sector-0x0000+j)/4]) return fail(0x305);
+    }
+    for(u32 j=0;j<count;j+=4) {
+        u32 index=(S[8]-0x0000)/4, before=S[6];
+        if(TABLE[index]!=low_pages[index]) return fail(0x306);
+        if(index && TABLE[index+1]!=low_pages[index+1]) return fail(0x307);
+        S[10]=0x0000+16u*low_pages[index]; S[9]=2;
+        fill(MAIN,8192,255); fill(AUX,256,255);
+        for(u32 k=0;k<4;k++) fill((volatile u8 *)(buffer+(j+k)*528+512),16,255);
+        /* Original loop copies four main/aux records, sets native link markers,
+           selects the low page and invokes the checked original NAND routine. */
+        int rc=native_write_loop(0,S[8],buffer+j*528,4);
+        if(rc || S[3] || S[9] || S[6]!=before+1) return fail(0x308);
+        S[8]+=4;
+    }
+    if(S[8]==0x0100) S[2]=3;
+    return 0;
+#endif
+}
+__attribute__((used)) int guarded_read(u32 chip,u32 sector,u32 buffer,u32 count) {
+    if(chip || !count || count>4096 || !buffer_ok(buffer,count*528)) return -1;
+    if(sector==0x7effff && count==1) {
+        fill((volatile u8 *)buffer,528,0);
+        volatile u32 *d=(volatile u32 *)buffer;
+        for(u32 i=0;i<13;i++) d[i]=S[i];
+        d[13]=geometry(40); d[14]=BUILD_TAG;
+        d[15]=S[13]; d[16]=S[14]; d[17]=S[15]; d[18]=S[16]; d[19]=S[17];
+        for(u32 i=0;i<176;i++) ((volatile u8 *)buffer)[80+i]=G[i];
+        return 0;
+    }
+#ifdef RF_BBT_COPY12
+    if(sector<0xc000 || sector>=0xe000 || count>0xe000-sector) return -1;
+#else
+    if(sector>=0x12000 || count>0x12000-sector) return -1;
+#endif
+    fill(MAIN,8192,0xa5); fill(AUX,256,0xa5);
+    return native_read_loop(chip,sector,buffer,count);
+}

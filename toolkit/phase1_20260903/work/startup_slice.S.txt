@@ -1,0 +1,44 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/startup_slice.S
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+.syntax unified
+.arm
+.section .before,"ax",%progbits
+.global slice_before
+slice_before:
+    ldr r1, =0x60801010
+    mrc p15, 0, r0, c1, c0, 0
+    str r0, [r1]
+    ldr r2, =0x10080000
+    ldr r3, [r2]
+    str r3, [r1, #4]
+    ldr pc, =0x6000020c
+    .ltorg
+.section .after,"ax",%progbits
+.global slice_after
+slice_after:
+    ldr r1, =0x60801010
+    ldr r2, =0x6101ae00
+    ldr r0, =RF_CUT_PC
+    str r0, [r2, #4]
+    mrc p15, 0, r0, c1, c0, 0
+    str r0, [r2, #12]
+    ldr r0, [r1]
+    str r0, [r2, #8]
+    mcr p15, 0, r0, c1, c0, 0
+    dsb sy
+    isb sy
+    ldr r3, =0x10080000
+    ldr r0, [r3]
+    str r0, [r2, #16]
+    ldr r0, [r1, #4]
+    str r0, [r2, #20]
+    str r0, [r3]
+    dsb sy
+    ldr r0, =0x31475453 /* STG1; written only after state restoration */
+    str r0, [r2]
+    dsb sy
+    ldr pc, =0x60800c00 /* Existing, hardware-tested IRQ-safe return */
+    .ltorg

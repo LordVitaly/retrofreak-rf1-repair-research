@@ -1,0 +1,39 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/build_hardened_bridge.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Offline extra geometry-probe denial; unchanged bridge RAM callbacks."""
+from pathlib import Path
+import sys,struct,json,hashlib
+OLD=Path('<EXTERNAL_STAGE_03>');HERE=Path(__file__).resolve().parent
+sys.path.insert(0,str(OLD/'work'))
+from audit_ram_loader_container import rc4,crc32
+out=HERE/'hardened_bridge_v1';out.mkdir(exist_ok=False)
+prefix='usb_ram_bridge_checkpoint_modefix'
+b=bytearray((OLD/f'work/{prefix}.BOOT.OFFLINE_ONLY.bin').read_bytes())
+assert hashlib.sha256(b).hexdigest()=='<HISTORICAL_HASH_REDACTED>'
+h=struct.unpack_from('<H',b,4)[0];o,n=struct.unpack_from('<II',b,h+57+45)
+usb=bytearray(rc4(b[o:o+n]));original_usb=bytes(usb)
+assert usb[0x4230:0x4238].hex()=='f05f2de9cc6a1fe5'
+reject=bytes.fromhex('0000e0e31eff2fe1');usb[0x4230:0x4238]=reject
+for at in (0x3620,0x3fa4,0x4230,0x7528,0x75ac,0x7614,0x7624):assert usb[at:at+8]==reject
+assert usb[:0x4230]==original_usb[:0x4230] and usb[0x4238:]==original_usb[0x4238:]
+b[o:o+n]=rc4(usb);struct.pack_into('<I',b,len(b)-4,crc32(b[:-4]))
+report=json.loads((OLD/f'outputs/{prefix}_build.json').read_text())
+report['additional_guard']={'offset':'0x4230','before':'f05f2de9cc6a1fe5','after':reject.hex(),'scope':'USB transport startup only; no change to later measured FlashBoot geometry'}
+for suffix,data in (('.BOOT.OFFLINE_ONLY.bin',b),('.USBPLUG.OFFLINE_ONLY.bin',usb),('.guarded_payload.RAM_ONLY.raw',(OLD/f'work/{prefix}.guarded_payload.RAM_ONLY.raw').read_bytes())):
+    name=prefix+suffix;(out/name).write_bytes(data)
+    report['files'][name]={'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()}
+(out/'build.json').write_text(json.dumps(report,indent=2))
+t=(OLD/f'work/test_{prefix}.py').read_text()
+t=t.replace('ROOT=Path(__file__).resolve().parents[1]','ROOT=Path('+repr(str(OLD))+')\nOUT=Path('+repr(str(out))+')')
+t=t.replace("(ROOT/'outputs/usb_ram_bridge_checkpoint_modefix_build.json')","(OUT/'build.json')")
+t=t.replace("(ROOT/'work/usb_ram_bridge_checkpoint_modefix.USBPLUG.OFFLINE_ONLY.bin')","(OUT/'usb_ram_bridge_checkpoint_modefix.USBPLUG.OFFLINE_ONLY.bin')")
+t=t.replace("(ROOT/'work'/name)","(OUT/name)")
+t=t.replace('(0x3620,0x3fa4,0x7528,0x75ac,0x7614,0x7624)','(0x3620,0x3fa4,0x4230,0x7528,0x75ac,0x7614,0x7624)')
+t=t.replace("(ROOT/'outputs/usb_ram_bridge_checkpoint_modefix_offline_tests.json')","(OUT/'offline_test.json')")
+t=t.replace('six_NAND_entry_guards','seven_NAND_entry_guards')
+(HERE/'test_hardened_bridge.py').write_text(t)
+print(report['files'][prefix+'.BOOT.OFFLINE_ONLY.bin'])

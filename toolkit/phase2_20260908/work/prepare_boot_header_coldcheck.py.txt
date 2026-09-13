@@ -1,0 +1,47 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/prepare_boot_header_coldcheck.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Prepare uniquely named copies of proven read-only session tools. No hardware."""
+from pathlib import Path
+import hashlib, json, py_compile
+p = Path(__file__).resolve().parent
+changes = {
+ 'bootstrap_boot_visibility.py': ('bootstrap_boot_header.py', [('boot_visibility_original_attempt01','boot_header_original_attempt01')]),
+ 'install_boot_visibility_window.py': ('install_boot_header_window.py', [('boot_visibility_original_attempt01','boot_header_original_attempt01'),('boot_visibility_window_attempt01','boot_header_window_attempt01')]),
+ 'run_boot_physical_backup.py': ('run_boot_header_cold_backup.py', [('boot_physical_backup_attempt01','boot_header_cold_backup_attempt01'),("batch='boot_physical_backup'", "batch='boot_header_cold_backup'")])
+}
+rows=[]
+for parent,(name,replacements) in changes.items():
+    text=(p/parent).read_text()
+    for old,new in replacements:
+        assert old in text
+        text=text.replace(old,new)
+    if parent=='run_boot_physical_backup.py':
+        needle="profiles=[]"
+        insert="""candidate=(HERE/'adb_boot_diagnostic/boot_early_adb.DIAGNOSTIC_CANDIDATE.img').read_bytes()
+assert sha(candidate)=='<HISTORICAL_HASH_REDACTED>'
+original=candidate+original[len(candidate):]
+profiles=[]"""
+        assert text.count(needle)==1
+        text=text.replace(needle,insert)
+        text=text.replace('original main exact','diagnostic main exact').replace('original_main_exact','diagnostic_main_exact').replace('Original boot main differs','Diagnostic boot main differs')
+    if parent=='install_boot_visibility_window.py':
+        needle='    result.update(all_pass=True,window_installed=True,boundary_ram_roundtrip=True,stage_unchanged=True)'
+        insert=needle+"""
+    statefile=HERE/'white_screen_read_state.json';tmp=statefile.with_suffix('.tmp')
+    with tmp.open('w') as f:
+        json.dump(dict(valid=True,ram_path=str(out/'final_stage.raw'),ram_sha256=hashlib.sha256(raw).hexdigest(),last_case='boot_header_fresh_window',batch='boot_header_window'),f,indent=2)
+        f.flush();os.fsync(f.fileno())
+    os.replace(tmp,statefile)"""
+        assert text.count(needle)==1
+        text=text.replace(needle,insert)
+    text="import sys\nif sys.flags.optimize: raise RuntimeError('Assertions must remain enabled')\n"+text
+    dest=p/name
+    with dest.open('x') as f:f.write(text)
+    py_compile.compile(str(dest),doraise=True)
+    rows.append(dict(parent=parent,path=str(dest),sha256=hashlib.sha256(dest.read_bytes()).hexdigest()))
+with (p/'boot_header_coldcheck_tools.json').open('x') as f:json.dump(dict(all_pass=True,hardware_access=False,tools=rows),f,indent=2)
+print(json.dumps(rows,indent=2))

@@ -1,0 +1,116 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/boot_header_secondary/reader/build.py
+Role: historical_unexecuted_superseded_boot1028
+Original repair session must not be resumed from this public copy.
+
+"""Offline fixed physical backup profiles; no device/USB APIs."""
+from pathlib import Path
+import hashlib, importlib.util, json, struct, subprocess, sys, zlib
+sys.dont_write_bytecode=True
+OUT=Path(__file__).resolve().parent
+OLD=Path('<EXTERNAL_STAGE_03>')
+def sha(b): return hashlib.sha256(b).hexdigest()
+hp=OLD/'work/ram_artifact.py'
+assert sha(hp.read_bytes())=='<HISTORICAL_HASH_REDACTED>'
+s=importlib.util.spec_from_file_location('helper',hp);h=importlib.util.module_from_spec(s);s.loader.exec_module(h)
+parent=(OLD/'work/ftl_fullmap_system_read_v1/read.raw').read_bytes()
+assert sha(parent)=='<HISTORICAL_HASH_REDACTED>'
+original=(OLD/'work/FlashBoot.packet512.STATIC_ONLY.bin').read_bytes()
+assert sha(original)=='ed820d1c51ab4b75b9b6758cfac378732cdfaa9cbc12d7cfe3f24b57c70615f5'
+profiles={};codes={}
+for physical in (1028,):
+ for half in (0,1):
+  sector=physical*4096+half*2048; name=f'physical{physical}_half{half}'
+  elf=OUT/(name+'.elf')
+  subprocess.run([str(OLD/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe'),'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-nostdlib','-DPHYSICAL_SECTOR='+str(sector),str(OUT/'read_half.S'),'-Wl,--script='+str(OLD/'work/ftl_bridge_read.ld'),'-Wl,-e,read_half','-o',str(elf)],check=True,cwd=OUT)
+  code=h.elf_code(elf.read_bytes(),0x60007040,0x180);codes[name]=code
+  raw=bytearray(parent[:110080]);raw[0x7040:0x71c0]=code+bytes(0x180-len(code))
+  assert raw[0xb408:0xb40c]==bytes.fromhex('0205a0e3');raw[0xb408:0xb40c]=bytes.fromhex('0101a0e3')
+  h.fix_crc(raw);raw=bytes(raw)+bytes(272)
+  assert len(raw)==110352 and zlib.crc32(raw[:110080])==0xad0dadee
+  assert all(0x7040<=i<0x71c0 or 0x1e0<=i<0x1e4 or 0xb408<=i<0xb40c for i,(x,y) in enumerate(zip(parent,raw)) if x!=y)
+  for off in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):assert raw[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+  for off in (0xbbc8,0xbc90):assert raw[off:off+4]==bytes.fromhex('feffffea')
+  assert raw[0x9b44:0xa158]==original[0x9b44:0xa158]
+  assert raw[0x9258:0x93a8]==original[0x9258:0x93a8]
+  assert raw[0xaf60:0xaf64]==bytes.fromhex('0003a0e1')
+  path=OUT/(name+'.raw');path.write_bytes(raw)
+  profiles[name]=dict(path=str(path),sha256=sha(raw),physical_block=physical,half=half,
+     physical_sector=sector,requested_sectors=2048,pages=128,helper_bytes=len(code),
+     raw528_bytes=1081344,raw528_window_sectors=2112,status_words=128,
+     page_status_window_lba=0x800840,all8guards_2stops_retained=True,
+     original_native_read_and_aux_functions_unchanged=True)
+
+# Same compiled helper except fixed-sector literal; exercise all native calls
+# and memory boundaries on one profile plus first/last error paths.
+first=next(iter(codes));ref=codes[first]
+for name,code in codes.items():
+ assert len(code)==len(ref)
+ differences=[i for i,(x,y) in enumerate(zip(ref,code)) if x!=y]
+ assert len(differences)<=4
+ # For high fixed sectors, LDR literal is expected; decode its exact target.
+ off=0x20;word=struct.unpack_from('<I',code,off)[0]
+ assert word&0xfffff000==0xe59f5000,(name,hex(word))
+ literal=off+8+(word&0xfff)
+ assert struct.unpack_from('<I',code,literal)[0]==profiles[name]['physical_sector']
+ assert all(literal<=i<literal+4 for i in differences)
+sys.path.insert(0,str(OLD/'work/emulator_deps'))
+from unicorn import Uc,UC_ARCH_ARM,UC_MODE_ARM,UC_HOOK_CODE,UC_HOOK_MEM_WRITE
+from unicorn.arm_const import *
+tests=[]
+for fail in (None,0,127):
+ u=Uc(UC_ARCH_ARM,UC_MODE_ARM)
+ for address,size in ((0x60000000,0x400000),(0x61000000,0x20000),(0x63000000,0x200000)):
+  u.mem_map(address,size)
+ u.mem_write(0x60007040,ref);u.mem_write(0x63000000,b'\x69'*0x200000)
+ u.reg_write(UC_ARM_REG_SP,0x603ff000);u.reg_write(UC_ARM_REG_LR,0x601e0000)
+ regs=[UC_ARM_REG_R4,UC_ARM_REG_R5,UC_ARM_REG_R6,UC_ARM_REG_R7,UC_ARM_REG_R8,UC_ARM_REG_R9,UC_ARM_REG_R10,UC_ARM_REG_R11]
+ for i,r in enumerate(regs):u.reg_write(r,0x5a000000+i)
+ calls=[]
+ def native(uc,pc,size,ctx):
+  if pc!=0x600894c0:return
+  index=len(calls);args=[uc.reg_read(r) for r in (UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3)]
+  expected_sector=profiles[first]['physical_sector']+index*16
+  assert args==[expected_sector,0x63110000,0x63112000,16]
+  assert struct.unpack('<I',uc.mem_read(uc.reg_read(UC_ARM_REG_SP),4))[0]==0xffffffff
+  assert bytes(uc.mem_read(0x63110000,8448))==b'\xa5'*8448
+  if index!=fail:
+   uc.mem_write(0x63110000,bytes([index])*8192)
+   for sector in range(16):uc.mem_write(0x63112000+sector*16,struct.pack('<H',(expected_sector+sector)&65535))
+  calls.append(args);uc.reg_write(UC_ARM_REG_R0,0xffffffff if index==fail else 0)
+  # Model native AAPCS volatile-register clobbering.
+  for r in (UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3,UC_ARM_REG_R12):uc.reg_write(r,0xdeaddead)
+  uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR))
+ def writes(uc,access,address,size,value,ctx):
+  assert any(lo<=address and address+size<=hi for lo,hi in
+    ((0x603fef00,0x603ff000),(0x6101af10,0x6101af28),(0x63000000,0x63108200),(0x63110000,0x63112100)))
+ u.hook_add(UC_HOOK_CODE,native);u.hook_add(UC_HOOK_MEM_WRITE,writes)
+ u.emu_start(0x60007040,0x60000100,count=5000000)
+ attempted=128 if fail is None else fail+1
+ assert len(calls)==attempted
+ assert bytes(u.mem_read(0x6101af10,8))==b'RF1PHYS1'
+ assert struct.unpack('<4I',u.mem_read(0x6101af18,16))==(profiles[first]['physical_sector'],2048,0 if fail is None else 0xffffffff,attempted)
+ for index in range(attempted):
+  raw=bytes(u.mem_read(0x63000000+index*8448,8448))
+  for sector in range(16):
+   row=raw[sector*528:(sector+1)*528]
+   if index==fail:assert row==b'\xa5'*528
+   else:
+    assert row[:512]==bytes([index])*512
+    assert row[512:514]==struct.pack('<H',(profiles[first]['physical_sector']+index*16+sector)&65535)
+    assert row[514:]==b'\xa5'*14
+ assert bytes(u.mem_read(0x63000000+attempted*8448,1081344-attempted*8448))==b'\x69'*(1081344-attempted*8448)
+ assert struct.unpack('<'+str(attempted)+'I',u.mem_read(0x63108000,attempted*4))==tuple(0xffffffff if i==fail else 0 for i in range(attempted))
+ assert u.reg_read(UC_ARM_REG_SP)==0x603ff000 and all(u.reg_read(r)==0x5a000000+i for i,r in enumerate(regs))
+ tests.append(dict(failure_page=fail,attempted_pages=attempted,native_calls=len(calls),passed=True))
+manifest=dict(all_pass=True,hardware_access=False,profiles=profiles,tests=tests,
+  source_parent_sha256=sha(parent),read_abi='file9EF4/runtime600894C0(physical_sector, main8192, aux256, 16, fifth=-1); returns0/-1 after original read retry logic',
+  export_status=dict(RS=['0x7f00d1','0x2'],offset=0,magic='RF1PHYS1',fields=['physical_sector','requested_sectors','last_native_rc','attempted_pages']),
+  export_raw='Read window0x800000 for2112 sectors in <=16-sector chunks; remove only OUTER transport16zero bytes. Result is INNER native raw528 records.',
+  export_page_status='Read window0x800840 count1; strip outer16zero bytes to get128 little-endian native return words.',
+  valid_aux='Controller6 read9258 writes only inner auxiliary bytes0/1; other14 are deterministic A5 fill, not NAND/ECC. Writer9258 likewise consumes only bytes0/1.',
+  acceptance='Require status physical sector/count exact, last_rc0, attempted_pages128, all128 page rc0, all raw record auxiliary bytes2..15=A5. Each half has1MiB main; joining half0+half1 gives2MiB main +65536 auxiliary bytes.',
+  limits=['Do not upload as USB loader: RAM stage only on authenticated current bridge/window.','No host retry or NAND write; this script only builds/tests files.','Native9EF4 keeps original internal ECC read retry logic; backup does not expose physical ECC parity.','Original complete mode1 remap init is reused; physical read itself does not consult logical mapping.'])
+(OUT/'manifest.json').write_text(json.dumps(manifest,indent=2))
+print(json.dumps(dict(all_pass=True,helper_bytes=len(ref),profiles=profiles,tests=tests),indent=2))

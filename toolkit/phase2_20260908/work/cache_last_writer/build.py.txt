@@ -1,0 +1,93 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/cache_last_writer/build.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Offline source build. No USB/device imports, no upload or hardware runner."""
+import hashlib,importlib.util,json,struct,subprocess,sys,zlib
+from pathlib import Path
+sys.dont_write_bytecode=True
+OUT=Path(__file__).resolve().parent;HERE=OUT.parents[1]
+OLD=Path('<EXTERNAL_STAGE_03>')
+def sha(b):return hashlib.sha256(b).hexdigest()
+hp=OLD/'work/ram_artifact.py'
+assert sha(hp.read_bytes())=='<HISTORICAL_HASH_REDACTED>'
+s=importlib.util.spec_from_file_location('pure_helper',hp);h=importlib.util.module_from_spec(s);s.loader.exec_module(h)
+if sys.flags.optimize: raise RuntimeError('Assertions required; do not use python -O')
+cfg=json.loads((OUT/'inputs.json').read_text())
+assert cfg['ready'] is True
+assert json.loads(Path(cfg['snapshot_result_path']).read_text())['all_pass']
+assert sha(Path(cfg['snapshot_result_path']).read_bytes())==cfg['snapshot_result_sha256']
+mode0=Path(cfg['early_mode0_snapshot_path']).read_bytes()
+assert sha(mode0)==cfg['early_mode0_snapshot_sha256'] and len(mode0)==0xa8000
+assert set(struct.unpack_from('<24H',mode0,0xf00)).issubset(set(cfg['extra_protected_physical_blocks']))
+snapshot=Path(cfg['snapshot_path']).read_bytes()
+assert sha(snapshot)==cfg['snapshot_sha256'] and len(snapshot)==0xa8000
+image=Path(cfg['image_path']).read_bytes()
+assert sha(image)==cfg['image_sha256'] and len(image)==0x4000000
+allow=set(range(24,56))
+targets=cfg['target_logical_blocks']
+assert targets and len(targets)==len(set(targets)) and len(targets)<=10
+assert all(isinstance(n,int) and n in allow for n in targets)
+mapping=list(struct.unpack_from('<1896H',snapshot,0xf00))
+assert all(p<2048 for p in mapping)
+protected=set(range(24))|set(cfg['extra_protected_physical_blocks'])|{p for n,p in enumerate(mapping) if p and n not in allow}
+assert all(0<=p<2048 for p in protected)
+assert all(mapping[n] not in protected and mapping[n] for n in targets), [(n,mapping[n]) for n in targets]
+mask=bytearray(256)
+for p in protected:mask[p>>3]|=1<<(p&7)
+nonboot=b''.join(struct.pack('<H',p) for n,p in enumerate(mapping) if n not in allow)
+mapcrc=zlib.crc32(nonboot)
+(OUT/'boot_protection.h').write_text('static const unsigned char baseline_protected[256]={'+','.join(map(str,mask))+'};\n#define NON_BOOT_MAP_CRC '+hex(mapcrc)+'u\n')
+# Existing native prologues only; inspect and pin the actual original packet.
+original=(OLD/'work/FlashBoot.packet512.STATIC_ONLY.bin').read_bytes()
+assert sha(original)=='ed820d1c51ab4b75b9b6758cfac378732cdfaa9cbc12d7cfe3f24b57c70615f5'
+for filename in ('system_writer_original.S','system_writer_gated.ld','ftl_bridge_read.ld'):
+ (OUT/filename).write_bytes((OLD/'work'/filename).read_bytes())
+parent=(OLD/'work/ftl_fullmap_system_read_v1/read.raw').read_bytes()
+assert sha(parent)=='<HISTORICAL_HASH_REDACTED>'
+zig=str(OLD/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe')
+report=dict(device_access=False,all_pass=False,hardware_ready=False,source_snapshot_path=str(Path(cfg['snapshot_path']).resolve()),source_snapshot_sha256=sha(snapshot),image_path=str(Path(cfg['image_path']).resolve()),image_sha256=sha(image),inputs_sha256=sha((OUT/'inputs.json').read_bytes()),allowed_logical_blocks=targets,cache_logical_blocks=sorted(allow),non_boot_map_crc32=hex(mapcrc),baseline_protected_blocks=sorted(protected),variants={},cut_pc='0x600982e4',return_pc='0x60000100')
+
+gates={0x3b0c:'gate_wrapper',0x7dcc:'gate_logical',0xba10:'gate_program',0xbc1c:'gate_erase',0xbd5c:'gate_copy',0x1934:'gate_forbidden',0x5b60:'gate_forbidden',0x7038:'gate_forbidden'}
+for block in targets:
+ source=image[(block-24)*2097152:(block-23)*2097152]
+ (OUT/f'block{block}.source.bin').write_bytes(source)
+ d=OUT/f'block{block}';d.mkdir(exist_ok=True)
+ (d/'boot_manifest.h').write_text(f'#define TARGET_LBA {hex(block*4096)}u\n#define SOURCE_CRC {hex(zlib.crc32(source))}u\n')
+ for variant in ('dry','write'):
+  elf=d/(variant+'.elf')
+  flags=[zig,'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-mfloat-abi=soft','-Oz','-g','-ffreestanding','-fno-builtin','-fno-stack-protector','-ffunction-sections','-nostdlib','-I'+str(d),'-I'+str(OUT)]
+  if variant=='dry':flags+=['-DRF_DRY_RUN']
+  subprocess.run(flags+[str(OUT/'boot_core.c'),str(OUT/'boot_gate.c'),str(OUT/'system_writer_original.S'),'-Wl,-T,'+str(OUT/'system_writer_gated.ld'),'-Wl,-e,system_write_portion','-o',str(elf)],check=True,cwd=OUT)
+  code=h.elf_code(elf.read_bytes(),0x61800000,0x1300);syms=h.symbols(elf.read_bytes())
+  assert len(code)%4==0
+  for symbol,off in [('original_program',0xba10),('original_erase',0xbc1c),('original_logical',0x7dcc),('original_wrapper',0x3b0c)]:
+   at=syms[symbol]-0x61800000;assert code[at:at+8]==original[off:off+8]
+  (d/(variant+'.core.bin')).write_bytes(code)
+  helf=d/(variant+'.handoff.elf')
+  subprocess.run([zig,'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-g','-nostdlib','-DCORE_BYTES='+str(len(code)),'-DTARGET_LBA='+hex(block*4096),str(OUT/'handoff.S'),'-Wl,-T,'+str(OUT/'ftl_bridge_read.ld'),'-Wl,-e,writer_before','-o',str(helf)],check=True,cwd=OUT)
+  helper=h.elf_code(helf.read_bytes(),0x60007040,0x180);hs=h.symbols(helf.read_bytes())
+  data=bytearray(parent[:110080]);data[0x2800:0x2800+len(code)]=code;data[0x7040:0x71c0]=helper+bytes(0x180-len(helper))
+  assert data[0xb408:0xb40c]==bytes.fromhex('0205a0e3');data[0xb408:0xb40c]=bytes.fromhex('0101a0e3')
+  patches={4:h.branch(0x60000004,hs['writer_before']),0x18d18:h.branch(0x600982e4,hs['writer_after'])}
+  for off,name in gates.items():
+   assert data[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+   patches[off]=h.branch(0x60080000+off-0xa34,syms[name])
+  if variant=='write':
+   for off in (0xbbc8,0xbc90):patches[off]=struct.unpack_from('<I',original,off)[0]
+  for off,word in patches.items():struct.pack_into('<I',data,off,word)
+  h.fix_crc(data);raw=bytes(data)+bytes(272)
+  allowed=[(4,8),(0x1e0,0x1e4),(0x2800,0x2800+len(code)),(0x7040,0x71c0),(0xb408,0xb40c),(0x18d18,0x18d1c)]+[(p,p+4) for p in patches]
+  assert all(any(a<=i<b for a,b in allowed) for i,(x,y) in enumerate(zip(parent,raw)) if x!=y)
+  assert raw[0xaf60:0xaf64]==bytes.fromhex('0003a0e1')
+  assert zlib.crc32(raw[:110080])==0xad0dadee and len(raw)==110352 and raw[-272:]==bytes(272)
+  assert all(raw[o+4:o+8]==bytes.fromhex('1eff2fe1') for o in gates)
+  for off in (0xbbc8,0xbc90):assert raw[off:off+4]==(original[off:off+4] if variant=='write' else bytes.fromhex('feffffea'))
+  for off in (0x6ae8,0x6b88):assert raw[off:off+4]==parent[off:off+4]
+  rp=d/(variant+'.raw');rp.write_bytes(raw)
+  report['variants'][f'{block}_{variant}']=dict(payload=str(rp),sha256=sha(raw),source_path=str(OUT/f'block{block}.source.bin'),source_sha256=sha(source),source_crc32=hex(zlib.crc32(source)),lba=block*4096,sectors=4096,core_sha256=sha(code),core_bytes=len(code),helper_bytes=len(helper),symbols={k:hex(v) for k,v in syms.items() if k in set(gates.values())|{'system_write_portion','gate_prepare','original_logical','original_wrapper','original_program','original_erase'}},handoff_symbols={k:hex(hs[k]) for k in ('writer_before','writer_after')},patch_words={hex(k):hex(v) for k,v in patches.items()},allowed_changes_proved=True,physical_confirm_stops_preserved=variant=='dry',physical_confirm_original_restored=variant=='write')
+report['build_pass']=True
+(OUT/'manifest.json').write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps({k:v for k,v in report.items() if k!='baseline_protected_blocks'},indent=2))

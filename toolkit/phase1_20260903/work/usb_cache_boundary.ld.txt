@@ -1,0 +1,15 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/usb_cache_boundary.ld
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+ENTRY(usb_cache_boundary)
+SECTIONS {
+ . = 0x6008660c;
+ .text : { *(.text*) *(.rodata*) }
+ ASSERT(SIZEOF(.text) <= 0x180, "Must stay in guarded format body")
+ .data : { *(.data*) }
+ .bss : { *(.bss*) }
+ ASSERT(SIZEOF(.data) == 0 && SIZEOF(.bss) == 0, "No implicit state")
+ /DISCARD/ : { *(.ARM.exidx*) *(.ARM.extab*) *(.comment*) }
+}

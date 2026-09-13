@@ -1,0 +1,49 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/audit_native_bbt_and_saved_state.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Offline BBT/saved-state diagnostics grounded in actual RF1 module.
+Does not emulate ECC success or invoke the driver.
+"""
+import hashlib
+import json
+import struct
+from pathlib import Path
+from verify_native_ecc_page import extract
+ROOT=Path(__file__).parent
+def page(block,p=0):
+    chunk,local=divmod(block,64)
+    with (ROOT/'nand_native_ecc40'/f'NAND_{chunk:02d}.RAW').open('rb') as f:
+        f.seek((local*256+p)*8448)
+        return f.read(8448)
+def meta(raw): return [int.from_bytes(raw[i*528+512:i*528+514],'little') for i in range(8)]
+copies=[]
+for block in (12,13):
+    raw=page(block)
+    main=extract(raw)
+    words=struct.unpack('<2048H',main[:4096])
+    end=words.index(65535)
+    bad=list(words[:end])
+    item=dict(physical_block=block,meta=meta(raw),bad_blocks=bad,main4096_sha256=hashlib.sha256(main[:4096]).hexdigest())
+    copies.append(item)
+    print('BBT',block,'meta',meta(raw),'badcount',len(bad),'bad',bad)
+    assert meta(raw)[:3]==[0xf000,0x438,1896]
+    assert meta(raw)[4:8]==[12,13,14,15]
+    assert len(set(bad))==len(bad) and all(0<=b<2048 for b in bad)
+print('BBT copies payload match',copies[0]['main4096_sha256']==copies[1]['main4096_sha256'])
+states=[]
+for p in range(256):
+    raw=page(15,p)
+    tag=meta(raw)[0]
+    states.append(tag)
+first_ff=states.index(65535)
+last_tag=states[first_ff-1]
+print('saved-state first erased page',first_ff,'preceding tag',hex(last_tag),
+      'F400 check would pass',last_tag==0xf400)
+out=ROOT.parent/'outputs/native_bbt_saved_state_audit.json'
+report=dict(scope='Offline structure checks only; no hardware ECC status',bbt_copies=copies,
+            saved_state_first_ff_page=first_ff,preceding_tag=last_tag,
+            pwr_on_f400_tag_check_passes=last_tag==0xf400)
+if not out.exists():
+    with out.open('x') as f: json.dump(report,f,indent=2)

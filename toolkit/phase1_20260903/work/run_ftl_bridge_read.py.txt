@@ -1,0 +1,130 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/run_ftl_bridge_read.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""One cold RAM-only logical read. Fixed addresses/hashes; no retries or NAND writes."""
+import hashlib,json,os,struct,subprocess,threading,time,sys
+from pathlib import Path
+from direct_winpty_console import DirectConsole
+from read_device_identity import TOOL
+from console_completion import completed_response
+fullmap='--full-map-system-from-existing-bridge' in sys.argv
+assert sys.argv[1:]==(['--full-map-system-from-existing-bridge'] if fullmap else ['--after-confirmed-cold-maskrom'])
+ROOT=Path(__file__).resolve().parents[1]
+build=json.loads((ROOT/('outputs/ftl_fullmap_system_read_build.json' if fullmap else 'outputs/ftl_bridge_read_build.json')).read_text())
+proof=json.loads((ROOT/('outputs/ftl_fullmap_system_read_offline.json' if fullmap else 'outputs/ftl_bridge_read_offline.json')).read_text())
+digest='<REDACTED:HASH_OR_BYTES>' if fullmap else '<REDACTED:HASH_OR_BYTES>'
+raw=(ROOT/build['cases'][0]['file']).read_bytes()
+assert len(raw)==110352 and hashlib.sha256(raw).hexdigest()==digest==proof['payload_sha256']
+assert proof['all_pass'] and len(proof['cases'])==2 and all(c['extra_RS_exact'] for c in proof['cases'])
+loader=ROOT/'work/usb_ram_bridge_checkpoint_modefix.BOOT.OFFLINE_ONLY.bin'
+assert hashlib.sha256(loader.read_bytes()).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+boot=Path(build['official_boot']).read_bytes()
+assert hashlib.sha256(boot).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+expected=boot[16384:16896]
+if fullmap:
+    system=Path(build['official_boot']).with_name('system.img').read_bytes()
+    assert hashlib.sha256(system).hexdigest()=='b9ca511124e6c3d9ee2a1e31220f6bf5a858f06d88f9003f5fd7f7e25cf5676a'
+    expected=system[73*2097152:73*2097152+512]
+for off in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):
+    assert raw[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+for off in (0xbbc8,0xbc90):assert raw[off:off+4]==bytes.fromhex('feffffea')
+assert 'Android_Console_Tool.exe' not in subprocess.run(['tasklist','/FI','IMAGENAME eq Android_Console_Tool.exe','/FO','CSV','/NH'],capture_output=True,text=True,check=True).stdout
+out=ROOT/('work/ftl_fullmap_system_read_hardware_attempt01' if fullmap else 'work/ftl_bridge_read_hardware_attempt01');out.mkdir(exist_ok=False)
+env=dict(os.environ);env['__COMPAT_LAYER']='RunAsInvoker'
+proc=DirectConsole.spawn([str(TOOL)],cwd=str(TOOL.parent),env=env,dimensions=(40,160),backend=1)
+chunks=[];done=threading.Event();stream=(out/'transcript.txt').open('x',encoding='utf-8')
+result=dict(commands=[],payload_sha256=digest,system_repair_performed=False,nand_writes_enabled=False,scope='One logical boot sector; original v33 return; no own FlashBoot USB startup')
+if fullmap:result.update(scope='Full remap mode1; one logical system sector; existing v33 return, no own USB',remap_mode=1)
+def reader():
+    try:
+        while proc.isalive():
+            s=proc.read(4096)
+            if s:chunks.append(s);stream.write(s);stream.flush()
+    except EOFError:pass
+    finally:done.set()
+threading.Thread(target=reader,daemon=True).start()
+def wait(token,start=0):
+    deadline=time.monotonic()+45
+    while time.monotonic()<deadline:
+        text=''.join(chunks)[start:]
+        if token in text:return text
+        if done.is_set():break
+        time.sleep(.05)
+    raise RuntimeError('No response; no retry')
+def command(cmd):
+    parts=cmd.split();op=parts[0]
+    assert op in ('DB','RS','WS','RD')
+    if op=='DB':assert cmd==f'DB {loader}' and not any(c.startswith('DB ') for c in result['commands'])
+    if op=='RD':assert cmd=='RD' and 'RD' not in result['commands'] and result.get('full_ram_exact')
+    if op=='RS':assert tuple(parts[1:3]) in (('0x7effff','0x1'),('0x7f0000','0xd1'),('0x7f00d1','0x2'))
+    if op=='WS':assert result.get('bridge_marker_exact') and 0x7f0000<=int(parts[1],16)<=0x7f00d0 and 'RD' not in result['commands']
+    token={'DB':'Download boot ok','RS':'Read Sector to file (100%)','WS':'Write Sector from file (100%)','RD':'Reset Device OK'}[op]
+    result['commands'].append(cmd);start=len(''.join(chunks));proc.write(cmd+'\r\n')
+    deadline=time.monotonic()+45
+    while time.monotonic()<deadline:
+        response=completed_response(''.join(chunks),start,token)
+        if response is not None:return response
+        if done.is_set():break
+        time.sleep(.05)
+    raise RuntimeError('No completion; no retry')
+try:
+    intro=wait('Select input');assert all(t in intro for t in (('Found 1 rockusb','DevNo=1') if fullmap else ('Found 1 rockusb','DevNo=1','Maskrom')))
+    result['cold_maskrom_visible']=not fullmap
+    start=len(''.join(chunks));proc.write('1\r\n');wait('Rockusb>',start)
+    if not fullmap:command(f'DB {loader}')
+    marker=out/'marker_before.raw';command(f'RS 0x7effff 0x1 {marker}')
+    assert marker.read_bytes()==b'RF1CKP02'+struct.pack('<IIII',110080,<REDACTED:ARTIFACT_CRC>,1 if fullmap else 0,0x60000004 if fullmap else 0)+bytes(504)
+    result['bridge_marker_exact']=True
+    if fullmap:
+        previous=out/'previous.raw';command(f'RS 0x7f0000 0xd1 {previous}')
+        assert hashlib.sha256(previous.read_bytes()).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+        result['previous_state_exact']=True
+    for i,offset in enumerate(range(0,110080,8192)):
+        part=out/f'part{i:02d}.bin'
+        with part.open('xb') as f:f.write(raw[offset:min(offset+8192,110080)])
+        command(f'WS {hex(0x7f0000+offset//512)} {part}')
+    before=out/'before.raw';command(f'RS 0x7f0000 0xd1 {before}')
+    assert before.read_bytes()==raw
+    result['full_ram_exact']=True;print('RAM EXACT; one guarded logical read',flush=True)
+    command('RD')
+    marker=out/'marker_after.raw';command(f'RS 0x7effff 0x1 {marker}')
+    assert marker.read_bytes()==b'RF1CKP02'+struct.pack('<IIII',110080,<REDACTED:ARTIFACT_CRC>,1,0x60000004)+bytes(504)
+    result['bridge_returned']=True
+    after=out/'after.raw';command(f'RS 0x7f0000 0xd1 {after}')
+    data=after.read_bytes()
+    assert len(data)==len(raw) and data[:110080]==raw[:110080] and data[110348:]==bytes(4)
+    record=struct.unpack_from('<31I',data,110080)
+    result['result_record']=[hex(x) for x in record]
+    tag,cut,bef,aft,sram_after,sram_before=record[:6]
+    assert tag==0x44475453 and cut==0x600982e4 and bef&5==0 and aft==bef&~0x10003805
+    assert sram_after in (sram_before,0x18) and record[6]&~0xe==0 and record[7]==0x100a
+    frame,cpsr,cl,ul,slot=record[10:15]
+    assert cpsr&0x1f==0x12 and cl==0x600011fc and ul==0x600009c0 and slot==frame+60
+    assert all(record[i]==0 for i in (15,16,19)) and record[21] in (0,1)
+    assert record[20]==aft|0x1005 and record[22]&0xfff==0xc8 and record[28:30]==(1,0)
+    assert struct.unpack_from('<I',data,110344)[0]==0x6009a1f8
+    result['main_control_pointer']='0x6009a1f8'
+    result['nand_id']=data[110204:110210].hex()
+    assert result['nand_id']=='2c44444ba900'
+    export=out/'logical_export.raw';command(f'RS 0x7f00d1 0x2 {export}')
+    ex=export.read_bytes();assert len(ex)==1056 and ex[:8]==b'RF1READ1'
+    lba,count,rc=struct.unpack_from('<III',ex,8)
+    result.update(logical_lba=hex(lba),logical_sectors=count,logical_return=hex(rc))
+    assert (lba,count)==(int(build['read_lba'],16),1)
+    sector=ex[240:752]
+    with (out/('system_sector.bin' if fullmap else 'boot_sector.bin')).open('xb') as f:f.write(sector)
+    result['logical_sha256']=hashlib.sha256(sector).hexdigest()
+    result['matches_official_system' if fullmap else 'matches_official_boot']=sector==expected
+    assert rc==0 and sector==expected,'Logical read status/data mismatch; do not write NAND'
+    result['all_pass']=True
+    print('PASS: original FTL logical read matches official reference; USB bridge returned',flush=True)
+except BaseException as e:
+    result['error']=repr(e);raise
+finally:
+    if proc.isalive():proc.terminate(force=True)
+    done.wait(2)
+    if done.is_set():stream.close()
+    with (out/'result.json').open('x',encoding='utf-8') as f:json.dump(result,f,indent=2)
+    print(json.dumps({k:v for k,v in result.items() if k!='commands'},indent=2),flush=True)

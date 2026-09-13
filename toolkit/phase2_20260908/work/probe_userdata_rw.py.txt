@@ -1,0 +1,44 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/probe_userdata_rw.py
+Role: historical_device_runner_or_stateful_scenario_review_before_any_use
+Original repair session must not be resumed from this public copy.
+
+from pathlib import Path
+import subprocess,hashlib,json
+work=Path(__file__).resolve().parent
+out=work/'userdata_native_repair_attempt02'
+assert json.loads((out/'result.json').read_text())['all_pass']
+assert not (out/'rw_probe_result.json').exists()
+adb=r'<EXTERNAL_STAGE_02>/work/AndroidTool_Release_v2.43/AndroidTool_Release_v2.43/bin/adb.exe'
+prefix=[adb,'-s','<DEVICE_SERIAL_REDACTED>']
+data=(b'RF1_DATA_RW_VERIFIED_20260909\n'*150)[:4096]
+source=out/'rw_probe.bin';source.write_bytes(data)
+digest=hashlib.md5(data).hexdigest()
+result={'all_pass':False,'probe_md5':digest}
+def run(args,label):
+ p=subprocess.run(prefix+args,capture_output=True,timeout=30)
+ d=p.stdout+p.stderr;(out/(label+'.txt')).write_bytes(d)
+ assert p.returncode==0,(label,p.returncode)
+ return d
+def sh(cmd,label):return run(['shell',cmd],label)
+try:
+ mounts=sh('/sbin/busybox cat /proc/mounts','probe_before_mounts')
+ assert b' /data ' not in mounts
+ run(['push',str(source),'/mnt/ram/rf1-data-probe.bin'],'probe_push')
+ sh('/sbin/busybox mount -t ext4 -o rw,nosuid,nodev,noatime,nodiratime,barrier=1,data=ordered,noauto_da_alloc /dev/block/mtdblock6 /data','probe_mount')
+ mounts=sh('/sbin/busybox cat /proc/mounts','probe_mounted')
+ assert b'/dev/block/mtdblock6 /data ext4 rw,' in mounts
+ command='test ! -e /data/.rf1_write_probe_20260909 && /sbin/busybox cp /mnt/ram/rf1-data-probe.bin /data/.rf1_write_probe_20260909 && /sbin/busybox sync && echo 3 > /proc/sys/vm/drop_caches && /sbin/busybox md5sum /data/.rf1_write_probe_20260909'
+ assert digest.encode() in sh(command,'probe_write_readback')
+ mounts=sh('/sbin/busybox cat /proc/mounts','probe_after_write_mounts')
+ assert b'/dev/block/mtdblock6 /data ext4 rw,' in mounts
+ sh('/sbin/busybox rm /data/.rf1_write_probe_20260909 && /sbin/busybox sync && /sbin/busybox umount /data','probe_cleanup_unmount')
+ mounts=sh('/sbin/busybox cat /proc/mounts','probe_final_mounts')
+ assert b' /data ' not in mounts
+ result['all_pass']=True
+except BaseException as exc:
+ result['error']=repr(exc);raise
+finally:
+ (out/'rw_probe_result.json').write_text(json.dumps(result,indent=2))
+ print(json.dumps(result,indent=2))

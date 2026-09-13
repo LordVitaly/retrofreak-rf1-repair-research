@@ -1,0 +1,38 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/early_adb_failure_audit/test_timer.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Read-only actual ARM USB timer replay with I/O fixtures, not hardware."""
+from pathlib import Path
+import hashlib,json,struct,sys
+sys.path.insert(0,'<EXTERNAL_STAGE_03>/work/emulator_deps')
+from unicorn import Uc,UC_ARCH_ARM,UC_MODE_ARM,UC_HOOK_CODE
+from unicorn.arm_const import *
+OUT=Path(__file__).resolve().parent
+K=Path('<EXTERNAL_STAGE_01>/work/android_boot_parts/boot/kernel.bin')
+b=K.read_bytes();assert hashlib.sha256(b).hexdigest()=='af7e01d68227df6f1936b3bd35fac398e0f7f5be1a42060dfb713a196013963f'
+base=0xc0408000;pcd=0xc1800000;ret=0xc19ffff0
+hooks={0xc08b5de4:'printk',0xc06a4eb4:'phy_suspend',0xc06a4f8c:'msc_lock',0xc0473020:'schedule_delayed_work',0xc0469f54:'add_timer'}
+results=[]
+for idbit in (0,1):
+ for vbusbit in (0,1):
+  for conn in (0,1):
+   u=Uc(UC_ARCH_ARM,UC_MODE_ARM);u.mem_map(0xc0000000,0x2000000);u.mem_map(0xfed08000,0x1000);u.mem_write(base,b)
+   u.mem_write(0xfed0815c,struct.pack('<I',(idbit<<20)|(vbusbit<<17)))
+   u.mem_write(pcd+0xb38,bytes([1,0,conn,0]));calls=[]
+   def callback(uc,pc,size,ctx):
+    if pc not in hooks:return
+    args=[uc.reg_read(r) for r in (UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3)]
+    calls.append({'pc':hex(pc),'name':hooks[pc],'args':[hex(x) for x in args]})
+    uc.reg_write(UC_ARM_REG_R0,0);uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR))
+   u.hook_add(UC_HOOK_CODE,callback)
+   u.reg_write(UC_ARM_REG_R0,pcd);u.reg_write(UC_ARM_REG_SP,0xc1900000);u.reg_write(UC_ARM_REG_LR,ret)
+   u.emu_start(0xc06a4fcc,ret,count=10000);assert u.reg_read(UC_ARM_REG_PC)==ret
+   scheduled=any(c['name']=='schedule_delayed_work' for c in calls)
+   assert scheduled==bool(idbit and vbusbit and conn)
+   results.append({'status_bit20':idbit,'status_bit17':vbusbit,'gadget_pullup_requested':conn,'connection_work_scheduled':scheduled,'calls':calls})
+report={'device_access':False,'actual_kernel_sha256':hashlib.sha256(b).hexdigest(),'actual_arm_function':'dwc_otg_pcd_check_vbus_timer@0xc06a4fcc','hardware_status_virtual_address':'0xfed0815c','register_offset':'GRF +0x15c','fixtures':'First VBUS observation; phy suspended; pullup 0 or1; printk/PHY/scheduling boundaries are stubbed','results':results,'all_pass':True,'limitation':'This proves the kernel control flow. Actual ordinary-boot ID/VBUS bits remain unmeasured.'}
+(OUT/'timer_arm_proof.json').write_text(json.dumps(report,indent=2)+'\n',encoding='utf-8')
+print(json.dumps({'all_pass':True,'truth_table':[{k:v for k,v in r.items() if k!='calls'} for r in results]},indent=2))

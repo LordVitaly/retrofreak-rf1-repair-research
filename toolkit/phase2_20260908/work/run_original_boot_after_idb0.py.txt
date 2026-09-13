@@ -1,0 +1,85 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/run_original_boot_after_idb0.py
+Role: historical_device_runner_or_stateful_scenario_review_before_any_use
+Original repair session must not be resumed from this public copy.
+
+"""Cold guarded RAM bridge; original capacity then unmodified-count BBT test."""
+from pathlib import Path
+import sys,os,json,struct,hashlib,time,zlib
+OLD=Path('<EXTERNAL_STAGE_03>');HERE=Path(__file__).resolve().parent
+sys.path.insert(0,str(OLD/'work'))
+from ram_console_session import RamConsole
+from console_completion import ANSI,completed_response
+assert sys.argv[1:]==['--fresh-maskrom-confirmed']
+loader=HERE/'hardened_bridge_v1/usb_ram_bridge_checkpoint_modefix.BOOT.OFFLINE_ONLY.bin'
+assert hashlib.sha256(loader.read_bytes()).hexdigest()=='<HISTORICAL_HASH_REDACTED>'
+bridge_proof=json.loads((loader.parent/'offline_test.json').read_text())
+assert bridge_proof['build_sha256']==hashlib.sha256(loader.read_bytes()).hexdigest() and bridge_proof['seven_NAND_entry_guards_reject_without_writes'] and bridge_proof['checkpoint_roundtrip_passed']
+manifest=json.loads((HERE/'original_boot_diag/manifest.json').read_text());assert manifest['all_pass'] and manifest['trace_unchanged'] and manifest['no_ram_count_substitution_executed']
+cases=[('capacity','ftl_capacity_original.raw','<HISTORICAL_HASH_REDACTED>',0x60086b00),('bbt','bbt_trace_v2_original_capacity.raw','<HISTORICAL_HASH_REDACTED>',0x60086c84)]
+payloads=[]
+for name,file,digest,cut in cases:
+    raw=(HERE/'original_boot_diag'/file).read_bytes()
+    assert len(raw)==110352 and raw[110080:]==bytes(272) and hashlib.sha256(raw).hexdigest()==digest and zlib.crc32(raw[:110080])==0xad0dadee
+    assert raw[0xb408:0xb40c]==bytes.fromhex('0101a0e3')
+    for at in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):assert raw[at:at+8]==bytes.fromhex('0000e0e31eff2fe1')
+    for at in (0xbbc8,0xbc90):assert raw[at:at+4]==bytes.fromhex('feffffea')
+    payloads.append(raw)
+out=HERE/'original_boot_after_idb0_attempt01';out.mkdir(exist_ok=False)
+c=None;result=dict(complete=False,nand_writes_enabled=False,capacity_ram_fix=False,bbt_ram_fix=False,explicit_soc_reset=False,cases=[])
+def save(name,data):
+    with (out/name).open('x') as f:json.dump(data,f,indent=2);f.flush();os.fsync(f.fileno())
+def read(name,sector,count):
+    assert (sector,count) in ((0x7effff,1),(0x7f0000,209),(0x7f00d1,2))
+    p=out/(name+'.raw');c.command(f'RS {hex(sector)} {hex(count)} {p}')
+    d=p.read_bytes();assert len(d)==count*528;return d
+def marker(name,completed):
+    raw=read(name,0x7effff,1)
+    assert raw==b'RF1CKP02'+struct.pack('<IIII',110080,0xad0dadee,completed,0x60000004 if completed else 0)+bytes(504)
+def download():
+    cmd='DB '+os.path.relpath(loader,out);start=len(''.join(c.chunks));c.commands.append(cmd);c.send_once(cmd)
+    deadline=time.monotonic()+45
+    while time.monotonic()<deadline:
+        text=''.join(c.chunks)
+        if completed_response(text,start,'Download boot ok') is not None:return
+        if 'Error:' in ANSI.sub('',text[start:]):raise RuntimeError('DB error; no retry')
+        time.sleep(.01)
+    raise RuntimeError('DB timeout; no retry')
+try:
+    c=RamConsole(out);intro=c.wait('Select input');assert 'Found 1 rockusb' in intro and 'Maskrom' in intro
+    c.select();download();marker('initial_marker',0)
+    for (name,file,digest,cut),raw in zip(cases,payloads):
+        case=dict(name=name,sha256=digest);result['cases'].append(case)
+        for i,offset in enumerate(range(0,110080,8192)):
+            p=out/f'{name}_part{i:02d}.bin';p.write_bytes(raw[offset:min(offset+8192,110080)])
+            c.command(f'WS {hex(0x7f0000+offset//512)} {p}')
+        assert read(name+'_ram_before',0x7f0000,209)==raw
+        save(name+'_DISPATCHED_NO_RETRY.json',case)
+        c.command('RD') # this authenticated bridge opcode calls bounded RAM payload; no SoC reset
+        marker(name+'_marker',1)
+        data=read(name+'_ram_after',0x7f0000,209)
+        assert data[:110080]==raw[:110080] and data[110348:]==bytes(4)
+        record=struct.unpack_from('<67I',data,110080)
+        assert record[:2]==(0x44475453,cut)
+        case.update(bridge_returned=True,record=[hex(v) for v in record],geometry_hex=data[110272:110344].hex(),result_word=record[66])
+        assert data[110204:110210].hex()=='2c44444ba900'
+        if name=='capacity':
+            case['physical_blocks']=record[66]
+            print('Original NAND physical block count: '+str(record[66]),flush=True)
+            save(name+'_result.json',case)
+            if record[66]!=2048:
+                result['stopped_before_bbt']='Original capacity not2048; no table/BBT execution'
+                break
+        else:
+            trace=read('bbt_trace',0x7f00d1,2)
+            magic,total,errors,tags=struct.unpack_from('<4I',trace)
+            assert magic==0x31544242 and total<=50*256 and errors<=total and tags<=total
+            case['trace']=dict(total_reads=total,nonzero_returns=errors,f000_tags=tags,rows=[dict(zip(('sector','return_code','aux_tag','aux_version','main_first_word','count'),struct.unpack_from('<6I',trace,16+i*24))) for i in range(min(total,32))],ftl_header_u16=list(struct.unpack_from('<16H',trace,800)))
+            print(json.dumps(dict(bbt_return=hex(record[66]),trace=case['trace'])),flush=True)
+            save(name+'_result.json',case)
+    result['complete']=True
+except BaseException as exc:result['error']=repr(exc);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    save('result.json',result);print(json.dumps({k:v for k,v in result.items() if k not in ('cases','commands')},indent=2))

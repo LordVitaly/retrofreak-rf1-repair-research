@@ -1,0 +1,54 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/startup_l2_fixture.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Bounded register contract only; no cache, latency or RK3066 emulation."""
+import struct
+from unicorn import UC_HOOK_MEM_READ, UC_HOOK_MEM_WRITE
+class L2Contract:
+    def __init__(self,u):
+        self.initial={0:0x410000c8,0x100:0,0x104:0x02060000,0x108:0x111,
+                      0x10c:0x222,0xf60:0,0xf80:0}
+        self.regs=dict(self.initial);self.writes=[];self.pending=None
+        self.cleaned=False;self.synced=False;self.enabled=False
+        u.mem_map(0x10138000,0x1000)
+        u.hook_add(UC_HOOK_MEM_READ,self.read,begin=0x10138000,end=0x10138fff)
+        u.hook_add(UC_HOOK_MEM_WRITE,self.write,begin=0x10138000,end=0x10138fff)
+    def read(self,u,access,a,size,value,ctx):
+        off=a-0x10138000;assert size==4
+        if off in (0x77c,0x7fc,0x730):
+            val=0
+            if self.pending:
+                po,mask,left=self.pending;assert off==po
+                if left:val=mask;self.pending=(po,mask,left-1)
+                else:
+                    self.pending=None
+                    if off==0x7fc:self.cleaned=True
+                    if off==0x730:self.synced=True
+        else:assert off in self.regs;val=self.regs[off]
+        u.mem_write(a,struct.pack('<I',val))
+    def write(self,u,access,a,size,val,ctx):
+        off=a-0x10138000;assert size==4 and self.pending is None,(hex(off),self.pending)
+        self.writes.append((off,val))
+        if off in (0x77c,0x7fc):
+            assert val==(0xffff if self.regs[0x104]&0x10000 else 0xff)
+            assert bool(self.regs[0x100])==(off==0x7fc)
+            self.pending=(off,val,1)
+        elif off==0x730:
+            assert val==0
+            self.pending=(off,1,0) if self.regs[0x100] else None
+        else:
+            assert off in self.regs and off!=0
+            if off==0x100:
+                if val==0:assert self.cleaned and self.synced
+                else:assert val==1;self.enabled=True
+            if off==0x104:assert self.regs[0x100]==0
+            self.regs[off]=val
+    def verify(self,executed):
+        assert self.pending is None and self.regs==self.initial
+        assert self.enabled==executed
+        assert self.cleaned==executed and self.synced==executed
+        if executed:
+            assert self.writes[:7]==[(0x108,0),(0x10c,0x31),(0xf80,3),(0x104,0x76050001),(0x77c,0xffff),(0x730,0),(0x100,1)],self.writes
+            assert self.writes[7:12]==[(0xf60,0x7800000e),(0x7fc,0xffff),(0x730,0),(0x100,0),(0x104,self.initial[0x104])],self.writes

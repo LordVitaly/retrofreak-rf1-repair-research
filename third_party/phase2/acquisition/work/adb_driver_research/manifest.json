@@ -1,0 +1,253 @@
+{
+  "all_pass": true,
+  "offline_only": true,
+  "no_installation_or_pnp_or_usb_actions": true,
+  "packages": [
+    {
+      "directory": "<THREAD_ROOT>\\work\\adb_driver_research\\rockchip_4_5",
+      "hardware_id": "USB\\VID_2207&PID_0006",
+      "source": "https://github.com/rockchip-android/RKTools/tree/rk3399-box-7.1/windows/DriverAssitant_v4.5/ADBDriver",
+      "files": [
+        {
+          "path": "<THREAD_ROOT>\\work\\adb_driver_research\\rockchip_4_5\\amd64\\WdfCoInstaller01009.dll",
+          "bytes": 1721576,
+          "sha256": "18487b4ff94edccc98ed59d9fca662d4a1331c5f1e14df8db3093256dd9f1c3e"
+        },
+        {
+          "path": "<THREAD_ROOT>\\work\\adb_driver_research\\rockchip_4_5\\amd64\\winusbcoinstaller2.dll",
+          "bytes": 1002728,
+          "sha256": "981a17effddbc20377512ddaec9f22c2b7067e17a3e2a8ccf82bb7bb7b2420b6"
+        },
+        {
+          "path": "<THREAD_ROOT>\\work\\adb_driver_research\\rockchip_4_5\\android_winusb.inf",
+          "bytes": 3033,
+          "sha256": "19336540133381a4b4ee1f8ef43c7f9372906aa7efda5a3586109224f966098a"
+        },
+        {
+          "path": "<THREAD_ROOT>\\work\\adb_driver_research\\rockchip_4_5\\androidwinusb86.cat",
+          "bytes": 10722,
+          "sha256": "13b8b1f24e4f49f7a299db2429fbf00c30b9bcb9f447b5c9e56a7012f236c565"
+        },
+        {
+          "path": "<THREAD_ROOT>\\work\\adb_driver_research\\rockchip_4_5\\androidwinusba64.cat",
+          "bytes": 10782,
+          "sha256": "c9575276460c176aa47155bc41c4040edd65aaf0965bfc5b4b0d9ddabe153edf"
+        },
+        {
+          "path": "<THREAD_ROOT>\\work\\adb_driver_research\\rockchip_4_5\\i386\\WdfCoInstaller01009.dll",
+          "bytes": 1461992,
+          "sha256": "7a6bf1f950684381205c717a51af2d9c81b203cb1f3db0006a4602e2df675c77"
+        },
+        {
+          "path": "<THREAD_ROOT>\\work\\adb_driver_research\\rockchip_4_5\\i386\\winusbcoinstaller2.dll",
+          "bytes": 851176,
+          "sha256": "ebe3b7708dd974ee87efed3113028d266af87ca8dbae77c47c6f7612824d3d6c"
+        }
+      ],
+      "signature_membership_checks": [
+        {
+          "catalog": "androidwinusba64.cat",
+          "file": "android_winusb.inf",
+          "returncode": 0,
+          "stdout": "0      sha1       Authenticode \nSuccessfully verified: work\\adb_driver_research\\rockchip_4_5\\android_winusb.inf\n\n",
+          "stderr": "",
+          "referenced_by_inf": true
+        },
+        {
+          "catalog": "androidwinusba64.cat",
+          "file": "amd64\\WdfCoInstaller01009.dll",
+          "returncode": 0,
+          "stdout": "0      sha1       Authenticode \nSuccessfully verified: work\\adb_driver_research\\rockchip_4_5\\amd64\\WdfCoInstaller01009.dll\n\n",
+          "stderr": "",
+          "referenced_by_inf": true
+        },
+        {
+          "catalog": "androidwinusba64.cat",
+          "file": "amd64\\winusbcoinstaller2.dll",
+          "returncode": 0,
+          "stdout": "0      sha1       Authenticode \nSuccessfully verified: work\\adb_driver_research\\rockchip_4_5\\amd64\\winusbcoinstaller2.dll\n\n",
+          "stderr": "",
+          "referenced_by_inf": true
+        },
+        {
+          "catalog": "androidwinusb86.cat",
+          "file": "android_winusb.inf",
+          "returncode": 0,
+          "stdout": "0      sha1       Authenticode \nSuccessfully verified: work\\adb_driver_research\\rockchip_4_5\\android_winusb.inf\n\n",
+          "stderr": "",
+          "referenced_by_inf": true
+        },
+        {
+          "catalog": "androidwinusb86.cat",
+          "file": "i386\\WdfCoInstaller01009.dll",
+          "returncode": 0,
+          "stdout": "0      sha1       Authenticode \nSuccessfully verified: work\\adb_driver_research\\rockchip_4_5\\i386\\WdfCoInstaller01009.dll\n\n",
+          "stderr": "",
+          "referenced_by_inf": true
+        },
+        {
+          "catalog": "androidwinusb86.cat",
+          "file": "i386\\winusbcoinstaller2.dll",
+          "returncode": 0,
+          "stdout": "0      sha1       Authenticode \nSuccessfully verified: work\\adb_driver_research\\rockchip_4_5\\i386\\winusbcoinstaller2.dll\n\n",
+          "stderr": "",
+          "referenced_by_inf": true
+        }
+      ],
+      "all_membership_checks_pass": true,
+      "required_inf_membership_checks_pass": true,
+      "kernel_policy_check_amd64": {
+        "returncode": 0,
+        "stdout": "0      sha1       Authenticode \nSuccessfully verified: <THREAD_ROOT>\\work\\adb_driver_research\\rockchip_4_5\\android_winusb.inf\n\n",
+        "stderr": ""
+      }
+    },
+    {
+      "directory": "<THREAD_ROOT>\\work\\adb_driver_research\\google_r04\\usb_driver_r04-windows",
+      "hardware_id": "USB\\VID_0BB4&PID_0C01",
+      "source": "https://dl.google.com/android/repository/usb_driver_r04-windows.zip",
+      "files": [
+        {
+          "path": "<THREAD_ROOT>\\work\\adb_driver_research\\google_r04\\usb_driver_r04-windows\\amd64\\NOTICE",
+          "bytes": 236,
+          "sha256": "a19b767b9ddda7306c78232e4a223d0ba966471b74dce3c0c995307cab5bf7b7"
+        },
+        {
+          "path": "<THREAD_ROOT>\\work\\adb_driver_research\\google_r04\\usb_driver_r04-windows\\amd64\\WdfCoInstaller01009.dll",
+          "bytes": 1721576,
+          "sha256": "18487b4ff94edccc98ed59d9fca662d4a1331c5f1e14df8db3093256dd9f1c3e"
+        },
+        {
+          "path": "<THREAD_ROOT>\\work\\adb_driver_research\\google_r04\\usb_driver_r04-windows\\amd64\\winusbcoinstaller2.dll",
+          "bytes": 1002728,
+          "sha256": "981a17effddbc20377512ddaec9f22c2b7067e17a3e2a8ccf82bb7bb7b2420b6"
+        },
+        {
+          "path": "<THREAD_ROOT>\\work\\adb_driver_research\\google_r04\\usb_driver_r04-windows\\amd64\\WUDFUpdate_01009.dll",
+          "bytes": 2152176,
+          "sha256": "015f26bbcd619a0b67b5eaa985b69582bac27d5cbca99ce747a76532fcde4aff"
+        },
+        {
+          "path": "<THREAD_ROOT>\\work\\adb_driver_research\\google_r04\\usb_driver_r04-windows\\android_winusb.inf",
+          "bytes": 3988,
+          "sha256": "eb2527c856b2b70d07d884c61ae7a574a07b7d89e44ccb7c349b5316724703b8"
+        },
+        {
+          "path": "<THREAD_ROOT>\\work\\adb_driver_research\\google_r04\\usb_driver_r04-windows\\androidwinusb86.cat",
+          "bytes": 9103,
+          "sha256": "e5b47fba7ae210bf4543ba134bf7bbd89efe0e6e938416d6c2d1d30706d4b469"
+        },
+        {
+          "path": "<THREAD_ROOT>\\work\\adb_driver_research\\google_r04\\usb_driver_r04-windows\\androidwinusba64.cat",
+          "bytes": 9139,
+          "sha256": "789ed6bbaeff32b57c23cb5e695f3c7e3409b88325b47d82110b0a1be88f4b4e"
+        },
+        {
+          "path": "<THREAD_ROOT>\\work\\adb_driver_research\\google_r04\\usb_driver_r04-windows\\i386\\NOTICE",
+          "bytes": 236,
+          "sha256": "a19b767b9ddda7306c78232e4a223d0ba966471b74dce3c0c995307cab5bf7b7"
+        },
+        {
+          "path": "<THREAD_ROOT>\\work\\adb_driver_research\\google_r04\\usb_driver_r04-windows\\i386\\WdfCoInstaller01009.dll",
+          "bytes": 1461992,
+          "sha256": "7a6bf1f950684381205c717a51af2d9c81b203cb1f3db0006a4602e2df675c77"
+        },
+        {
+          "path": "<THREAD_ROOT>\\work\\adb_driver_research\\google_r04\\usb_driver_r04-windows\\i386\\winusbcoinstaller2.dll",
+          "bytes": 851176,
+          "sha256": "ebe3b7708dd974ee87efed3113028d266af87ca8dbae77c47c6f7612824d3d6c"
+        },
+        {
+          "path": "<THREAD_ROOT>\\work\\adb_driver_research\\google_r04\\usb_driver_r04-windows\\i386\\WUDFUpdate_01009.dll",
+          "bytes": 1837296,
+          "sha256": "a902bb3bff785faaeb6432be76f798627a80b2cc45441e16440e46e6d7340f2c"
+        },
+        {
+          "path": "<THREAD_ROOT>\\work\\adb_driver_research\\google_r04\\usb_driver_r04-windows\\source.properties",
+          "bytes": 77,
+          "sha256": "4166cd270aa6a34294430e368dac080404b55121f94253dc06315410bf76bef7"
+        }
+      ],
+      "signature_membership_checks": [
+        {
+          "catalog": "androidwinusba64.cat",
+          "file": "android_winusb.inf",
+          "returncode": 0,
+          "stdout": "0      sha1       Authenticode \nSuccessfully verified: work\\adb_driver_research\\google_r04\\usb_driver_r04-windows\\android_winusb.inf\n\n",
+          "stderr": "",
+          "referenced_by_inf": true
+        },
+        {
+          "catalog": "androidwinusba64.cat",
+          "file": "amd64\\WdfCoInstaller01009.dll",
+          "returncode": 0,
+          "stdout": "0      sha1       Authenticode \nSuccessfully verified: work\\adb_driver_research\\google_r04\\usb_driver_r04-windows\\amd64\\WdfCoInstaller01009.dll\n\n",
+          "stderr": "",
+          "referenced_by_inf": true
+        },
+        {
+          "catalog": "androidwinusba64.cat",
+          "file": "amd64\\winusbcoinstaller2.dll",
+          "returncode": 0,
+          "stdout": "0      sha1       Authenticode \nSuccessfully verified: work\\adb_driver_research\\google_r04\\usb_driver_r04-windows\\amd64\\winusbcoinstaller2.dll\n\n",
+          "stderr": "",
+          "referenced_by_inf": true
+        },
+        {
+          "catalog": "androidwinusba64.cat",
+          "file": "amd64\\WUDFUpdate_01009.dll",
+          "returncode": 1,
+          "stdout": "\nNumber of errors: 1\n\n",
+          "stderr": "SignTool Error: File not found in the specified catalog.\nSignTool Error: File not valid: work\\adb_driver_research\\google_r04\\usb_driver_r04-windows\\amd64\\WUDFUpdate_01009.dll\n\n",
+          "referenced_by_inf": false
+        },
+        {
+          "catalog": "androidwinusb86.cat",
+          "file": "android_winusb.inf",
+          "returncode": 0,
+          "stdout": "0      sha1       Authenticode \nSuccessfully verified: work\\adb_driver_research\\google_r04\\usb_driver_r04-windows\\android_winusb.inf\n\n",
+          "stderr": "",
+          "referenced_by_inf": true
+        },
+        {
+          "catalog": "androidwinusb86.cat",
+          "file": "i386\\WdfCoInstaller01009.dll",
+          "returncode": 0,
+          "stdout": "0      sha1       Authenticode \nSuccessfully verified: work\\adb_driver_research\\google_r04\\usb_driver_r04-windows\\i386\\WdfCoInstaller01009.dll\n\n",
+          "stderr": "",
+          "referenced_by_inf": true
+        },
+        {
+          "catalog": "androidwinusb86.cat",
+          "file": "i386\\winusbcoinstaller2.dll",
+          "returncode": 0,
+          "stdout": "0      sha1       Authenticode \nSuccessfully verified: work\\adb_driver_research\\google_r04\\usb_driver_r04-windows\\i386\\winusbcoinstaller2.dll\n\n",
+          "stderr": "",
+          "referenced_by_inf": true
+        },
+        {
+          "catalog": "androidwinusb86.cat",
+          "file": "i386\\WUDFUpdate_01009.dll",
+          "returncode": 1,
+          "stdout": "\nNumber of errors: 1\n\n",
+          "stderr": "SignTool Error: File not found in the specified catalog.\nSignTool Error: File not valid: work\\adb_driver_research\\google_r04\\usb_driver_r04-windows\\i386\\WUDFUpdate_01009.dll\n\n",
+          "referenced_by_inf": false
+        }
+      ],
+      "all_membership_checks_pass": false,
+      "required_inf_membership_checks_pass": true,
+      "extra_file_note": "WUDFUpdate_01009.dll is not referenced anywhere by this INF and is not a member of these Android catalogs. Both x86/x64 copies have independently Valid embedded Microsoft Windows Component Publisher signatures. No package files modified.",
+      "kernel_policy_check_amd64": {
+        "returncode": 1,
+        "stdout": "\nNumber of errors: 1\n\n",
+        "stderr": "SignTool Error: Signing Cert does not chain to a Microsoft Root Cert.\nSignTool Error: File not valid: <THREAD_ROOT>\\work\\adb_driver_research\\google_r04\\usb_driver_r04-windows\\android_winusb.inf\n\n"
+      }
+    }
+  ],
+  "notes": [
+    "Exact matching single-interface IDs in both x86 and amd64 INF sections. No INF edits.",
+    "Signature catalog membership verified with SignTool /pa; this is not a guarantee that Windows kernel driver policy accepts an old package.",
+    "No driver binding/installation was attempted. Inspect actual device and interface IDs before selecting package."
+  ],
+  "all_pass_scope": "Both target IDs occur in unchanged x86/x64 INF and all files required by INF have valid signature-catalog membership under /pa. Kernel policy outcomes listed separately; no installation attempted."
+}

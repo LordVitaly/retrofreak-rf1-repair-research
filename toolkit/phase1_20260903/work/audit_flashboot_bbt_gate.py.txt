@@ -1,0 +1,52 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/audit_flashboot_bbt_gate.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Evaluate only FlashBoot's final BBT predicates from local dump bytes.
+
+Not an FTL initialization emulator; no USB or device execution.
+"""
+import hashlib
+import json
+import struct
+from pathlib import Path
+from verify_native_ecc_page import extract
+
+root = Path(__file__).resolve().parents[1]
+loader = (root / 'work/FlashBoot.packet512.STATIC_ONLY.bin').read_bytes()
+assert hashlib.sha256(loader).hexdigest() == '<REDACTED:HASH_OR_BYTES>'
+copies = []
+for block in (12, 13):
+    with (root / 'work/nand_native_ecc40/NAND_00.RAW').open('rb') as f:
+        f.seek(block * 256 * 8448)
+        raw = f.read(8448)
+    main = extract(raw)
+    meta = [int.from_bytes(raw[i*528+512:i*528+514], 'little') for i in range(8)]
+    words = struct.unpack('<2048H', main[:4096])
+    bad = list(words[:words.index(0xffff)])
+    # These predicates are at 0x6D30..0x6D64, AFTER earlier reads/selection.
+    # Runtime gFtl+0xE is not established by this script. Show two hypotheses.
+    gates = []
+    for runtime_capacity in (2048, 4096):
+        usable = (meta[2] | meta[3] << 16) & 0xffff
+        predicates = {'version_high_byte_is_4': meta[1] >> 8 == 4,
+                      'usable_less_than_capacity': usable < runtime_capacity,
+                      'usable_at_least_half_capacity': usable >= runtime_capacity >> 1,
+                      'bad_count_at_most_quarter_capacity': len(bad) <= runtime_capacity >> 2}
+        gates.append({'assumed_runtime_capacity': runtime_capacity,
+                      'predicates': predicates, 'final_gate_pass': all(predicates.values())})
+    copies.append({'physical_block': block, 'raw_page_sha256': hashlib.sha256(raw).hexdigest(),
+                   'meta': meta, 'bad_blocks': bad, 'main4096_sha256': hashlib.sha256(main[:4096]).hexdigest(),
+                   'conditional_final_gate_evaluation': gates})
+report = {'scope': 'Offline final BBT predicates only, not proof that FlashBoot init is safe',
+          'copies': copies,
+          'limits': ['Hardware ECC return unavailable in RS dump',
+                     'Earlier scan and copy-selection branches not emulated',
+                     'Runtime capacity field must be established from FlashInit before choosing hypothesis',
+                     'GetRemapTbl and logical read can write even with valid BBT'],
+          'read_side_effect_path_file_offsets': ['0xCDD4', '0x50D4', '0x513C', '0x3BF4',
+                                                '0x3C80/0x3C9C', '0x3B0C', '0xBC1C/0xBA10']}
+with (root / 'outputs/flashboot_bbt_gate_conditions.json').open('x', encoding='utf-8') as f:
+    json.dump(report, f, indent=2)
+print(json.dumps(report, indent=2))

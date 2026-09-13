@@ -1,0 +1,56 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/prepare_bbt_with_idb0_check.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Offline BBT12 writer derivative: add read-only IDB0 range and new version."""
+from pathlib import Path
+HERE=Path(__file__).resolve().parent
+stage=HERE/'bbt_with_idb0_check_sources';stage.mkdir(exist_ok=False)
+for name in ('idb_copy6_guard.c','idb_copy6_guard.S','idb_copy6_guard.ld'):
+    text=(HERE/'bbt_check_sources'/name).read_text()
+    if name.endswith('.c'):
+        old='if(!((sector>=0xc000 && sector<0xe000 && count<=0xe000-sector)'
+        assert text.count(old)==1
+        text=text.replace(old,'if(!((sector<0x100 && count<=0x100-sector) || (sector>=0xc000 && sector<0xe000 && count<=0xe000-sector)')
+    if name.endswith('.S'):
+        assert text.count('0x0c000101')==1
+        text=text.replace('0x0c000101','0x0c000102')
+    (stage/name).write_text(text)
+build=(HERE/'build_bbt_with_idb_check.py').read_text()
+build=build.replace('bbt_check_sources','bbt_with_idb0_check_sources').replace('bbt_with_idb_check_v1','bbt_with_idb0_check_v1')
+build=build.replace('report=dict(build_only=True,','report=dict(marker_version=0x0c000102,read_count_marker_word=18,read_status_marker_word=19,build_only=True,')
+(HERE/'build_bbt_with_idb0_check.py').write_text(build)
+test=(HERE/'test_bbt_with_idb_check.py').read_text()
+test=test.replace('bbt_with_idb_check_v1','bbt_with_idb0_check_v1').replace('0x0c000101','0x0c000102')
+adaptive=(HERE/'test_adaptive_read.py').read_text()
+adaptive=adaptive[adaptive.index('u,calls=new();events=[]'):adaptive.index('report=dict(')]
+adaptive=adaptive.replace('((0x5000,4,0),','((0,4,0),(0xf4,4,0),(0x5000,4,0),')
+adaptive=adaptive.replace('==(5,0)','==(7,0)')
+adaptive=adaptive.replace('((0x4fff,1),','((0x100,1),(0xff,2),(0xfffffff0,32),(0x4fff,1),')
+adaptive+="assert not calls\ntests.append('native read status and adaptive ECC: IDB0 0/f4 and IDB5/6 use24 restored40; BBT12/13 use40; counter/return exact; twelve boundary negatives')\n"
+adaptive+='''
+u,calls=new();forwarded=[]
+def loop_hook(uc,pc,size,unused):
+    forwarded.append([uc.reg_read(r) for r in R]);uc.reg_write(R[0],0)
+    uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR))
+u.hook_add(UC_HOOK_CODE,loop_hook,begin=sym['native_read_loop'],end=sym['native_read_loop'])
+for sector,count in ((0,4),(0xf4,4),(0,248),(0,256),(0x5000,248),(0x6000,248),(0xc000,4096),(0xd000,4096)):
+    before=len(forwarded);assert call(u,'guarded_read',(0,sector,BUF,count))==0
+    assert len(forwarded)==before+1 and forwarded[-1]==[0,sector,BUF,count]
+assert not calls
+tests.append('read guard positively forwards IDB0 including 0/f4 groups and complete256 records; existing IDB5/6 and BBT12/13 unchanged')
+old_usb=(out.parent/'bbt_with_idb_check_v1/usbplug.bin').read_bytes()
+hook_offsets=(0x30,0x3620,0x3fa4,0x7528,0x7718,0x787c,0x528c,0x6d7c,0x796c)
+diff=[i for i,(a,b) in enumerate(zip(old_usb[:0xe000],usb[:0xe000])) if a!=b]
+assert all(any(off<=i<off+4 for off in hook_offsets) for i in diff)
+assert source==(out.parent/'bbt_with_idb_check_v1/page0.main512.bin').read_bytes()
+assert control==(out.parent/'bbt_with_idb_check_v1/erase_copy12_once.bin').read_bytes()
+tests.append('native NAND/ECC/OOB code and source/control remain byte-identical outside compiled-addon callsite branches')
+'''
+needle='report=dict(all_pass=True'
+assert needle in test
+test=test.replace(needle,adaptive+'\n'+needle)
+(HERE/'test_bbt_with_idb0_check.py').write_text(test)
+print('Prepared new offline BBT12 writer with IDB0 read permission only.')

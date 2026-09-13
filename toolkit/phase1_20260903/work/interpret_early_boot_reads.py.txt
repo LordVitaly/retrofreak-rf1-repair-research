@@ -1,0 +1,28 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/interpret_early_boot_reads.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Reuse only existing saved RS-address model; no device or new peripheral model."""
+import ast,hashlib,json,sys
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'work/emulator_deps'))
+path=ROOT/'work/prove_rs_boot_mapping.py'
+tree=ast.parse(path.read_text());prefix=[]
+for node in tree.body:
+    if isinstance(node,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='cases' for t in node.targets):break
+    prefix.append(node)
+env={'__file__':str(path),'__name__':'rs_model_readonly_import'}
+exec(compile(ast.Module(body=prefix,type_ignores=[]),str(path),'exec'),env)
+replay=env['replay'];code=env['patched'];dump=env['dump'];out=ROOT/'work/early_boot_compare_attempt01'
+rows=[]
+for b in (1,3,4,5,6,12,15):
+    current=(out/f'block{b:02d}.raw').read_bytes()
+    modeled,calls=replay(code,12,b*4096,16)
+    actual=current[:8448]
+    row=dict(block=b,first_response_page_equal_to_old_with_correct_addressing=modeled==actual,first_response_different_bytes=sum(a!=z for a,z in zip(modeled,actual)),physical_reads=calls,current_prefix=actual[:24].hex(),old_linear_prefix=dump[b*4096*528:b*4096*528+24].hex(),modeled_prefix=modeled[:24].hex())
+    rows.append(row)
+report=dict(scope='Offline only; first 16 response records per selected block, with actual existing ARM wrapper address model',rows=rows)
+with (out/'address_interpretation.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

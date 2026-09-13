@@ -1,0 +1,68 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/stock_boot_restore/read_stage/02_install_window.py
+Role: completed_stock_return_or_temporary_USB_probe_historical_source
+No binaries or specimen auxiliary headers are included. Do not resume this old hardware session.
+
+import sys
+if sys.flags.optimize: raise RuntimeError('Assertions must remain enabled')
+"""Install existing bounded RAM data window on authenticated hardened bridge."""
+from pathlib import Path
+import sys,json,hashlib,struct,os
+OLD=Path('<EXTERNAL_STAGE_03>');HERE=Path(__file__).resolve().parents[2];BASE=Path(__file__).resolve().parent
+sys.path.insert(0,str(OLD/'work'))
+from ram_console_session import RamConsole
+assert sys.argv[1:]==['--same-original-bbt-pass-session']
+prior=BASE/'originals'
+assert json.loads((prior/'result.json').read_text())['all_pass']
+assert json.loads((prior/'capacity_result.json').read_text())['physical_blocks']==2048
+assert json.loads((prior/'bbt_result.json').read_text())['trace']['ftl_header_u16'][7:10]==[2048,1896,1896]
+assert json.loads((prior/'bbt_result.json').read_text())['result_word']==0
+old=(prior/'bbt_ram_after.raw').read_bytes()
+assert old[:110080]==(HERE/'original_boot_diag/bbt_trace_v2_original_capacity.raw').read_bytes()[:110080]
+assert len(old)==110352 and struct.unpack_from('<2I',old,110080)==(0x44475453,0x60086c84)
+raw=(OLD/'work/system_ram_window_v3/install.raw').read_bytes()
+pin='<HISTORICAL_HASH_REDACTED>'
+proof=json.loads((OLD/'outputs/system_ram_window_offline.json').read_text())
+assert proof['all_pass'] and proof['raw_sha256']==hashlib.sha256(raw).hexdigest()==pin
+assert len(proof['cases'])==2
+out=BASE/'window';out.mkdir(exist_ok=False);c=None
+result=dict(all_pass=False,nand_access=False,download_boot=False,payload_sha256=pin)
+expected_marker=b'RF1CKP02'+struct.pack('<IIII',110080,0xad0dadee,1,0x60000004)+bytes(504)
+expected_window=b'RF1WIN01'+struct.pack('<IIII',0x800000,4096,0x63000000,16)+bytes(504)
+def save(name,data):
+    with (out/name).open('x') as f:json.dump(data,f,indent=2);f.flush();os.fsync(f.fileno())
+def read(name,sector,count):
+    assert (sector,count) in ((0x7effff,1),(0x7efffe,1),(0x7f0000,209),(0x800000,16),(0x800ff0,16))
+    p=out/(name+'.raw');c.command(f'RS {hex(sector)} {hex(count)} {p}');data=p.read_bytes()
+    assert len(data)==count*528;return data
+try:
+    c=RamConsole(out);c.select()
+    assert read('marker_before',0x7effff,1)==expected_marker
+    assert read('previous_ram',0x7f0000,209)==old
+    for i,offset in enumerate(range(0,110080,8192)):
+        p=out/f'install_part{i:02d}.bin';p.write_bytes(raw[offset:min(offset+8192,110080)])
+        c.command(f'WS {hex(0x7f0000+offset//512)} {p}')
+    assert read('before',0x7f0000,209)==raw
+    save('DISPATCHED_NO_RETRY.json',result);c.command('RD')
+    assert read('window_marker',0x7efffe,1)==expected_window
+    assert read('marker_after',0x7effff,1)==expected_marker
+    assert read('after',0x7f0000,209)==raw
+    for i,sector in enumerate((0x800000,0x800ff0)):
+        pattern=hashlib.shake_256(f'RF1 window boundary {i}'.encode()).digest(8192)
+        p=out/f'pattern{i}.bin';p.write_bytes(pattern);c.command(f'WS {hex(sector)} {p}')
+        data=read(f'boundary{i}',sector,16)
+        assert all(data[j+512:j+528]==bytes(16) for j in range(0,len(data),528))
+        assert b''.join(data[j:j+512] for j in range(0,len(data),528))==pattern
+    assert read('final_stage',0x7f0000,209)==raw
+    result.update(all_pass=True,window_installed=True,boundary_ram_roundtrip=True,stage_unchanged=True)
+    statefile=BASE/'ram_read_state.json';tmp=statefile.with_suffix('.tmp')
+    with tmp.open('w') as f:
+        json.dump(dict(valid=True,ram_path=str(out/'final_stage.raw'),ram_sha256=hashlib.sha256(raw).hexdigest(),last_case='stock_boot_restore_fresh_window',batch='stock_boot_restore_window'),f,indent=2)
+        f.flush();os.fsync(f.fileno())
+    os.replace(tmp,statefile)
+except BaseException as exc:result['error']=repr(exc);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    save('result.json',result);print(json.dumps({k:v for k,v in result.items() if k!='commands'},indent=2))
+

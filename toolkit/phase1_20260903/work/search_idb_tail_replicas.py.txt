@@ -1,0 +1,31 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/search_idb_tail_replicas.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Search local old/new first-chunk records for exact official tail sectors.
+Search uses reference as a signature only. No reconstruction or device access.
+"""
+import json
+from pathlib import Path
+from audit_ram_loader_container import rc4
+root=Path(__file__).resolve().parents[1]
+ref=(root/'work/FlashBoot.packet512.STATIC_ONLY.bin').read_bytes()
+signatures={o:rc4(ref[o:o+512]) for o in range(0x1a800,len(ref),512)}
+sources={'old':Path(r'<HOST_PATH>'),
+         'ecc40':root/'work/nand_native_ecc40/NAND_00.RAW'}
+results=[]
+for label,path in sources.items():
+    # Search every complete RS record in the first 64 physical blocks.
+    raw=path.read_bytes()
+    for offset,needle in signatures.items():
+        hits=[]
+        pos=raw.find(needle)
+        while pos>=0:
+            if pos%528==0:
+                sector=pos//528
+                hits.append(dict(sector=sector,block=sector//4096,page=(sector%4096)//16,lane=sector%16))
+            pos=raw.find(needle,pos+1)
+        results.append(dict(source=label,official_offset=hex(offset),exact_record_hits=hits))
+with (root/'outputs/idb_tail_exact_record_search.json').open('x') as f:json.dump(results,f,indent=2)
+print(json.dumps(results,indent=2))

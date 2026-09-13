@@ -1,0 +1,24 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/prepare_relocated_backup_host.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+from pathlib import Path
+import py_compile
+p=Path(__file__).resolve().parent
+s=(p/'run_boot_header_cold_backup.py').read_text()
+for old,new in [
+ ('boot_physical_backup_tools/manifest.json','boot_relocated_active/reader/manifest.json'),
+ ('for block,logical in ((22,6),(25,9),(26,10)):','for block,logical in ((74,6),(77,9),(78,10)):'),
+ ('boot_header_cold_backup_attempt01','boot_relocated_backup_attempt01'),
+ ("batch='boot_header_cold_backup'","batch='boot_relocated_backup'")]:
+ assert old in s,old
+ s=s.replace(old,new)
+needle="manifest=json.loads((HERE/'boot_relocated_active/reader/manifest.json').read_text());assert manifest['all_pass']"
+assert needle in s
+s=s.replace(needle,needle+"\nassert sha((HERE/'boot_relocated_active/reader/manifest.json').read_bytes())=='<HISTORICAL_HASH_REDACTED>'")
+t=p/'run_relocated_boot_backup.py'
+with t.open('x') as f:f.write(s)
+py_compile.compile(str(t),doraise=True)
+print(str(t))

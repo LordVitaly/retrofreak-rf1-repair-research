@@ -1,0 +1,82 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/copy6_cold_readonly_attempt01/result.json",
+  "interpretation": "Significant copy6 code exact after cold boot; FF padding unstable.",
+  "data": {
+    "user_normal_boot": "no HDMI signal; power not held; user returned device to MaskROM",
+    "nand_write_commands": 0,
+    "reset_commands": 0,
+    "reads": [
+      {
+        "name": "copy6_cold_first",
+        "exact": false,
+        "sha256": "<REDACTED:HASH_OR_BYTES>",
+        "mismatches": 25,
+        "first_offsets": [
+          130084,
+          130146,
+          130179,
+          130223,
+          130265,
+          130316,
+          130426,
+          130429,
+          130507,
+          130512,
+          130535,
+          130602,
+          130614,
+          130646,
+          130683,
+          130694,
+          130717,
+          130726,
+          130783,
+          130805,
+          130827,
+          130853,
+          130995,
+          131011
+        ]
+      },
+      {
+        "name": "copy6_cold_second",
+        "exact": false,
+        "sha256": "<REDACTED:HASH_OR_BYTES>",
+        "mismatches": 23,
+        "first_offsets": [
+          130084,
+          130179,
+          130223,
+          130265,
+          130402,
+          130426,
+          130437,
+          130507,
+          130535,
+          130602,
+          130614,
+          130635,
+          130683,
+          130694,
+          130726,
+          130783,
+          130805,
+          130813,
+          130827,
+          130853,
+          130995,
+          131011,
+          131013
+        ]
+      }
+    ],
+    "identity": "<REDACTED:RAW_LOG_OR_IDENTIFIER>",
+    "loaded_marker": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+    "flash_info": "<REDACTED:RAW_LOG_OR_IDENTIFIER>",
+    "copy5_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "final_marker": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+    "copy6_persistence_exact": false,
+    "commands": "<REDACTED:RAW_LOG_OR_IDENTIFIER>"
+  }
+}

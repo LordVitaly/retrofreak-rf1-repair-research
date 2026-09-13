@@ -1,0 +1,105 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/power_hold_snapshot_hardware_attempt01/result.json",
+  "interpretation": "Power-hold MMIO snapshot; not a normal-boot trace.",
+  "data": {
+    "all_pass": true,
+    "nand_writes": 0,
+    "pmic_writes": 0,
+    "ftl_init": false,
+    "phase": "READ_ONLY_SNAPSHOT_COMPLETE",
+    "payload_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "commands": "<REDACTED:RAW_LOG_OR_IDENTIFIER>",
+    "device_intro": "\u001b[1t\u001b[c\u001b[?1004h\u001b[?9001hList of rockusb connected\r\r\nDevNo=1\tVid=0x2207,Pid=0x300a,Layer=1-10\tMaskrom\r\r\nFound 1 rockusb,Select input DevNo,Rescan press <R>,Quit press <Q>:",
+    "registers": [
+      {
+        "address": "0x200000f0",
+        "value": "0x0",
+        "skipped_clock_gated": false
+      },
+      {
+        "address": "0x2000a000",
+        "value": "0x0",
+        "skipped_clock_gated": false
+      },
+      {
+        "address": "0x2000a004",
+        "value": "0x0",
+        "skipped_clock_gated": false
+      },
+      {
+        "address": "0x2000a050",
+        "value": "0x18ed",
+        "skipped_clock_gated": false
+      },
+      {
+        "address": "0x20008154",
+        "value": "0x6",
+        "skipped_clock_gated": false
+      },
+      {
+        "address": "0x20000044",
+        "value": "0x1040",
+        "skipped_clock_gated": false
+      },
+      {
+        "address": "0x2002f000",
+        "value": "0x0",
+        "skipped_clock_gated": false
+      },
+      {
+        "address": "0x2002f004",
+        "value": "0x60006",
+        "skipped_clock_gated": false
+      },
+      {
+        "address": "0x2002f008",
+        "value": "0x0",
+        "skipped_clock_gated": false
+      },
+      {
+        "address": "0x2002f00c",
+        "value": "0x0",
+        "skipped_clock_gated": false
+      },
+      {
+        "address": "0x2002f010",
+        "value": "0x0",
+        "skipped_clock_gated": false
+      },
+      {
+        "address": "0x2002f014",
+        "value": "0x0",
+        "skipped_clock_gated": false
+      },
+      {
+        "address": "0x2002f018",
+        "value": "0x0",
+        "skipped_clock_gated": false
+      },
+      {
+        "address": "0x2002f01c",
+        "value": "0x0",
+        "skipped_clock_gated": false
+      },
+      {
+        "address": "0x2002f020",
+        "value": "0x0",
+        "skipped_clock_gated": false
+      },
+      {
+        "address": "0x200000f0",
+        "value": "0x0",
+        "skipped_clock_gated": false
+      }
+    ],
+    "gpio6_b0": {
+      "poweronpin": "GPIO6_B0",
+      "output_value": 0,
+      "direction_output": 0,
+      "input_level": 0
+    },
+    "pmic_registers_read": false,
+    "current_stage_sha256": "<REDACTED:HASH_OR_BYTES>"
+  }
+}

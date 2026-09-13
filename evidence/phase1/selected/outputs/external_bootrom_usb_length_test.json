@@ -1,0 +1,38 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "outputs/external_bootrom_usb_length_test.json",
+  "interpretation": "Arithmetic of a 16-bit counter in an external ROM; not a ROM dump from this RF-1.",
+  "data": {
+    "source": "https://gist.github.com/dw/9300925",
+    "external_rom_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "limitation": "External RK3066 ROM, not read from RF-1; packet-copy, CRC and decryption are not emulated.",
+    "executed_range": "0x1488 until 0x1578 or 0x14ec",
+    "cases": [
+      {
+        "payload_bytes": 56520,
+        "transferred_bytes": 56522,
+        "accumulated_u16": 56522,
+        "inferred_start": "0x60000000",
+        "expected_start": "0x60000000",
+        "start_matches": true
+      },
+      {
+        "payload_bytes": 110080,
+        "transferred_bytes": 110082,
+        "accumulated_u16": 44546,
+        "inferred_start": "0x60010000",
+        "expected_start": "0x60000000",
+        "start_matches": false
+      },
+      {
+        "payload_bytes": 110592,
+        "transferred_bytes": 110594,
+        "accumulated_u16": 45058,
+        "inferred_start": "0x60010000",
+        "expected_start": "0x60000000",
+        "start_matches": false
+      }
+    ],
+    "device_access": false
+  }
+}

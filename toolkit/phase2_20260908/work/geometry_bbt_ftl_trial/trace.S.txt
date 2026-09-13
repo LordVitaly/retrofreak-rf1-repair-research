@@ -1,0 +1,178 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/geometry_bbt_ftl_trial/trace.S
+Role: case_specific_payload_source_not_complete_standalone_firmware
+Original repair session must not be resumed from this public copy.
+
+.syntax unified
+.arm
+.section .text,"ax",%progbits
+.global trace_bbt,trace_read,trace_remap,trace_ftl_return,read_boot
+
+trace_bbt:
+    push {r0-r3,r4,lr}
+    ldr r4, =0x6101af10
+    mov r1, #0
+    mov r2, #264
+    mov r3, r4
+1:  str r1, [r3], #4
+    subs r2, r2, #1
+    bne 1b
+    ldr r1, =0x31544242
+    str r1, [r4]
+    mvn r1, #0
+    str r1, [r4,#852]
+    str r1, [r4,#856]
+    str r1, [r4,#860]
+    pop {r0-r3}
+    ldr r12, =0x60085ff0
+    blx r12
+    str r0, [r4,#852]
+    push {r0-r3}
+    ldr r1, =0x602b3180
+    add r2, r4, #800
+    mov r3, #8
+2:  ldr r0, [r1], #4
+    str r0, [r2], #4
+    subs r3, r3, #1
+    bne 2b
+    pop {r0-r3}
+    pop {r4,pc}
+
+trace_remap:
+    push {r4,lr}
+    ldr r4, =0x6101af10
+    ldr r12, =0x6008561c
+    blx r12
+    str r0, [r4,#856]
+    pop {r4,pc}
+
+trace_ftl_return:
+    mov r0, r7 /* exact replaced instruction, flags unchanged */
+    ldr r12, =0x6101af10
+    str r0, [r12,#860]
+    ldr pc, =0x60086c78 /* original POP at raw76ac */
+
+trace_read:
+    push {r4-r11,lr}
+    sub sp, sp, #12
+    mov r4, r0
+    mov r5, r2
+    mov r7, r1
+    mov r8, r3
+    ldr r12, [sp,#48]
+    str r12, [sp]
+    ldr r12, =0x600894c0
+    blx r12
+    push {r0-r3,r12}
+    mov r6, r0
+    ldr r9, =0x6101af10
+    cmp r8, #8
+    bne 6f
+    cmp r5, #0
+    beq 6f
+    mov r1, #0
+    add r3, r9, #832
+3:  ldrh r2, [r5,r1]
+    strh r2, [r3], #2
+    add r1, r1, #16
+    cmp r1, #128
+    blo 3b
+    cmp r6, #0
+    bne 5f
+    cmp r4, #0xc000
+    cmpne r4, #0xd000
+    bne 5f
+    ldrh r1, [r5]
+    cmp r1, #0xf000
+    bne 5f
+    ldrh r1, [r5,#16]
+    movw r2, #0x438
+    cmp r1, r2
+    bne 5f
+    ldrh r1, [r5,#32]
+    movw r2, #0xff70
+    cmp r1, r2
+    bne 5f
+    ldr r1, =0x602b3180
+    ldrh r1, [r1,#14]
+    cmp r1, #2048
+    bne 5f
+    movw r1, #1896
+    strh r1, [r5,#32] /* ONLY returned RAM aux slot2 */
+    str r1, [r9,#848]
+    ldr r1, [r9,#880]
+    add r1, r1, #1
+    str r1, [r9,#880]
+5:  mov r1, #0
+    add r3, r9, #864
+4:  ldrh r2, [r5,r1]
+    strh r2, [r3], #2
+    add r1, r1, #16
+    cmp r1, #128
+    blo 4b
+6:  ldr r1, [r9,#4]
+    add r2, r1, #1
+    str r2, [r9,#4]
+    cmp r6, #0
+    ldrne r2, [r9,#8]
+    addne r2, r2, #1
+    strne r2, [r9,#8]
+    cmp r5, #0
+    beq 9f
+    cmp r8, #0
+    beq 9f
+    ldrh r2, [r5]
+    cmp r2, #0xf000
+    ldreq r3, [r9,#12]
+    addeq r3, r3, #1
+    streq r3, [r9,#12]
+    cmp r1, #32
+    bhs 9f
+    add r3, r1, r1, lsl #1
+    add r3, r9, r3, lsl #3
+    str r4, [r3,#16]
+    str r6, [r3,#20]
+    str r2, [r3,#24]
+    cmp r8, #2
+    ldrhhs r2, [r5,#16]
+    movlo r2, #0
+    str r2, [r3,#28]
+    cmp r7, #0
+    ldrne r2, [r7]
+    moveq r2, #0
+    str r2, [r3,#32]
+    str r8, [r3,#36]
+9:  pop {r0-r3,r12}
+    add sp, sp, #12
+    pop {r4-r11,pc}
+
+read_boot:
+    push {r4,lr}
+    cpsid if
+    ldr r4, =0x6101af10
+    ldr r0, =0x52314652
+    str r0, [r4]
+    ldr r0, =0x31444145
+    str r0, [r4,#4]
+    ldr r1, =0x6020
+    str r1, [r4,#8]
+    mov r2, #1
+    str r2, [r4,#12]
+    mvn r0, #0
+    str r0, [r4,#16]
+    ldr r3, =0x6101b000
+    mov r0, r3
+    ldr r12, =0xa5a5a5a5
+    mov r2, #128
+10: str r12, [r0], #4
+    subs r2, r2, #1
+    bne 10b
+    mov r2, #1
+    mov r0, #0
+    ldr r12, =0x600846a0
+    blx r12
+    str r0, [r4,#16]
+    pop {r4,lr}
+    ldr pc, =0x60000100
+    .ltorg

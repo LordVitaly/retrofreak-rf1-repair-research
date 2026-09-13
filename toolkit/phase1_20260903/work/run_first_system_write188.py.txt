@@ -1,0 +1,130 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/run_first_system_write188.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""USER-AUTHORIZED ONE portion188 write, then read-only reopen/read/map and STOP.
+No loop over portions, no automatic write retry, no DB/reset/cold tests.
+Exclusive output folder and a durable pre-RD record prevent accidental repetition.
+"""
+import hashlib,json,os,struct,sys,time,zlib
+from pathlib import Path
+from ram_console_session import RamConsole
+assert sys.argv[1:]==['--authorized-first-2mib-only-then-stop']
+ROOT=Path(__file__).resolve().parents[1]
+WRITER='<REDACTED:HASH_OR_BYTES>'
+READER='<REDACTED:HASH_OR_BYTES>'
+CAPTURE='<REDACTED:HASH_OR_BYTES>'
+CURRENT='<REDACTED:HASH_OR_BYTES>'
+paths=[ROOT/'work/system_writer_write_payload_v1/write.NOT_FOR_UPLOAD.raw',ROOT/'work/system_read_portion_188/read.raw',ROOT/'work/ftl_capture_v1/capture.raw']
+payloads=[p.read_bytes() for p in paths]
+assert [hashlib.sha256(p).hexdigest() for p in payloads]==[WRITER,READER,CAPTURE]
+assert all(len(p)==110352 and zlib.crc32(p[:110080])==<REDACTED:ARTIFACT_CRC> for p in payloads)
+for data in payloads[1:]:
+    for off in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):assert data[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+    for off in (0xbbc8,0xbc90):assert data[off:off+4]==bytes.fromhex('feffffea')
+for name in ('system_gated_persistence_v3_attempt2.json','system_writer_gates_v3_offline.json'):
+    assert json.loads((ROOT/'outputs'/name).read_text())['all_pass']
+for name in ('system_writer_dry_hardware_attempt01','system_read_portion187_hardware_attempt01'):
+    assert json.loads((ROOT/f'work/{name}/result.json').read_text())['all_pass']
+baseline=json.loads((ROOT/'work/ftl_capture_hardware_attempt01/result.json').read_text());assert baseline['all_pass']
+protected=set(json.loads((ROOT/'outputs/system_writer_gated_v3_build.json').read_text())['protected_blocks'])
+donor=(ROOT.parent.parent/'2026-09-01/retro-freak-retrofreak-systemupdate-0-2/work/rkfw_contents/components/system.img').read_bytes()
+assert hashlib.sha256(donor).hexdigest()=='b9ca511124e6c3d9ee2a1e31220f6bf5a858f06d88f9003f5fd7f7e25cf5676a'
+source=donor[4194304:6291456];assert len(source)==2097152
+for base in (ROOT/'work/nand_native_ecc40',Path('<HOST_PATH>')):
+    assert all((base/f'NAND_{i:02d}.RAW').is_file() for i in range(32)),str(base)
+out=ROOT/'work/first_system_write188_hardware_attempt01';out.mkdir(exist_ok=False)
+result=dict(all_pass=False,authorization='User explicitly allowed ONLY first 2MiB [bc000,bd000), then report readback and reopened FTL, no next portion',writer_sha256=WRITER,reader_sha256=READER,capture_sha256=CAPTURE,source_sha256=hashlib.sha256(source).hexdigest(),write_launches=0,phase='preflight',commands=[],executions=[]);c=None
+def save(name,value):
+    with (out/name).open('x',encoding='utf-8') as f:json.dump(value,f,indent=2);f.flush();os.fsync(f.fileno())
+def read_window(sectors,prefix):
+    data=bytearray()
+    for i,off in enumerate(range(0,sectors,16)):
+        count=min(16,sectors-off);file=out/f'{prefix}_{i:03d}.raw'
+        c.command(f'RS {hex(0x800000+off)} {hex(count)} {file}')
+        block=file.read_bytes();assert len(block)==count*528
+        assert all(block[j+512:j+528]==bytes(16) for j in range(0,len(block),528))
+        data.extend(b''.join(block[j:j+512] for j in range(0,len(block),528)))
+    return bytes(data)
+def write_window(data,prefix):
+    assert len(data)==2097152
+    for i,off in enumerate(range(0,len(data),8192)):
+        file=out/f'{prefix}_{i:03d}.bin'
+        with file.open('xb') as f:f.write(data[off:off+8192])
+        c.command(f'WS {hex(0x800000+off//512)} {file}')
+def execute(index,prefix):
+    assert index==len(result['executions']) and 0<=index<=2
+    raw=payloads[index]
+    for i,off in enumerate(range(0,110080,8192)):
+        file=out/f'{prefix}_payload{i:02d}.bin'
+        with file.open('xb') as f:f.write(raw[off:min(off+8192,110080)])
+        c.command(f'WS {hex(0x7f0000+off//512)} {file}')
+    file=out/f'{prefix}_before.raw';c.command(f'RS 0x7f0000 0xd1 {file}');assert file.read_bytes()==raw
+    if index==0:
+        assert result['write_launches']==0 and result.get('donor_RAM_exact')
+        result['write_launches']=1
+        save('WRITE_ATTEMPTED_DO_NOT_REPEAT.json',dict(writer_sha256=WRITER,lba='0xbc000',sectors=4096,source_sha256=result['source_sha256'],time=time.time()))
+    else:assert result['write_launches']==1
+    result['phase']=prefix+'_executing';start=time.monotonic();c.command('RD')
+    file=out/f'{prefix}_after.raw';c.command(f'RS 0x7f0000 0xd1 {file}');after=file.read_bytes()
+    entry=dict(phase=prefix,after_sha256=hashlib.sha256(after).hexdigest(),elapsed_seconds=time.monotonic()-start);result['executions'].append(entry)
+    result['current_stage_sha256']=entry['after_sha256']
+    assert len(after)==110352 and after[:110080]==raw[:110080] and after[110348:]==bytes(4)
+    assert struct.unpack_from('<II',after,110080)==(0x44475453,0x600982e4)
+    assert struct.unpack_from('<I',after,110344)[0]==0x6009a1f8
+    result['phase']=prefix+'_returned'
+    file=out/f'{prefix}_status.raw';c.command(f'RS 0x7f00d1 0x1 {file}');status=file.read_bytes();assert len(status)==528
+    entry['status_hex']=status[:32].hex();save(prefix+'_execution.json',entry)
+    return status
+def differences(mapping):
+    return [dict(logical=i,before=a,after=b) for i,(a,b) in enumerate(zip(baseline['logical_to_physical'],mapping)) if a!=b]
+try:
+    c=RamConsole(out);c.select();result['commands']=c.commands
+    file=out/'window_before.raw';c.command(f'RS 0x7efffe 0x1 {file}')
+    assert file.read_bytes()==b'RF1WIN01'+struct.pack('<IIII',0x800000,4096,0x63000000,16)+bytes(504)
+    file=out/'previous.raw';c.command(f'RS 0x7f0000 0xd1 {file}');assert hashlib.sha256(file.read_bytes()).hexdigest()==CURRENT
+    write_window(source,'donor');assert read_window(4096,'donor_check')==source
+    result['donor_RAM_exact']=True;print('Donor 2097152 bytes EXACT in hardware RAM; ONE authorized write now',flush=True)
+    status=struct.unpack_from('<8I',execute(0,'write'))
+    result['writer_status']=[hex(v) for v in status]
+    snapshot=read_window(32,'write_gate')
+    with (out/'write_gate_export.bin').open('xb') as f:f.write(snapshot)
+    state=struct.unpack_from('<8I',snapshot);result['gate_state']=[hex(v) for v in state]
+    assert state[5]<=512
+    journal=[struct.unpack_from('<4I',snapshot,0x1000+i*16) for i in range(state[5])]
+    result['journal']=[dict(kind=a,sector=hex(b),status=hex(c),portion=hex(d)) for a,b,c,d in journal]
+    mapping=list(struct.unpack_from('<1896H',snapshot,0x3000));result['postwrite_mapping']=mapping;result['postwrite_map_changes']=differences(mapping)
+    save('write_results.json',{k:v for k,v in result.items() if k!='commands'})
+    assert status==(0x31575246,0xbc000,4096,6,4096,0xbcf80,0,0),('writer did not finish',status)
+    assert state[0:5]==(0,0,0x31504752,0xbc000,0xbd000) and state[5]==state[6]+state[7] and state[6]>0
+    assert all(a in (1,2) and b//4096 not in protected and c==0 and d==0xbc000 for a,b,c,d in journal)
+    assert not any(not 186<=x['logical']<=259 for x in result['postwrite_map_changes'])
+    result['immediate_readback_exact']=True
+    print('WRITE returned SUCCESS; immediate 2097152-byte readback exact; now READ-ONLY reopen',flush=True)
+    write_window(bytes(x^255 for x in source),'reopen_prefill')
+    status=execute(1,'reopen_read')
+    assert status[:8]==b'RF1READ2' and struct.unpack_from('<4I',status,8)==(0xbc000,4096,0,4096)
+    readback=read_window(4096,'reopen_readback')
+    with (out/'system188.after_reopen.bin').open('xb') as f:f.write(readback)
+    result['reopened_readback']=dict(bytes=len(readback),sha256=hashlib.sha256(readback).hexdigest(),expected_sha256=result['source_sha256'],mismatching_bytes=sum(a!=b for a,b in zip(source,readback)))
+    save('reopened_readback.json',result['reopened_readback'])
+    # Capture a fresh FTL instance via the unchanged already-proven read-only payload.
+    # Do this even on data mismatch so the requested mapping evidence is retained.
+    status=execute(2,'reopen_ftl_capture')
+    assert status[:8]==b'RF1READ1' and struct.unpack_from('<4I',status,8)==(0x103000,1,0,0xa8000)
+    ftl=read_window(1344,'reopen_ftl')
+    assert len(ftl)==0xa8000
+    with (out/'ftl.after_reopen.bin').open('xb') as f:f.write(ftl)
+    mapping2=list(struct.unpack_from('<1896H',ftl,0xf00))
+    result['reopened_ftl']=dict(header_hex=ftl[0x180:0x194].hex(),snapshot_sha256=hashlib.sha256(ftl).hexdigest(),logical_to_physical=mapping2,map_changes=differences(mapping2),target_logical=188,target_physical=mapping2[188],postwrite_target_physical=mapping[188],reopen_to_postwrite_changes=[dict(logical=i,postwrite=a,reopened=b) for i,(a,b) in enumerate(zip(mapping,mapping2)) if a!=b])
+    save('reopened_ftl.json',result['reopened_ftl'])
+    assert not any(not 186<=x['logical']<=259 for x in result['reopened_ftl']['map_changes'])
+    assert readback==source,('REOPEN DATA MISMATCH',result['reopened_readback'])
+    assert mapping2[188]!=0 and all(p<2048 for p in mapping2)
+    result.update(all_pass=True,phase='STOP_user_approval_required_for_next_portion',next_portion_started=False)
+except BaseException as e:result['error']=repr(e);raise
+finally:
+    if c:c.close()
+    save('result.json',result)
+    print(json.dumps({k:v for k,v in result.items() if k not in ('commands','postwrite_mapping','reopened_ftl','journal')},indent=2),flush=True)

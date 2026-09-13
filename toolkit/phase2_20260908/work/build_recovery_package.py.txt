@@ -1,0 +1,104 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/build_recovery_package.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+from pathlib import Path
+import hashlib,json,shutil,subprocess,os,zipfile
+work=Path(__file__).resolve().parent
+here=work.parent
+official=Path(r'<EXTERNAL_STAGE_01>/work/rkfw_contents/components')
+package=here/'outputs/RF1_RECOVERY_BACKUP_2026-09-09'
+package.mkdir(exist_ok=False)
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+data=work/'live_adb_working_backup/userdata_raw/userdata_linux.img'
+boot=work/'live_adb_working_backup/boot_raw/boot_linux.img'
+assert sha(data)=='<HISTORICAL_HASH_REDACTED>'
+assert sha(boot)=='<HISTORICAL_HASH_REDACTED>'
+assert hashlib.sha256(boot.read_bytes()[:8781824]).hexdigest()=='3e9556dc6195a7d6616685f9d58a439c23fe55dbe760ba9254f4d233ba79df0f'
+env=dict(os.environ);env['PATH']=str(work/'cache_last_attempt/portable/usr/bin')+os.pathsep+env.get('PATH','')
+cyg='/cygdrive/c/'+data.as_posix()[3:]
+check=subprocess.run([str(work/'cache_last_attempt/portable/usr/sbin/e2fsck.exe'),'-f','-n',cyg],env=env,capture_output=True,timeout=60)
+assert check.returncode==0,(check.returncode,check.stdout[-2000:],check.stderr)
+assert sha(data)=='<HISTORICAL_HASH_REDACTED>'
+(package/'userdata_readonly_fsck.txt').write_bytes(check.stdout+check.stderr)
+specs=[
+ (data,'userdata_working_256MiB.img','<HISTORICAL_HASH_REDACTED>','Consistent unmounted working userdata after successful GUI setup and reboots'),
+ (boot,'boot_working_diagnostic_16MiB.img','<HISTORICAL_HASH_REDACTED>','Current full logical boot partition; retains diagnostic ADB'),
+ (official/'boot.img','boot_official.img','416c84c67be71e89d63530c1902112ebbe54845aca3e377a79506ce5c90b090d','Original official boot image, 8781824 bytes'),
+ (official/'system.img','system_official.img','b9ca511124e6c3d9ee2a1e31220f6bf5a858f06d88f9003f5fd7f7e25cf5676a','Official system matching all current system data; live superblock history differs'),
+ (official/'recovery.img','recovery_official.img',None,'Official recovery source; not a new readback or proof that current recovery works'),
+ (official/'parameter','parameter_official.bin','<HISTORICAL_HASH_REDACTED>','Official PARM component; current NAND equality not established'),
+ (work/'cache_last_attempt/cache64.img','cache_clean_64MiB.img','<HISTORICAL_HASH_REDACTED>','Verified clean cache template; not current live cache contents'),
+ (work/'bbt_restore_after_copy0_attempt04/COPY0_COLD_FULL.RAW','IDB0_COLD_BOOT_ORDER.raw528','<HISTORICAL_HASH_REDACTED>','Cold-verified IDB0, boot order, native ECC24, 256 records of 528 bytes'),
+ (work/'bbt_restore_after_copy0_attempt04/FINAL_BLOCK12.RAW','BBT12_CORRECTED.raw528','<HISTORICAL_HASH_REDACTED>','Corrected BBT12, main512 plus meaningful auxiliary u16 per raw528 record; native ECC40'),
+ (work/'copy0_writer_v1/build.json','proofs/IDB0_PAGE_ORDER_build.json',None,'IDB MLC page-order and writer build metadata'),
+ (work/'bbt_restore_after_copy0_attempt04/result.json','proofs/IDB0_BBT12_hardware_result.json','<HISTORICAL_HASH_REDACTED>','Cold IDB0 and exact BBT12 native readback proof'),
+ (work/'original_boot_after_idb0_attempt01/result.json','proofs/BBT_original_init_result.json','<HISTORICAL_HASH_REDACTED>','Original initialization accepts BBT without RAM correction'),
+ (work/'live_adb_working_backup/userdata_raw/result.json','proofs/userdata_read_result.json',None,'Fresh full userdata read metadata'),
+ (work/'live_adb_working_backup/boot_raw/result.json','proofs/boot_read_result.json',None,'Fresh full boot read metadata'),
+ (work/'userdata_native_repair_attempt02/result.json','proofs/userdata_repair_result.json',None,'Successful stock e2fsck repair and readonly verification'),
+ (work/'live_adb_after_data_repair/functional_validation.json','proofs/functional_validation.json',None,'Working GUI, filesystem state and post-reboot system checks'),
+ (here/'outputs/RF1_STATUS_2026-09-09.md','RF1_STATUS_2026-09-09.md',None,'Recovery history and diagnostic USB limitation'),
+]
+entries=[]
+for src,name,pin,role in specs:
+ digest=sha(src)
+ if pin:assert digest==pin,(name,digest,pin)
+ dst=package/name;dst.parent.mkdir(exist_ok=True)
+ shutil.copyfile(src,dst)
+ assert sha(dst)==digest
+ entries.append({'file':name,'bytes':dst.stat().st_size,'sha256':digest,'role':role})
+readme='''# Retro Freak RF-1 recovery component set, 9 September 2026
+
+This package was prepared after successful GUI boot, license acceptance, language selection,
+and confirmed settings persistence across restarts. The saved userdata image was captured while
+unmounted; read-only e2fsck validation completed without modifying it.
+
+The set contains a working userdata image, the then-current diagnostic boot image, official
+boot/system/recovery/parameter references, a clean cache image, verified IDB0 material,
+repaired BBT12 material, checksums, and proof reports.
+
+This is a component recovery set, NOT one raw 4 GiB NAND image. It does not include a complete
+physical NAND/OOB image, the user storage at /mnt/sdcard, removable microSD contents, or the
+then-current cache contents. These files are also not a universal firmware bundle for blind use.
+
+Logical boot/userdata images and physical IDB/BBT material use different formats. IDB0_BOOT_ORDER
+contains 256 records of 528 bytes; the first 248 are meaningful in this case. IDB recovery requires
+the correct MLC low-page order and native ECC24. A linear write of raw528 or extracted main data
+is not equivalent. BBT12 contains 4096 raw528 records; main512 and the first two auxiliary bytes
+were meaningful in the observed ECC40 path. The remaining 14 bytes are not a complete physical
+OOB/ECC capture. See the proof material for page order and hardware evidence.
+
+The diagnostic boot in this historical package enables early root ADB and forces USB device mode.
+A stock boot reference is included separately. Before restoring boot, always re-measure the active
+boot mapping: early and full FTL modes were observed to select different physical copies, and old
+physical block numbers must never be treated as permanent addresses.
+
+The official system image is a reference source. The working live system intentionally retained
+historical filesystem error fields in its superblock. Recovery and parameter files in this package
+are official references, not new hardware readbacks of those partitions.
+
+manifest.json records file roles and SHA-256 values; SHA256SUMS.txt is provided for convenience.
+Recovered historical objects under userdata/lost+found are preserved as-is; a successful fsck does
+not prove semantic correctness of every recovered object.
+'''
+(package/'README_RU.md').write_text(readme,encoding='utf-8')
+for name in ('README_RU.md','userdata_readonly_fsck.txt'):
+ p=package/name;entries.append({'file':name,'bytes':p.stat().st_size,'sha256':sha(p),'role':'Package documentation or validation'})
+manifest={'all_pass':True,'full_physical_nand_dump':False,'working_userdata_fsck_exit':0,'files':entries}
+(package/'manifest.json').write_text(json.dumps(manifest,indent=2,ensure_ascii=False),encoding='utf-8')
+(package/'SHA256SUMS.txt').write_text(''.join(e['sha256']+'  '+e['file']+'\n' for e in entries)+sha(package/'manifest.json')+'  manifest.json\n',encoding='utf-8')
+archive=package.with_suffix('.zip')
+assert not archive.exists()
+with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=6,allowZip64=True) as z:
+ for p in sorted(package.rglob('*')):
+  if p.is_file():z.write(p,str(Path(package.name)/p.relative_to(package)))
+with zipfile.ZipFile(archive) as z:
+ assert z.testzip() is None
+ for e in entries:
+  assert hashlib.sha256(z.read(package.name+'/'+e['file'])).hexdigest()==e['sha256']
+result={'all_pass':True,'archive':str(archive),'archive_bytes':archive.stat().st_size,'archive_sha256':sha(archive),'working_userdata_sha256':sha(data),'working_boot_sha256':sha(boot),'files_verified':len(entries)+2}
+(here/'outputs/RF1_RECOVERY_BACKUP_2026-09-09_VERIFIED.json').write_text(json.dumps(result,indent=2))
+print(json.dumps(result,indent=2),flush=True)

@@ -1,0 +1,148 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/run_usb_ram_bridge_checkpoint_modefix.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""One ENTRY CHECKPOINT diagnostic. Not the full FlashBoot hardware dry-run.
+
+One fresh MaskROM DB -> exact 528-byte bridge marker -> fixed RAM payload WS ->
+full RAM readback -> optional entry + return -> exact changed marker. No repair.
+"""
+import argparse,hashlib,json,os,struct,subprocess,threading,time
+from pathlib import Path
+from direct_winpty_console import DirectConsole
+from read_device_identity import TOOL
+from console_completion import completed_response
+ROOT=Path(__file__).resolve().parents[1]
+p=argparse.ArgumentParser()
+p.add_argument('--after-confirmed-cold-maskrom',action='store_true')
+p.add_argument('--execute-entry-checkpoint',action='store_true')
+p.add_argument('--resume-after-host-prompt-fix',action='store_true')
+args=p.parse_args()
+if args.resume_after_host_prompt_fix:
+    p.error('Historical v1 resume is not valid for this new binary; fresh cold MaskROM required')
+if args.after_confirmed_cold_maskrom == args.resume_after_host_prompt_fix:
+    p.error('Choose either a NEW cold MaskROM DB or the single authenticated RAM-only host-fix resume')
+loader=ROOT/'work/usb_ram_bridge_checkpoint_modefix.BOOT.OFFLINE_ONLY.bin'
+payload=ROOT/'work/usb_ram_bridge_checkpoint_modefix.guarded_payload.RAM_ONLY.raw'
+assert hashlib.sha256(loader.read_bytes()).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+expected=payload.read_bytes()
+assert hashlib.sha256(expected).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+assert len(expected)==110352
+for n in (1,2,3):
+    assert json.loads((ROOT/f'outputs/fixed_boundary{n:02d}_verification.json').read_text())['all_eight_exact']
+offline=json.loads((ROOT/'outputs/usb_ram_bridge_checkpoint_modefix_offline_tests.json').read_text())
+assert offline['build_sha256']==hashlib.sha256(loader.read_bytes()).hexdigest()
+assert all(offline[k] for k in ('marker_exact','full_110352_byte_RAM_roundtrip','six_NAND_entry_guards_reject_without_writes',
+    'all_256_opcodes_checked','three_corrupted_payloads_refused','guarded_payload_changed_only_at_entry_branch',
+    'bridge_survives_cleared_low_append_area','WS_512_plus_16_unwrapped','checkpoint_roundtrip_passed','no_peripheral_access_during_checkpoint'))
+running=subprocess.run(['tasklist','/FI','IMAGENAME eq Android_Console_Tool.exe','/FO','CSV','/NH'],capture_output=True,text=True,check=True).stdout
+assert 'Android_Console_Tool.exe' not in running,'Another console is active'
+if args.resume_after_host_prompt_fix:
+    prior=json.loads((ROOT/'work/usb_ram_bridge_checkpoint_modefix_hardware_attempt01/result.json').read_text())
+    assert prior['marker_exact'] and not prior['handoff_command_sent']
+    assert prior['commands'][-1].startswith('WS 0x7f0010 ')
+out=ROOT/('work/usb_ram_bridge_checkpoint_modefix_resume01' if args.resume_after_host_prompt_fix else 'work/usb_ram_bridge_checkpoint_modefix_hardware_attempt01')
+out.mkdir(exist_ok=False)
+main=expected[:110080]
+original=(ROOT/'work/readonly_ram.FlashBoot.NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(original).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+assert main[:4]==original[:4] and main[8:]==original[8:]
+assert main[4:8]==struct.pack('<I',0xea2002fd)
+marker=out/'bridge_marker.raw';readback=out/'guarded_payload_ram_readback.raw'
+marker_expected=b'RF1CKP02'+struct.pack('<II',110080,<REDACTED:ARTIFACT_CRC>)+bytes(528-16)
+env=dict(os.environ);env['__COMPAT_LAYER']='RunAsInvoker'
+proc=DirectConsole.spawn([str(TOOL)],cwd=str(TOOL.parent),env=env,dimensions=(40,160),backend=1)
+chunks=[];done=threading.Event();stream=(out/'transcript.txt').open('x',encoding='utf-8')
+result=dict(commands=[],marker_exact=False,RAM_roundtrip_exact=False,handoff_command_sent=False,
+    system_repair_performed=False,checkpoint_returned=False,FlashBoot_FTL_init_executed=False,scope='WS allowed only after exact bridge marker; targets RAM, not NAND')
+def reader():
+    try:
+        while proc.isalive():
+            s=proc.read(4096)
+            if s:chunks.append(s);stream.write(s);stream.flush()
+    except EOFError:pass
+    finally:done.set()
+threading.Thread(target=reader,daemon=True).start()
+def wait(fragment,start=0):
+    deadline=time.monotonic()+45
+    while time.monotonic()<deadline:
+        text=''.join(chunks)
+        if fragment in text[start:]:return text[start:]
+        if done.is_set() or not proc.isalive():break
+        time.sleep(.05)
+    raise RuntimeError('Expected response absent; no further commands')
+def command(value):
+    # Command construction is fixed below; no caller-supplied arbitrary command.
+    result['commands'].append(value)
+    start=len(''.join(chunks));proc.write(value+'\r\n')
+    tokens={'DB':'Download boot ok','RS':'Read Sector to file (100%)',
+            'WS':'Write Sector from file (100%)','RFI':'Flash Info:', 'RD':'Reset Device OK'}
+    token=tokens[value.split()[0]]
+    deadline=time.monotonic()+45
+    while time.monotonic()<deadline:
+        response=completed_response(''.join(chunks),start,token)
+        if response is not None:return response
+        if done.is_set() or not proc.isalive():break
+        time.sleep(.05)
+    raise RuntimeError('Command success token plus following prompt absent; no further commands')
+try:
+    intro=wait('Select input')
+    assert all(s in intro for s in ('Found 1 rockusb','DevNo=1'))
+    assert 'Maskrom' in intro
+    start=len(''.join(chunks));proc.write('1\r\n');wait('Rockusb>',start)
+    if not args.resume_after_host_prompt_fix:
+        assert 'Download boot ok' in command(f'DB {loader}')
+    response=command(f'RS 0x7effff 0x1 {marker}')
+    assert '(100%)' in response and marker.read_bytes()==marker_expected,'RAM bridge identity absent; WS FORBIDDEN'
+    result['marker_exact']=True
+    if args.resume_after_host_prompt_fix:
+        partial=out/'prior_two_packets.raw'
+        response=command(f'RS 0x7f0000 0x20 {partial}')
+        assert len(partial.read_bytes())==32*528
+        assert partial.read_bytes()[:16384]==main[:16384],'Prior two RAM packets do not match; stop'
+        result['prior_two_packets_exact']=True
+    print('RAM_BRIDGE_MARKER_EXACT; bounded RAM transfer permitted',flush=True)
+    response=command('RFI')
+    result['RFI_response']=response
+    assert 'Flash Info:' in response  # RAM-only bridge need not expose usable NAND geometry.
+    # Console long WS does not advance as expected on this bridge. Each command
+    # is at most one measured 16-sector packet, with an explicit address.
+    for index,start in enumerate(range(0,len(main),8192)):
+        part=out/f'part{index:02d}.main512.bin'
+        with part.open('xb') as f:f.write(main[start:start+8192])
+        response=command(f'WS {hex(0x7f0000+start//512)} {part}')
+        assert '(100%)' in response and 'fail' not in response.lower(),'RAM transfer not reported successful; no handoff'
+    response=command(f'RS 0x7f0000 0xd1 {readback}')
+    actual=readback.read_bytes()
+    assert '(100%)' in response and actual==expected,'RAM readback mismatch; no handoff'
+    result['RAM_roundtrip_exact']=True
+    result['readback_sha256']=hashlib.sha256(readback.read_bytes()).hexdigest()
+    print('RAM_ROUNDTRIP_EXACT 110352 bytes; diagnostic ENTRY CHECKPOINT payload verified',flush=True)
+    if args.execute_entry_checkpoint:
+        # RD approves only the diagnostic payload that returns at instruction 4.
+        result['handoff_command_sent']=True
+        try:result['handoff_response']=command('RD')
+        except RuntimeError as exc:
+            result['handoff_response']=''.join(chunks)[start:]
+            result['handoff_observation']=str(exc)
+            raise RuntimeError('Checkpoint ACK/prompt missing; no further commands') from exc
+        # ACK is not proof. Read an explicit new state through restored USBplug.
+        time.sleep(0.5)
+        after=out/'entry_checkpoint_after.raw'
+        response=command(f'RS 0x7effff 0x1 {after}')
+        wanted=b'RF1CKP02'+struct.pack('<IIII',110080,<REDACTED:ARTIFACT_CRC>,1,0x60000004)+bytes(528-24)
+        assert '(100%)' in response and after.read_bytes()==wanted,'ENTRY CHECKPOINT NOT OBSERVED; do not infer payload execution'
+        result['checkpoint_returned']=True
+        result['checkpoint_pc']='0x60000004'
+        result['after_marker_sha256']=hashlib.sha256(after.read_bytes()).hexdigest()
+        print('PAYLOAD ENTRY + RETURN TO USB BRIDGE PROVED; NOT FlashBoot FTL/USB init',flush=True)
+    print(json.dumps(result,indent=2),flush=True)
+except BaseException as exc:
+    result['error']=repr(exc)
+    raise
+finally:
+    if proc.isalive():proc.terminate(force=True)
+    done.wait(2)
+    if done.is_set():stream.close()
+    with (out/'result.json').open('x',encoding='utf-8') as f:json.dump(result,f,indent=2)

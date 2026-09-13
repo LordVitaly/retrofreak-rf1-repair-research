@@ -1,0 +1,46 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_ram_bootstrap_cpu_gate.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Run actual pre-copy ARM guards with altered CP15/CPSR on Cortex-A9 model."""
+import hashlib
+import json
+import sys
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'work/emulator_deps'))
+from unicorn import Uc, UC_ARCH_ARM, UC_MODE_ARM, UC_HOOK_CODE, UC_HOOK_MEM_WRITE
+from unicorn.arm_const import UC_CPU_ARM_CORTEX_A9, UC_ARM_REG_CPSR, UC_ARM_REG_PC, UC_ARM_REG_R0
+blob=(ROOT/'work/ram_bootstrap.NOT_FOR_UPLOAD.bin').read_bytes()
+previous=json.loads((ROOT/'outputs/ram_bootstrap_execution.json').read_text())
+assert hashlib.sha256(blob).hexdigest()==previous['binary_sha256']
+fail=int(previous['symbols']['failure'],16)-0x1000000
+results=[]
+for name,bit,bigend in [('mmu_enabled',1,False),('dcache_enabled',4,False),('both_enabled',5,False),('big_endian',0,True)]:
+    u=Uc(UC_ARCH_ARM,UC_MODE_ARM,cpu=UC_CPU_ARM_CORTEX_A9)
+    u.mem_map(0x60000000,0x10000); u.mem_write(0x60000000,blob)
+    control=u.cpr_read(15,0,1,0,0,0,False)
+    # Unicorn faults fetching code with MMU enabled and no page tables.
+    # For M=1 cases inject only the value consumed by the guard after MRC.
+    u.cpr_write(15,0,1,0,0,0,False,(control&~5)|(bit&4))
+    if bit&1:
+        assert blob[0x1c:0x20]==bytes.fromhex('100f11ee')
+        def inject_m(uc,address,size,ctx):
+            uc.reg_write(UC_ARM_REG_R0,uc.reg_read(UC_ARM_REG_R0)|1)
+        u.hook_add(UC_HOOK_CODE,inject_m,begin=0x60000020,end=0x60000020)
+    if bigend: u.reg_write(UC_ARM_REG_CPSR,u.reg_read(UC_ARM_REG_CPSR)|0x200)
+    state=dict(hits=0,writes=[])
+    def stop(uc,address,size,ctx):
+        state['hits']+=1
+        if state['hits']==8: uc.emu_stop()
+    def write(uc,access,address,size,value,ctx):
+        state['writes'].append((hex(address),size)); uc.emu_stop()
+    u.hook_add(UC_HOOK_CODE,stop,begin=fail,end=fail)
+    u.hook_add(UC_HOOK_MEM_WRITE,write)
+    u.emu_start(0x60000000,0,count=1000)
+    assert u.reg_read(UC_ARM_REG_PC)==fail and state['hits']==8 and not state['writes'],(name,state,hex(u.reg_read(UC_ARM_REG_PC)))
+    results.append(dict(case=name,pc=hex(fail),state=state,mmu_read_value_injected=bool(bit&1)))
+report=dict(binary_sha256=hashlib.sha256(blob).hexdigest(),cpu='Unicorn Cortex-A9',cases=results,device_access=False,limitation='M=1 tests inject register value AFTER MRC because actual enabled MMU faults before guard without translation tables. C and E tests use configured CP15/CPSR. Does not prove RF-1 entry state/cache coherency. Secondary-core guard not covered.')
+(ROOT/'outputs/ram_bootstrap_cpu_gate.json').write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps(report,indent=2))

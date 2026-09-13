@@ -1,0 +1,49 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/run_fixed_boundary_probe.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""One bounded hardware check; requires a NEW user-confirmed cold MaskROM entry.
+
+No NAND write/erase/FTL commands. RAM candidate is not intrinsically write-disabled.
+"""
+import argparse
+import json
+import subprocess
+from pathlib import Path
+from read_device_identity import run
+from verify_native_ecc_page import BOOT, compare
+
+p = argparse.ArgumentParser()
+p.add_argument('--after-confirmed-cold-maskrom',action='store_true')
+p.add_argument('--attempt',type=int,choices=(1,2,3),default=1)
+args = p.parse_args()
+if not args.after_confirmed_cold_maskrom:
+    p.error('A new physical cold MaskROM confirmation is required; do not reuse an earlier ready message')
+processes = subprocess.run(['tasklist','/FI','IMAGENAME eq Android_Console_Tool.exe','/FO','CSV','/NH'],
+    capture_output=True,text=True,check=True).stdout
+if 'Android_Console_Tool.exe' in processes:
+    raise RuntimeError('Another device console is active; stopping')
+root = Path(__file__).resolve().parent
+tag = f'fixed_boundary{args.attempt:02d}_'
+run([],root/f'{tag}probe.txt',probe=True,tag=tag,fixed_boundary=True)
+result = compare((root/f'{tag}probe_native_ecc40_page2.raw').read_bytes(),BOOT.read_bytes()[16384:24576])
+print('FIRST_PAGE '+json.dumps(result),flush=True)
+if not result['exact_page_match']:
+    raise RuntimeError('First page mismatch; no further hardware commands')
+run([],root/f'{tag}suite.txt',suite=True,tag=tag)
+rows = []
+for name,pages in [('boot',(0,1,2,3,12)),('recovery',(0,3,25))]:
+    reference = (BOOT.parent/f'{name}.img').read_bytes()
+    for page in pages:
+        raw = (root/f'{tag}native_ecc40_{name}_page{page}.raw').read_bytes()
+        result = compare(raw,reference[page*8192:(page+1)*8192])
+        result.update(name=name,page=page,raw_equals_baseline=raw==(root/f'native_ecc40_{name}_page{page}.raw').read_bytes())
+        rows.append(result)
+report = dict(attempt=args.attempt,all_eight_exact=all(r['exact_page_match'] and r['raw_equals_baseline'] for r in rows),
+    rows=rows,nand_write_commands_sent=False,scope='Sample reads only, not whole-NAND invariance or FTL readiness')
+with (root.parent/'outputs'/f'{tag}verification.json').open('x',encoding='utf-8') as f:
+    json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2),flush=True)
+if not report['all_eight_exact']:
+    raise RuntimeError('Suite mismatch; stop before any further loader or repair operation')

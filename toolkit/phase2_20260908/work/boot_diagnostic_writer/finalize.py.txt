@@ -1,0 +1,23 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/boot_diagnostic_writer/finalize.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Bind completed offline proofs and source provenance into the manifest."""
+import hashlib,json
+from pathlib import Path
+OUT=Path(__file__).resolve().parent
+def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+m=json.loads((OUT/'manifest.json').read_text())
+for name in ('offline_proof.json','handoff_proof.json'):
+ p=OUT/name;proof=json.loads(p.read_text());assert proof['all_pass'] and not proof['device_access']
+ assert {v['variant'] for v in proof['variants']}==set(m['variants'])
+m['proof_sha256']={name:sha(OUT/name) for name in ('offline_proof.json','handoff_proof.json')}
+m['source_sha256']={name:sha(OUT/name) for name in ('boot_core.c','boot_gate.c','boot_gate.h','boot_protection.h','handoff.S','system_writer_original.S','system_writer_gated.ld','ftl_bridge_read.ld','build.py','test_offline.py','test_handoff.py')}
+m['metadata_export']={'RS': '0x7f00d1','count':2,'tuple_offset':0,'RAM_address':'0x6101af10','tuple_u32':['token','lba','sectors','phase','completed','current_lba','io_rc','core_return'],'token':'0x31575246','write_success_phase':6,'dry_phase':3,'dry_faults':['0xd001','0xd002']}
+m['window_export']={'RS_first':'0x800000','sectors':32,'max_sectors_per_call':16,'record_bytes':528,'data_bytes_per_record':512,'gate_state_offset':0,'dynamic_protected_bitmap_offset':'0x100','dynamic_protected_bitmap_bytes':256,'journal_offset':'0x1000','journal_record_bytes':16,'journal_capacity':512,'map_offset':'0x3000','map_u16_entries':1896,'source_overwritten_after_core':True}
+m['preconditions']=['Current IDB/BBT accepted with original capacity/geometry opcodes and no RAM BBT correction.','Fresh pinned map snapshot and exact backed-up boot + preserved tail are the source of this build.','Each stage requires fresh full2MiB source RAM load/readback because helper overwrites source with audit export.','Actual dry must return via bridge with one denied physical attempt, no physical backend entry, no programs/erases.','Armed payload is launched once, followed by exact fullblock readback after read-only FTL reopen and fresh fullmap capture.','No automatic retry after any failure; restore plan uses original backup and fresh mapping.']
+m['all_pass']=True
+(OUT/'manifest.json').write_text(json.dumps(m,indent=2)+'\n')
+print(json.dumps({'manifest_sha256':sha(OUT/'manifest.json'),'all_pass':m['all_pass'],'payloads':{k:v['sha256'] for k,v in m['variants'].items()}},indent=2))

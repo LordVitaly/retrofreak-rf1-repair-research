@@ -1,0 +1,127 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/prove_rs_boot_mapping.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Bounded RS wrapper replay: real ARM address selection, no hardware/peripherals.
+
+Physical reads are supplied from the preserved dump. This proves address
+selection/output assembly only, not hardware ECC, initialization, or safety.
+"""
+import hashlib
+import json
+import struct
+import sys
+from pathlib import Path
+from audit_ram_loader_container import rc4, crc32
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'work/emulator_deps'))
+from unicorn import Uc, UC_ARCH_ARM, UC_MODE_ARM, UC_HOOK_CODE
+from unicorn.arm_const import *
+
+known = (ROOT/'work/RetronLoader_READ_NATIVE_ECC_RAM_ONLY.bin').read_bytes()
+assert hashlib.sha256(known).hexdigest() == '<REDACTED:HASH_OR_BYTES>'
+header = struct.unpack_from('<H', known, 4)[0]
+entries = [struct.unpack_from('<III', known, header+57*n+45) for n in range(4)]
+off, size, delay = entries[1]
+assert size == 56520
+usb = rc4(known[off:off+size])
+assert usb[0x78c4:0x78c8] == bytes.fromhex('910201e0')  # mul r1,r1,r2
+patched = bytearray(usb)
+patched[0x78c4:0x78c8] = bytes.fromhex('0319a0e3')  # mov r1,#0xc000
+assert len(patched) == len(usb)
+param = (ROOT/'work/idb_ecc24_parameter_attempt2/block05_page15.raw').read_bytes()
+assert len(param) == 528
+dump = (ROOT/'work/nand_native_ecc40/NAND_00.RAW').read_bytes()
+B, G, TABLE, OUT, STACK, STOP = 0x60000000, 0x60020e48, 0x60020dc8, 0x60030000, 0x6003f000, 0x6003fffc
+
+def replay(code, reserved, sector, count):
+    u = Uc(UC_ARCH_ARM, UC_MODE_ARM)
+    u.mem_map(B, 0x40000)
+    u.mem_write(B, bytes(code))
+    u.mem_write(G, struct.pack('<I', 6))
+    u.mem_write(G+8, param[0x18:0x90])
+    u.mem_write(G+0xa0, struct.pack('<H', reserved))
+    u.reg_write(UC_ARM_REG_SP, STACK)
+    u.reg_write(UC_ARM_REG_R4, TABLE)
+    # Run the actual table-generation arithmetic only; stop before its caller.
+    u.emu_start(B+0x5450, B+0x548c, count=4096)
+    assert u.reg_read(UC_ARM_REG_PC) == B+0x548c
+    table = bytes(u.mem_read(TABLE, 128))
+    assert table[:16] == bytes([0,1,2,3,6,7,10,11,14,15,18,19,22,23,26,27])
+    calls = []
+    def hook(uc, pc, length, unused):
+        if pc == B+0xd70c:
+            a, b = uc.reg_read(UC_ARM_REG_R0), uc.reg_read(UC_ARM_REG_R1)
+            assert b
+            uc.reg_write(UC_ARM_REG_R0, a//b)
+            uc.reg_write(UC_ARM_REG_R1, a%b)
+        elif pc == B+0x7a18:
+            dst, src, n = [uc.reg_read(r) for r in (UC_ARM_REG_R0, UC_ARM_REG_R1, UC_ARM_REG_R2)]
+            uc.mem_write(dst, bytes(uc.mem_read(src, n)))
+        elif pc == B+0x7498:
+            chip, address, main, aux = [uc.reg_read(r) for r in (UC_ARM_REG_R0, UC_ARM_REG_R1, UC_ARM_REG_R2, UC_ARM_REG_R3)]
+            n = struct.unpack('<I', uc.mem_read(uc.reg_read(UC_ARM_REG_SP), 4))[0]
+            assert chip == 0 and 0 < n <= 16 and address+n <= 0x40000
+            raw = dump[address*528:(address+n)*528]
+            uc.mem_write(main, b''.join(raw[i:i+512] for i in range(0,len(raw),528)))
+            uc.mem_write(aux, b''.join(raw[i+512:i+528] for i in range(0,len(raw),528)))
+            calls.append(dict(sector=hex(address), count=n))
+            uc.reg_write(UC_ARM_REG_R0, 0)
+        else:
+            return
+        uc.reg_write(UC_ARM_REG_PC, uc.reg_read(UC_ARM_REG_LR))
+    u.hook_add(UC_HOOK_CODE, hook)
+    for register, value in ((UC_ARM_REG_R0,0),(UC_ARM_REG_R1,sector),
+            (UC_ARM_REG_R2,OUT),(UC_ARM_REG_R3,count),(UC_ARM_REG_SP,STACK),(UC_ARM_REG_LR,STOP)):
+        u.reg_write(register, value)
+    u.emu_start(B+0x787c, STOP, count=100000)
+    assert u.reg_read(UC_ARM_REG_PC) == STOP
+    return bytes(u.mem_read(OUT, count*528)), calls
+
+cases = []
+for name, base, pages in [('boot',0x16000,(0,1,2,3,12)),('recovery',0x1e000,(0,3,25))]:
+    for page in pages:
+        sector = base+page*16
+        current = (ROOT/f'work/plain_control_native_ecc40_{name}_page{page}.raw').read_bytes()
+        bad, calls = replay(usb, 0xffff, sector, 16)
+        corrected, corrected_calls = replay(patched, 0xffff, sector, 16)
+        old_mode, _ = replay(usb, 12, sector, 16)
+        expected = dump[sector*528:(sector+16)*528]
+        assert bad == current, (name,page,'bad mode does not explain response')
+        assert corrected == old_mode == expected, (name,page,'correction failed')
+        cases.append(dict(name=name,page=page,observed_response_reproduced=True,
+                          corrected_raw_exact=True,original_calls=calls,corrected_calls=corrected_calls))
+
+short = []
+for row in map(json.loads, (ROOT/'work/address_probe_20260906_01/manifest.jsonl').read_text().splitlines()):
+    raw = (ROOT/'work/address_probe_20260906_01'/row['file']).read_bytes()
+    modeled, calls = replay(usb,0xffff,row['sector'],row['count'])
+    assert modeled == raw
+    short.append(dict(file=row['file'],exact=True,calls=calls))
+
+# Ensure IDB-range semantics match the previously verified reserved=12 mode.
+for sector in (0,0x5000,0xbff0,0xc000):
+    assert replay(patched,0xffff,sector,16)[0] == replay(usb,12,sector,16)[0]
+
+container = bytearray(known)
+container[off:off+size] = rc4(patched)
+struct.pack_into('<I', container, len(container)-4, crc32(container[:-4]))
+assert len(container) == len(known)
+assert rc4(container[off:off+size]) == patched
+assert all(off+0x78c4 <= i < off+0x78c8 or i >= len(known)-4
+           for i,(a,b) in enumerate(zip(known,container)) if a != b)
+target = ROOT/'work/RetronLoader_RS_FIXED_BOUNDARY_RAM_ONLY.bin'
+with target.open('xb') as f:
+    f.write(container)
+report = dict(scope='Actual ARM RS wrapper and table arithmetic; NAND read supplied from saved dump. Not hardware init or ECC proof.',
+    interpretation='All 15 saved hardware responses exactly reproduced by the IDB 2KiB/low-page branch. Reserved=0xffff is one sufficient modeled state, not measured RAM contents.',
+    change='RS wrapper only: 0x78c4 MUL r1,r1,r2 -> MOV r1,#0xc000. Fixed boundary of 12 physical 4096-sector blocks, no global state changes.',
+    cases=cases,short_reads=short,entry472_size=size,container=str(target),
+    sha256=hashlib.sha256(container).hexdigest(),device_access=False,
+    safety='Initialization and write functions are unchanged. Candidate is NOT intrinsically write-disabled. Hardware invocation must restrict commands to DB, RFI and RS; no FTL or NAND writes.')
+with (ROOT/'outputs/rs_boot_mapping_proof_20260906.json').open('x',encoding='utf-8') as f:
+    json.dump(report,f,indent=2)
+print(json.dumps({k:v for k,v in report.items() if k not in ('cases','short_reads')},indent=2))
+print('PASS: 8 full pages + 7 short responses reproduced; 8 corrected pages exact; IDB boundary checks passed.')

@@ -1,0 +1,188 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/cache_last_writer/run.py
+Role: historical_device_runner_or_stateful_scenario_review_before_any_use
+Original repair session must not be resumed from this public copy.
+
+"""One fixed cache block: read-only dry, once-only FTL write, reopened read and map."""
+from pathlib import Path
+import hashlib,json,os,struct,sys,zlib
+if sys.flags.optimize: raise RuntimeError('Assertions required; do not use python -O')
+build=Path(__file__).resolve().parent;HERE=build.parent
+OLD=Path('<EXTERNAL_STAGE_03>')
+sys.path.insert(0,str(OLD/'work'))
+from ram_console_session import RamConsole
+def sha(b):return hashlib.sha256(b).hexdigest()
+assert len(sys.argv)==3 and sys.argv[1] in ('--offline','--verified-resume-block')
+offline=sys.argv[1]=='--offline';block=int(sys.argv[2])
+MANIFEST_PIN='<HISTORICAL_HASH_REDACTED>'
+assert sha((build/'manifest.json').read_bytes())==MANIFEST_PIN
+manifest=json.loads((build/'manifest.json').read_text())
+assert manifest['all_pass'] and manifest['build_pass'] and manifest['hardware_ready']
+assert block in manifest['execution_order']==[26,24] and block in manifest['allowed_logical_blocks']
+for name,pin in manifest['source_sha256'].items():assert sha((build/name).read_bytes())==pin,name
+for name,pin in manifest['proof_sha256'].items():
+ assert sha((build/name).read_bytes())==pin and json.loads((build/name).read_text())['all_pass'],name
+assert sha(Path(manifest['filesystem_manifest_path']).read_bytes())==manifest['filesystem_manifest_sha256']
+skip=manifest['skipped_identical_blocks']['25']
+assert sha(Path(skip['backup_result_path']).read_bytes())==skip['backup_result_sha256']
+assert sha(Path(skip['backup_path']).read_bytes())==skip['sha256']==manifest['variants']['25_write']['source_sha256']
+cfg=json.loads((build/'inputs.json').read_text())
+assert cfg['ready'] and sha((build/'inputs.json').read_bytes())==manifest['inputs_sha256']
+image=Path(manifest['image_path']).read_bytes();assert len(image)==0x4000000 and sha(image)==manifest['image_sha256']
+snap=Path(manifest['source_snapshot_path']).read_bytes();assert sha(snap)==manifest['source_snapshot_sha256']
+before_map=list(struct.unpack_from('<1896H',snap,0xf00))
+order=manifest['execution_order'];index=order.index(block)
+if index and not offline:
+ prior=order[index-1]
+ prior_result=json.loads((HERE/f'cache_last_block{prior}_attempt01/result.json').read_text())
+ assert prior_result['all_pass'] and prior_result['reopened_readback_exact'] and prior_result['block']==prior
+ before_map=prior_result['reopened_mapping']
+assert len(before_map)==1896 and all(0<=p<2048 for p in before_map)
+assert zlib.crc32(b''.join(struct.pack('<H',p) for n,p in enumerate(before_map) if n<24 or n>=56))==int(manifest['non_boot_map_crc32'],16)
+backup_result_path=HERE/('white_screen_reads_cache_last_backup24/result.json' if block==24 else 'white_screen_reads_cache_last_backup2526/result.json')
+backup_result=json.loads(backup_result_path.read_text())
+assert backup_result['complete'] and not backup_result['nand_writes_enabled'] and not backup_result['download_boot']
+backup_cases=[c for c in backup_result['cases'] if c['lba']==block*4096 and c['sectors']==4096]
+assert len(backup_cases)==1
+backup_case=backup_cases[0]
+assert backup_case['complete'] and backup_case['read_status']==[block*4096,4096,0,4096]
+backup=Path(backup_case['path']).read_bytes();assert len(backup)==2097152 and sha(backup)==backup_case['sha256']
+statefile=HERE/'white_screen_read_state.json'
+state=json.loads(statefile.read_text());assert state['valid']
+previous=Path(state['ram_path']).read_bytes();assert sha(previous)==state['ram_sha256']
+source=Path(manifest['variants'][f'{block}_write']['source_path']).read_bytes()
+assert len(source)==2097152 and sha(source)==manifest['variants'][f'{block}_write']['source_sha256']
+assert source==image[(block-24)*2097152:(block-23)*2097152]
+payloads={}
+for kind in ('dry','write'):
+    meta=manifest['variants'][f'{block}_{kind}'];raw=Path(meta['payload']).read_bytes()
+    assert sha(raw)==meta['sha256'] and meta['lba']==block*4096 and meta['sectors']==4096
+    assert meta['source_sha256']==sha(source) and meta['allowed_changes_proved']
+    payloads[kind]=raw
+payloads['reopen']=(build/f'readers/cache_block{block}.raw').read_bytes()
+readproof=json.loads((build/f'readers/cache_block{block}.json').read_text())
+assert readproof['all_pass'] and sha(payloads['reopen'])==readproof['sha256'] and readproof['lba']==block*4096 and readproof['sectors']==4096
+payloads['capture']=(HERE/'boot_map_compare/capture_mode1.raw').read_bytes()
+assert sha(payloads['capture'])=='<HISTORICAL_HASH_REDACTED>'
+for kind,raw in payloads.items():
+    assert len(raw)==110352 and raw[110080:]==bytes(272) and zlib.crc32(raw[:110080])==0xad0dadee
+    assert raw[0xb408:0xb40c]==bytes.fromhex('0101a0e3') and raw[0xaf60:0xaf64]==bytes.fromhex('0003a0e1')
+    if kind in ('reopen','capture'):
+        for off in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):assert raw[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+    if kind!='write':
+        for off in (0xbbc8,0xbc90):assert raw[off:off+4]==bytes.fromhex('feffffea')
+if offline:
+ print(json.dumps(dict(offline=True,all_pass=True,block=block,source_sha256=sha(source),backup_sha256=sha(backup),manifest_sha256=MANIFEST_PIN)));sys.exit(0)
+out=HERE/f'cache_last_block{block}_attempt01';out.mkdir(exist_ok=False)
+result=dict(all_pass=False,block=block,lba=block*4096,source_sha256=sha(source),write_launches=0,executions=[],before_mapping=before_map)
+c=None
+marker=b'RF1CKP02'+struct.pack('<IIII',110080,0xad0dadee,1,0x60000004)+bytes(504)
+window=b'RF1WIN01'+struct.pack('<IIII',0x800000,4096,0x63000000,16)+bytes(504)
+def save(path,obj):
+    with path.open('x') as f:json.dump(obj,f,indent=2);f.flush();os.fsync(f.fileno())
+def update(obj):
+    tmp=statefile.with_suffix('.tmp');tmp.write_text(json.dumps(obj,indent=2));os.replace(tmp,statefile)
+def read(path,lba,count):
+    assert (lba,count) in ((0x7effff,1),(0x7efffe,1),(0x7f0000,209),(0x7f00d1,2)) or (0x800000<=lba<0x801000 and 0<count<=16 and lba+count<=0x801000)
+    c.command(f'RS {hex(lba)} {hex(count)} {path}');data=path.read_bytes();assert len(data)==count*528;return data
+def read_window(d,sectors,prefix):
+    data=bytearray()
+    for offset in range(0,sectors,16):
+        count=min(16,sectors-offset);part=read(d/f'{prefix}_{offset:04d}.raw',0x800000+offset,count)
+        assert all(part[j+512:j+528]==bytes(16) for j in range(0,len(part),528))
+        data.extend(b''.join(part[j:j+512] for j in range(0,len(part),528)))
+    return bytes(data)
+def load_window(d,data,prefix):
+    assert len(data)==2097152
+    for offset in range(0,len(data),8192):
+        p=d/f'{prefix}_{offset//512:04d}.bin';p.write_bytes(data[offset:offset+8192]);c.command(f'WS {hex(0x800000+offset//512)} {p}')
+def execute(kind,label=None):
+    global previous
+    label=label or kind
+    d=out/label;d.mkdir();raw=payloads[kind]
+    assert read(d/'previous.raw',0x7f0000,209)==previous
+    if kind in ('dry','write'):
+        load_window(d,source,'source');assert read_window(d,4096,'source_check')==source
+        print(f'block{block} {kind}: source 2097152 bytes exact in RAM',flush=True)
+    elif kind=='reopen':load_window(d,bytes(x^255 for x in source),'prefill')
+    for i,offset in enumerate(range(0,110080,8192)):
+        p=d/f'part{i:02d}.bin';p.write_bytes(raw[offset:min(offset+8192,110080)]);c.command(f'WS {hex(0x7f0000+offset//512)} {p}')
+    assert read(d/'ram_before.raw',0x7f0000,209)==raw
+    if kind=='write':
+        assert result.get('dry_pass') and result['write_launches']==0
+        save(out/'WRITE_ATTEMPTED_DO_NOT_REPEAT.json',dict(lba=block*4096,sectors=4096,payload_sha256=sha(raw),source_sha256=sha(source)))
+        result['write_launches']=1
+    save(d/'DISPATCHED_NO_RETRY.json',dict(kind=kind,payload_sha256=sha(raw)))
+    update(dict(valid=False,phase=f'boot_block{block}_{kind}_dispatched'))
+    c.command('RD')
+    assert read(d/'marker.raw',0x7effff,1)==marker
+    after=read(d/'ram_after.raw',0x7f0000,209)
+    assert after[:110080]==raw[:110080] and after[110348:]==bytes(4)
+    assert struct.unpack_from('<2I',after,110080)==(0x44475453,0x600982e4)
+    status=read(d/'status.raw',0x7f00d1,2)
+    result['executions'].append(dict(kind=kind,label=label,ram_sha256=sha(after),status_hex=status[:32].hex()))
+    previous=after
+    return d,status
+def map_changes(a,b):return [dict(logical=i,before=x,after=y) for i,(x,y) in enumerate(zip(a,b)) if x!=y]
+def check_gates(d,status,dry):
+    expected=(0x31575246,block*4096,4096,3 if dry else 6,0 if dry else 4096,block*4096+(0 if dry else 0xf80),0xffffffff if dry else 0,0xffffffff if dry else 0)
+    actual=struct.unpack_from('<8I',status,0)
+    exported=read_window(d,32,'gate');(d/'gate_export.bin').write_bytes(exported)
+    gate=struct.unpack_from('<8I',exported);assert gate[5]<=512
+    journal=[struct.unpack_from('<4I',exported,0x1000+i*16) for i in range(gate[5])]
+    mapping=list(struct.unpack_from('<1896H',exported,0x3000))
+    protection=set(manifest['baseline_protected_blocks'])|{p for n,p in enumerate(before_map) if p and n!=block}
+    mask=bytearray(256)
+    for p in protection:mask[p>>3]|=1<<(p&7)
+    data=dict(actual_status=list(actual),expected_status=list(expected),gate_state=list(gate),journal=[list(r) for r in journal],mapping=mapping,map_changes=map_changes(before_map,mapping),dynamic_protected_blocks=sorted(protection))
+    save(d/'gate_result.json',data)
+    assert actual==expected,('writer_status',data)
+    assert exported[0x100:0x200]==bytes(mask)
+    assert gate[0]==0 and gate[2:5]==(0x31504752,block*4096,(block+1)*4096)
+    assert all(p<2048 for p in mapping)
+    assert mapping[block]!=0 and mapping[block] not in protection
+    if dry:
+        assert gate[1] in (0xd001,0xd002) and gate[5:]==(1,0,0)
+        assert len(journal)==1 and journal[0][0] in (3,4) and journal[0][2]==0xffffffff
+        # Original FTL can reserve the target's replacement in RAM before the
+        # first denied erase. The following read-only reopen must undo it.
+        assert not any(row['logical']!=block for row in data['map_changes'])
+    else:
+        assert gate[1]==0 and gate[5]==gate[6]+gate[7] and gate[6]>0
+        assert all(kind in (1,2) and rc==0 for kind,sector,rc,lba in journal)
+        assert not any(row['logical']!=block for row in data['map_changes'])
+    assert all(sector<8388608 and sector//4096 not in protection and lba==block*4096 for kind,sector,rc,lba in journal)
+    return data
+try:
+    c=RamConsole(out);c.select()
+    assert read(out/'marker.raw',0x7effff,1)==marker and read(out/'window.raw',0x7efffe,1)==window
+    d,status=execute('dry');check_gates(d,status,True)
+    print(f'block{block}: dry gate reached one denied operation; NAND programs/erases 0',flush=True)
+    d,status=execute('capture','after_dry_capture')
+    assert status[:8]==b'RF1READ1' and struct.unpack_from('<4I',status,8)==(0x6020,1,0,0xa8000)
+    dry_snapshot=read_window(d,1344,'ftl');(d/'ftl_snapshot.bin').write_bytes(dry_snapshot)
+    assert list(struct.unpack_from('<1896H',dry_snapshot,0xf00))==before_map
+    result['dry_pass']=True;result['dry_reopened_map_exact']=True
+    d,status=execute('write');written=check_gates(d,status,False);result['immediate_readback_exact']=True
+    print(f'block{block}: write complete and immediate readback exact; reopening read-only',flush=True)
+    d,status=execute('reopen')
+    assert status[:8]==b'RF1READ2' and struct.unpack_from('<4I',status,8)==(block*4096,4096,0,4096)
+    data=read_window(d,4096,'readback');(d/'data.bin').write_bytes(data)
+    result['reopened_readback_sha256']=sha(data);result['reopened_readback_exact']=data==source
+    d,status=execute('capture')
+    assert status[:8]==b'RF1READ1' and struct.unpack_from('<4I',status,8)==(0x6020,1,0,0xa8000)
+    snapshot=read_window(d,1344,'ftl');(d/'ftl_snapshot.bin').write_bytes(snapshot)
+    mapping=list(struct.unpack_from('<1896H',snapshot,0xf00))
+    result['reopened_mapping']=mapping;result['reopened_map_changes']=map_changes(before_map,mapping);result['reopened_ftl_sha256']=sha(snapshot)
+    assert result['reopened_readback_exact'] and all(p<2048 for p in mapping) and mapping[block]!=0
+    assert not any(row['logical']!=block for row in result['reopened_map_changes'])
+    assert mapping==written['mapping']
+    result['all_pass']=True
+    update(dict(valid=True,ram_path=str(d/'ram_after.raw'),ram_sha256=sha(previous),last_case=f'cache_block{block}_verified_capture',batch=f'cache_last_block{block}'))
+except BaseException as exc:
+    result['error']=repr(exc);update(dict(valid=False,phase=f'cache_block{block}_failed',error=repr(exc),output=str(out)));raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    save(out/'result.json',result)
+    print(json.dumps({k:v for k,v in result.items() if k not in ('commands','before_mapping','reopened_mapping')},indent=2),flush=True)

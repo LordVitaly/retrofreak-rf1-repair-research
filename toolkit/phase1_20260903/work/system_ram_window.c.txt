@@ -1,0 +1,61 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/system_ram_window.c
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+/* Extension of the existing RAM callbacks only. No NAND/MMIO/function calls. */
+typedef unsigned int u32;
+typedef unsigned char u8;
+#define FIRST 0x7f0000u
+#define DATA_FIRST 0x800000u
+#define STAGE ((volatile u8 *)0x61000000u)
+#define DATA ((volatile u8 *)0x63000000u)
+static int buf_ok(u32 p,u32 count) {
+    return count && count<=215u && p>=0x60000000u && p<=0x60800000u && count*528u<=0x60800000u-p;
+}
+static int stage_ok(u32 sector,u32 count) {
+    return sector>=FIRST && sector-FIRST<215u && count<=215u-(sector-FIRST);
+}
+static int data_ok(u32 sector,u32 count) {
+    return sector>=DATA_FIRST && sector-DATA_FIRST<4096u && count<=16u && count<=4096u-(sector-DATA_FIRST);
+}
+__attribute__((used)) int window_read(u32 chip,u32 sector,u32 buffer,u32 count) {
+    if(chip || !buf_ok(buffer,count)) return -1;
+    volatile u8 *dst=(volatile u8 *)buffer;
+    if((sector==FIRST-1u || sector==FIRST-2u) && count==1) {
+        for(u32 i=0;i<528u;i++) dst[i]=0;
+        volatile u32 *w=(volatile u32 *)dst;
+        if(sector==FIRST-1u) {
+            w[0]=0x43314652u;w[1]=0x3230504bu;w[2]=110080u;w[3]=<REDACTED:ARTIFACT_CRC>u;
+            w[4]=*(volatile u32 *)0x60801000u;w[5]=w[4]?0x60000004u:0;
+        } else {
+            w[0]=0x57314652u;w[1]=0x31304e49u; /* RF1WIN01 */
+            w[2]=DATA_FIRST;w[3]=4096u;w[4]=0x63000000u;w[5]=16u;
+        }
+        return 0;
+    }
+    if(data_ok(sector,count)) {
+        for(u32 s=0;s<count;s++) {
+            for(u32 i=0;i<512u;i++) dst[s*528u+i]=DATA[(sector-DATA_FIRST+s)*512u+i];
+            for(u32 i=512u;i<528u;i++) dst[s*528u+i]=0;
+        }
+        return 0;
+    }
+    if(!stage_ok(sector,count)) return -1;
+    for(u32 i=0;i<count*528u;i++) dst[i]=STAGE[(sector-FIRST)*528u+i];
+    return 0;
+}
+__attribute__((used)) int window_write(u32 chip,u32 sector,u32 buffer,u32 count) {
+    if(chip || !buf_ok(buffer,count)) return -1;
+    const volatile u8 *src=(const volatile u8 *)buffer;
+    if(data_ok(sector,count)) {
+        for(u32 s=0;s<count;s++) for(u32 i=0;i<512u;i++)
+            DATA[(sector-DATA_FIRST+s)*512u+i]=src[s*528u+i];
+        return 0;
+    }
+    if(!stage_ok(sector,count)) return -1;
+    for(u32 s=0;s<count;s++) for(u32 i=0;i<512u;i++)
+        STAGE[(sector-FIRST+s)*512u+i]=src[s*528u+i];
+    if(sector-FIRST+count==215u) for(u32 i=110080u;i<110352u;i++) STAGE[i]=0;
+    return 0;
+}

@@ -1,0 +1,102 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/cache_last_writer/build_read.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Offline derivatives of existing tested read-only FTL tools. No device APIs.
+
+Usage: python -B build.py --lba 0x6000 --sectors 4096 --name boot_prefix
+Each generated payload reads at most2MiB and returns through original v33 helper.
+"""
+import argparse,hashlib,importlib.util,json,struct,subprocess,sys,zlib
+from pathlib import Path
+sys.dont_write_bytecode=True
+OUT=Path(__file__).resolve().parent/'readers';OUT.mkdir(exist_ok=True)
+OLD=Path('<EXTERNAL_STAGE_03>')
+def sha(b):return hashlib.sha256(b).hexdigest()
+def save(path,data):
+    if path.exists():assert path.read_bytes()==data,str(path)
+    else:path.write_bytes(data)
+def readpin(path,pin):
+    b=path.read_bytes();assert sha(b)==pin,str(path);return b
+p=argparse.ArgumentParser();p.add_argument('--lba',type=lambda s:int(s,0),default=0x6000);p.add_argument('--sectors',type=lambda s:int(s,0),default=4096);p.add_argument('--name',default='boot_prefix');a=p.parse_args()
+assert 0<=a.lba<1896*4096 and 1<=a.sectors<=4096 and a.lba+a.sectors<=1896*4096
+assert a.name and all(c.isalnum() or c=='_' for c in a.name)
+hp=OLD/'work/ram_artifact.py';readpin(hp,'<HISTORICAL_HASH_REDACTED>')
+spec=importlib.util.spec_from_file_location('checked_pure_helper',hp);helper=importlib.util.module_from_spec(spec);spec.loader.exec_module(helper)
+guards=(0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c)
+def addr(o):return 0x60080000+o-0xa34
+def target(b,o):
+    w=struct.unpack_from('<I',b,o)[0];assert w>>24 in (0xea,0xeb)
+    d=w&0xffffff
+    if d&0x800000:d-=0x1000000
+    return addr(o)+8+d*4
+def verify(b):
+    assert len(b)==110352 and b[110080:]==bytes(272) and zlib.crc32(b[:110080])==0xad0dadee
+    assert b[0xb408:0xb40c]==bytes.fromhex('0101a0e3')
+    assert b[0xaf60:0xaf64]==bytes.fromhex('0003a0e1')
+    assert all(b[o:o+8]==bytes.fromhex('0000e0e31eff2fe1') for o in guards)
+    assert all(b[o:o+4]==bytes.fromhex('feffffea') for o in (0xbbc8,0xbc90))
+    assert all(target(b,o)==addr(0x9ef4) for o in (0x6ae8,0x6b88))
+    assert target(b,0x76b4)==addr(0x6a24)
+    assert target(b,0x18d18)==0x60007040
+
+single_source=readpin(OLD/'work/ftl_bridge_read_v1/read.raw','<HISTORICAL_HASH_REDACTED>')
+single=bytearray(single_source[:110080]);assert single[0xb408:0xb40c]==bytes.fromhex('0205a0e3')
+single[0xb408:0xb40c]=bytes.fromhex('0101a0e3');helper.fix_crc(single);single=bytes(single)+bytes(272)
+assert all(0x1e0<=i<0x1e4 or 0xb408<=i<0xb40c for i,(x,y) in enumerate(zip(single_source,single)) if x!=y)
+verify(single);save(OUT/'boot_sector.raw',single)
+
+bulk_source=readpin(OLD/'work/ftl_fullmap_system_read_v1/read.raw','<HISTORICAL_HASH_REDACTED>')
+source_asm=OLD/'work/system_read_portion.S';source_ld=OLD/'work/ftl_bridge_read.ld'
+elfpath=OUT/(a.name+'.elf')
+subprocess.run([str(OLD/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe'),'cc','-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-nostdlib','-DREAD_LBA='+str(a.lba),'-DREAD_SECTORS='+str(a.sectors),str(source_asm),'-Wl,-T,'+str(source_ld),'-Wl,-e,ftl_bridge_read','-o',str(elfpath)],check=True,cwd=OUT)
+code=helper.elf_code(elfpath.read_bytes(),0x60007040,0x180)
+bulk=bytearray(bulk_source[:110080]);assert bulk[0xb408:0xb40c]==bytes.fromhex('0205a0e3')
+bulk[0xb408:0xb40c]=bytes.fromhex('0101a0e3');bulk[0x7040:0x71c0]=code+bytes(0x180-len(code));helper.fix_crc(bulk);bulk=bytes(bulk)+bytes(272)
+assert all(0x1e0<=i<0x1e4 or 0xb408<=i<0xb40c or 0x7040<=i<0x71c0 for i,(x,y) in enumerate(zip(bulk_source,bulk)) if x!=y)
+verify(bulk)
+assert bulk[0x76f8:0x76fc]==bulk_source[0x76f8:0x76fc]==bytes.fromhex('0100a0e3')
+
+# Reuse proven RAM-only window installer byte-for-byte. Hardened bridge changed
+# only original USBplug guard4230; extension callbacks and checkpoint are exact.
+window=readpin(OLD/'work/system_ram_window_v3/install.raw','<HISTORICAL_HASH_REDACTED>')
+window_proof=json.loads((OLD/'outputs/system_ram_window_offline.json').read_text());assert window_proof['all_pass'] and window_proof['raw_sha256']==sha(window)
+hardened=(OUT.parents[1]/'hardened_bridge_v1/usb_ram_bridge_checkpoint_modefix.USBPLUG.OFFLINE_ONLY.bin').read_bytes()
+legacy=(OLD/'work/usb_ram_bridge_checkpoint_modefix.USBPLUG.OFFLINE_ONLY.bin').read_bytes()
+assert hardened[:0x4230]==legacy[:0x4230] and hardened[0x4238:]==legacy[0x4238:]
+assert hardened[0x4230:0x4238]==bytes.fromhex('0000e0e31eff2fe1')
+save(OUT/'window_install.raw',window)
+
+# Proportional test: actual existing bulk helper, success and early/later errors.
+sys.path.insert(0,str(OLD/'work/emulator_deps'))
+from unicorn import Uc,UC_ARCH_ARM,UC_MODE_ARM,UC_HOOK_CODE,UC_HOOK_MEM_WRITE
+from unicorn.arm_const import *
+tests=[]
+for fail in (None,0,max(0,(a.sectors-1)//128)):
+    u=Uc(UC_ARCH_ARM,UC_MODE_ARM);u.mem_map(0x60000000,0x400000);u.mem_map(0x61000000,0x20000);u.mem_map(0x62fff000,0x202000)
+    u.mem_write(0x60007040,code);u.mem_write(0x62fff000,b'\x69'*0x202000)
+    u.reg_write(UC_ARM_REG_SP,0x603ff000);u.reg_write(UC_ARM_REG_LR,0x601e0000);u.reg_write(UC_ARM_REG_R4,0x6009a1f8)
+    calls=[]
+    def read(uc,pc,size,ctx):
+        if pc!=0x600846a0:return
+        i=len(calls);args=[uc.reg_read(r) for r in (UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3)]
+        assert args==[0,a.lba+i*128,min(128,a.sectors-i*128),0x63000000+i*65536]
+        calls.append(args)
+        if fail!=i:uc.mem_write(args[3],bytes([i&255])*(args[2]*512))
+        uc.reg_write(UC_ARM_REG_R0,0xffffffff if fail==i else 0);uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR))
+    def writes(uc,access,address,size,value,ctx):
+        assert 0x603fef00<=address and address+size<=0x603ff000 or 0x6101af10<=address and address+size<=0x6101af28
+    u.hook_add(UC_HOOK_CODE,read);u.hook_add(UC_HOOK_MEM_WRITE,writes)
+    u.emu_start(0x60007040,0x60000100,count=100000)
+    completed=a.sectors if fail is None else fail*128
+    assert struct.unpack('<4I',u.mem_read(0x6101af18,16))==(a.lba,a.sectors,0 if fail is None else 0xffffffff,completed)
+    assert len(calls)==((a.sectors+127)//128 if fail is None else fail+1)
+    assert bytes(u.mem_read(0x63000000+completed*512,0x201000-completed*512))==b'\x69'*(0x201000-completed*512)
+    assert bytes(u.mem_read(0x62fff000,4096))==b'\x69'*4096
+    assert u.reg_read(UC_ARM_REG_R4)==0x6009a1f8 and u.reg_read(UC_ARM_REG_SP)==0x603ff000
+    tests.append({'fail_at':fail,'completed':completed,'native_calls':len(calls),'passed':True})
+save(OUT/(a.name+'.raw'),bulk)
+meta={'all_pass':True,'device_access':False,'name':a.name,'path':str(OUT/(a.name+'.raw')),'sha256':sha(bulk),'lba':a.lba,'sectors':a.sectors,'bytes_to_export':a.sectors*512,'body_bytes':110080,'body_crc32':'0xad0dadee','payload_bytes':110352,'cut_pc':'0x600982e4','return_helper':'0x60000100','source_sha256':sha(bulk_source),'source_assembly':str(source_asm),'source_assembly_sha256':sha(source_asm.read_bytes()),'helper_bytes':len(code),'no_capacity_geometry_or_BBT_RAM_corrections':True,'original_capacity_instruction':'0101a0e3','original_geometry_instruction':'0003a0e1','all8guards_2stops_retained':True,'native_BBT_read_calls_unmodified':True,'fullmap_mode':1,'fullmap_mode_purpose':'Existing original GetRemapTbl(1) reads complete logical mapping for high LBAs','tests':tests,'single_sector':{'path':str(OUT/'boot_sector.raw'),'sha256':sha(single),'lba':'0x6020','sectors':1,'output_in_RS_export_offset':240,'metadata_magic':'RF1READ1'},'window_installer':{'path':str(OUT/'window_install.raw'),'sha256':sha(window),'unchanged_old_test_proof':str(OLD/'outputs/system_ram_window_offline.json'),'hardened_bridge_callback_compatibility_exact':True,'window_marker_sector':'0x7efffe','window_marker_magic':'RF1WIN01','data_RAM':'0x63000000','RS_first':'0x800000','window_sectors':4096,'max_transfer_sectors':16,'aux16_bytes_per_RS_record':'all_zero'},'export':{'metadata_RS':['0x7f00d1','0x2'],'magic':'RF1READ2','u32_offsets':{'lba':8,'requested_sectors':12,'native_rc':16,'completed_sectors':20},'data_RS':'0x800000 + relative sector, <=16 records per call; each528bytes consists512data+16zeroaux'},'hardware_sequence':['Verify current marker and exact previous RAM against parent known state; no DB reload.','Stage window_install.raw with existing RAM WS; exact full readback, RD once, verify RF1WIN01 marker and unchanged RAM.','Stage selected bulk raw with RAM WS; exact full readback, RD once, verify checkpoint return, raw body unchanged, STGD cut600982e4.','Read RF1READ2 export; require requested lba/count, native_rc0 and completed==count before exporting all requested data.','RS window chunks <=16 sectors; strip exactly16 zero auxiliary bytes per528-byte record.'],'limits':['Native logical reader is an ABI fixture in new proportional tests; whole original startup/return and window code reuse earlier tested binaries.','FTL data and NAND are only read by diagnostic stage; window installer writes RAM callbacks and RAM buffers only.']}
+(OUT/(a.name+'.json')).write_text(json.dumps(meta,indent=2)+'\n');print(json.dumps(meta,indent=2))

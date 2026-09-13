@@ -1,0 +1,510 @@
+{
+  "all_pass": true,
+  "erase_dispatched": true,
+  "program_dispatched": true,
+  "target_block": 12,
+  "other_writes_authorized": false,
+  "automatic_reboot": false,
+  "ftl_init": false,
+  "writer_sha256": "<HISTORICAL_HASH_REDACTED>",
+  "resume_verified_same_phase0_runtime": true,
+  "saved_geometry_fallback_used": false,
+  "flash_info": "RFI\r\nFlash Info:\r\r\n\tManufacturer: MICRON,value=04\r\r\n\tFlash Size: 4096MB\r\r\n\tBlock Size: 2048KB\r\r\n\tPage Size: 8KB\r\r\n\tECC Bits: 40\r\r\n\tAccess Time: 30\r\r\n\tFlash CS: Flash<0> \r\r\nRockusb>",
+  "copy0_cold_padding_differences": 0,
+  "copy6_cold_padding_differences": 29,
+  "copy0_native_status_checks": [
+    {
+      "offset": 0,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 4,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 8,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 12,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 16,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 20,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 24,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 28,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 32,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 36,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 40,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 44,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 48,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 52,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 56,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 60,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 64,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 68,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 72,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 76,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 80,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 84,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 88,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 92,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 96,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 100,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 104,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 108,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 112,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 116,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 120,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 124,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 128,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 132,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 136,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 140,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 144,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 148,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 152,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 156,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 160,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 164,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 168,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 172,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 176,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 180,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 184,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 188,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 192,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 196,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 200,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 204,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 208,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 212,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 216,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 220,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 224,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 228,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 232,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 236,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 240,
+      "count": 4,
+      "native_return": 0
+    },
+    {
+      "offset": 244,
+      "count": 4,
+      "native_return": 0
+    }
+  ],
+  "copy0_cold_code_and_flashinfo_verified": true,
+  "final_marker": [
+    826426441,
+    201326850,
+    3,
+    0,
+    1,
+    0,
+    1,
+    0,
+    49168,
+    0,
+    49152,
+    49152,
+    0,
+    1,
+    2486241045,
+    1,
+    22384,
+    0,
+    1796,
+    255
+  ],
+  "block12_main_and_valid_aux_exact": true,
+  "copy13_main_and_valid_aux_unchanged": true,
+  "erase_calls": 1,
+  "program_calls": 1,
+  "program_erase_return_codes": [
+    0,
+    0
+  ],
+  "normal_boot_verified": false,
+  "phase": "COPY12_RESTORED_NEEDS_SEPARATE_COLD_READ_OR_BOOT",
+  "commands": [
+    "RS 0x7effff 0x1 loaded_marker.raw",
+    "RFI",
+    "RS 0x4 0x4 prime_nonzero_before_copy0.raw",
+    "RS 0x7effff 0x1 prime_nonzero_status.raw",
+    "RS 0x0 0x100 copy0_cold_full.raw",
+    "RS 0x5000 0x100 copy5_cold_full.raw",
+    "RS 0x6000 0x100 copy6_cold_full.raw",
+    "RS 0x7effff 0x1 before_idb_status.raw",
+    "RS 0x0 0x4 copy0_sector_000.raw",
+    "RS 0x7effff 0x1 copy0_status_000.raw",
+    "RS 0x4 0x4 copy0_sector_004.raw",
+    "RS 0x7effff 0x1 copy0_status_004.raw",
+    "RS 0x8 0x4 copy0_sector_008.raw",
+    "RS 0x7effff 0x1 copy0_status_008.raw",
+    "RS 0xc 0x4 copy0_sector_012.raw",
+    "RS 0x7effff 0x1 copy0_status_012.raw",
+    "RS 0x10 0x4 copy0_sector_016.raw",
+    "RS 0x7effff 0x1 copy0_status_016.raw",
+    "RS 0x14 0x4 copy0_sector_020.raw",
+    "RS 0x7effff 0x1 copy0_status_020.raw",
+    "RS 0x18 0x4 copy0_sector_024.raw",
+    "RS 0x7effff 0x1 copy0_status_024.raw",
+    "RS 0x1c 0x4 copy0_sector_028.raw",
+    "RS 0x7effff 0x1 copy0_status_028.raw",
+    "RS 0x20 0x4 copy0_sector_032.raw",
+    "RS 0x7effff 0x1 copy0_status_032.raw",
+    "RS 0x24 0x4 copy0_sector_036.raw",
+    "RS 0x7effff 0x1 copy0_status_036.raw",
+    "RS 0x28 0x4 copy0_sector_040.raw",
+    "RS 0x7effff 0x1 copy0_status_040.raw",
+    "RS 0x2c 0x4 copy0_sector_044.raw",
+    "RS 0x7effff 0x1 copy0_status_044.raw",
+    "RS 0x30 0x4 copy0_sector_048.raw",
+    "RS 0x7effff 0x1 copy0_status_048.raw",
+    "RS 0x34 0x4 copy0_sector_052.raw",
+    "RS 0x7effff 0x1 copy0_status_052.raw",
+    "RS 0x38 0x4 copy0_sector_056.raw",
+    "RS 0x7effff 0x1 copy0_status_056.raw",
+    "RS 0x3c 0x4 copy0_sector_060.raw",
+    "RS 0x7effff 0x1 copy0_status_060.raw",
+    "RS 0x40 0x4 copy0_sector_064.raw",
+    "RS 0x7effff 0x1 copy0_status_064.raw",
+    "RS 0x44 0x4 copy0_sector_068.raw",
+    "RS 0x7effff 0x1 copy0_status_068.raw",
+    "RS 0x48 0x4 copy0_sector_072.raw",
+    "RS 0x7effff 0x1 copy0_status_072.raw",
+    "RS 0x4c 0x4 copy0_sector_076.raw",
+    "RS 0x7effff 0x1 copy0_status_076.raw",
+    "RS 0x50 0x4 copy0_sector_080.raw",
+    "RS 0x7effff 0x1 copy0_status_080.raw",
+    "RS 0x54 0x4 copy0_sector_084.raw",
+    "RS 0x7effff 0x1 copy0_status_084.raw",
+    "RS 0x58 0x4 copy0_sector_088.raw",
+    "RS 0x7effff 0x1 copy0_status_088.raw",
+    "RS 0x5c 0x4 copy0_sector_092.raw",
+    "RS 0x7effff 0x1 copy0_status_092.raw",
+    "RS 0x60 0x4 copy0_sector_096.raw",
+    "RS 0x7effff 0x1 copy0_status_096.raw",
+    "RS 0x64 0x4 copy0_sector_100.raw",
+    "RS 0x7effff 0x1 copy0_status_100.raw",
+    "RS 0x68 0x4 copy0_sector_104.raw",
+    "RS 0x7effff 0x1 copy0_status_104.raw",
+    "RS 0x6c 0x4 copy0_sector_108.raw",
+    "RS 0x7effff 0x1 copy0_status_108.raw",
+    "RS 0x70 0x4 copy0_sector_112.raw",
+    "RS 0x7effff 0x1 copy0_status_112.raw",
+    "RS 0x74 0x4 copy0_sector_116.raw",
+    "RS 0x7effff 0x1 copy0_status_116.raw",
+    "RS 0x78 0x4 copy0_sector_120.raw",
+    "RS 0x7effff 0x1 copy0_status_120.raw",
+    "RS 0x7c 0x4 copy0_sector_124.raw",
+    "RS 0x7effff 0x1 copy0_status_124.raw",
+    "RS 0x80 0x4 copy0_sector_128.raw",
+    "RS 0x7effff 0x1 copy0_status_128.raw",
+    "RS 0x84 0x4 copy0_sector_132.raw",
+    "RS 0x7effff 0x1 copy0_status_132.raw",
+    "RS 0x88 0x4 copy0_sector_136.raw",
+    "RS 0x7effff 0x1 copy0_status_136.raw",
+    "RS 0x8c 0x4 copy0_sector_140.raw",
+    "RS 0x7effff 0x1 copy0_status_140.raw",
+    "RS 0x90 0x4 copy0_sector_144.raw",
+    "RS 0x7effff 0x1 copy0_status_144.raw",
+    "RS 0x94 0x4 copy0_sector_148.raw",
+    "RS 0x7effff 0x1 copy0_status_148.raw",
+    "RS 0x98 0x4 copy0_sector_152.raw",
+    "RS 0x7effff 0x1 copy0_status_152.raw",
+    "RS 0x9c 0x4 copy0_sector_156.raw",
+    "RS 0x7effff 0x1 copy0_status_156.raw",
+    "RS 0xa0 0x4 copy0_sector_160.raw",
+    "RS 0x7effff 0x1 copy0_status_160.raw",
+    "RS 0xa4 0x4 copy0_sector_164.raw",
+    "RS 0x7effff 0x1 copy0_status_164.raw",
+    "RS 0xa8 0x4 copy0_sector_168.raw",
+    "RS 0x7effff 0x1 copy0_status_168.raw",
+    "RS 0xac 0x4 copy0_sector_172.raw",
+    "RS 0x7effff 0x1 copy0_status_172.raw",
+    "RS 0xb0 0x4 copy0_sector_176.raw",
+    "RS 0x7effff 0x1 copy0_status_176.raw",
+    "RS 0xb4 0x4 copy0_sector_180.raw",
+    "RS 0x7effff 0x1 copy0_status_180.raw",
+    "RS 0xb8 0x4 copy0_sector_184.raw",
+    "RS 0x7effff 0x1 copy0_status_184.raw",
+    "RS 0xbc 0x4 copy0_sector_188.raw",
+    "RS 0x7effff 0x1 copy0_status_188.raw",
+    "RS 0xc0 0x4 copy0_sector_192.raw",
+    "RS 0x7effff 0x1 copy0_status_192.raw",
+    "RS 0xc4 0x4 copy0_sector_196.raw",
+    "RS 0x7effff 0x1 copy0_status_196.raw",
+    "RS 0xc8 0x4 copy0_sector_200.raw",
+    "RS 0x7effff 0x1 copy0_status_200.raw",
+    "RS 0xcc 0x4 copy0_sector_204.raw",
+    "RS 0x7effff 0x1 copy0_status_204.raw",
+    "RS 0xd0 0x4 copy0_sector_208.raw",
+    "RS 0x7effff 0x1 copy0_status_208.raw",
+    "RS 0xd4 0x4 copy0_sector_212.raw",
+    "RS 0x7effff 0x1 copy0_status_212.raw",
+    "RS 0xd8 0x4 copy0_sector_216.raw",
+    "RS 0x7effff 0x1 copy0_status_216.raw",
+    "RS 0xdc 0x4 copy0_sector_220.raw",
+    "RS 0x7effff 0x1 copy0_status_220.raw",
+    "RS 0xe0 0x4 copy0_sector_224.raw",
+    "RS 0x7effff 0x1 copy0_status_224.raw",
+    "RS 0xe4 0x4 copy0_sector_228.raw",
+    "RS 0x7effff 0x1 copy0_status_228.raw",
+    "RS 0xe8 0x4 copy0_sector_232.raw",
+    "RS 0x7effff 0x1 copy0_status_232.raw",
+    "RS 0xec 0x4 copy0_sector_236.raw",
+    "RS 0x7effff 0x1 copy0_status_236.raw",
+    "RS 0xf0 0x4 copy0_sector_240.raw",
+    "RS 0x7effff 0x1 copy0_status_240.raw",
+    "RS 0xf4 0x4 copy0_sector_244.raw",
+    "RS 0x7effff 0x1 copy0_status_244.raw",
+    "RS 0xc000 0x1000 before_block12.raw",
+    "RS 0xd000 0x1000 before_block13.raw",
+    "RS 0x7effff 0x1 before_erase_marker.raw",
+    "WS 0x7f0100 ..\\bbt_with_idb0_check_v1\\erase_copy12_once.bin",
+    "RS 0x7effff 0x1 erased_marker.raw",
+    "RS 0xc000 0x1000 erased_block12.raw",
+    "WS 0xc000 ..\\bbt_with_idb0_check_v1\\page0.main512.bin",
+    "RS 0x7effff 0x1 programmed_marker.raw",
+    "RS 0xc000 0x10 immediate_page0.raw",
+    "RS 0x7effff 0x1 immediate_page0_status.raw",
+    "RS 0xc000 0x1000 final_block12.raw",
+    "RS 0xd000 0x1000 final_block13.raw",
+    "RS 0x0 0x100 copy0_final_full.raw",
+    "RS 0x5000 0x100 copy5_final_full.raw",
+    "RS 0x6000 0x100 copy6_final_full.raw",
+    "RS 0x7effff 0x1 final_marker.raw"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "outputs/native_dump_complete_verification.json",
+  "interpretation": "Completeness of the native-ECC40 acquisition and independent copy; not per-page ECC status.",
+  "data": {
+    "scope": "Complete physical RS snapshot with nativeECC40 read configuration; file integrity, not proof of every page ECC success",
+    "source": "<THREAD_WORKSPACE>\\work\\nand_native_ecc40",
+    "backup": "<HOST_PATH>",
+    "chunks": 32,
+    "records": 8388608,
+    "raw_bytes": 4429185024,
+    "decoded_main_capacity_bytes": 4294967296,
+    "source_and_backup_sha256_verified": true,
+    "known_read_instability": "physical block312/page0 differs by38 main bits between two earlier reads; both preserved",
+    "manifest_records": {
+      "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+      "original_items": 32
+    }
+  }
+}

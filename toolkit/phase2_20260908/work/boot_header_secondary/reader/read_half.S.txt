@@ -1,0 +1,72 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/boot_header_secondary/reader/read_half.S
+Role: historical_unexecuted_superseded_boot1028
+Original repair session must not be resumed from this public copy.
+
+.syntax unified
+.arm
+.section .text,"ax",%progbits
+.global read_half
+read_half:
+    push {r4-r11,lr}
+    sub sp,sp,#4
+    cpsid if
+    ldr r4,=0x6101af10
+    ldr r0,=0x50314652
+    str r0,[r4]
+    ldr r0,=0x31535948 /* RF1PHYS1 */
+    str r0,[r4,#4]
+    ldr r5,=PHYSICAL_SECTOR
+    str r5,[r4,#8]
+    mov r0,#2048
+    str r0,[r4,#12]
+    mvn r0,#0
+    str r0,[r4,#16]
+    str r0,[sp] /* Original NandRead fifth argument, as stock callers. */
+    mov r0,#0
+    str r0,[r4,#20]
+    mov r6,#128
+    ldr r7,=0x63000000
+    ldr r8,=0x63108000 /* 128 native return words after raw payload. */
+1:
+    /* Native read leaves aux[2:16] untouched on controller6. Make that explicit. */
+    ldr r0,=0x63110000
+    mov r1,#0x840
+    ldr r2,=0xa5a5a5a5
+2:  str r2,[r0],#4
+    subs r1,r1,#1
+    bne 2b
+    mov r0,r5
+    ldr r1,=0x63110000
+    ldr r2,=0x63112000
+    mov r3,#16
+    ldr r12,=0x600894c0 /* file9EF4 NandRead, original retry/error semantics */
+    blx r12
+    str r0,[r4,#16]
+    str r0,[r8],#4
+    ldr r0,=0x63110000
+    ldr r1,=0x63112000
+    mov r3,#16
+3:  mov r9,#128
+4:  ldr r10,[r0],#4
+    str r10,[r7],#4
+    subs r9,r9,#1
+    bne 4b
+    ldmia r1!,{r9-r12}
+    stmia r7!,{r9-r12}
+    subs r3,r3,#1
+    bne 3b
+    subs r6,r6,#1
+    rsb r0,r6,#128
+    str r0,[r4,#20]
+    ldr r0,[r4,#16]
+    cmp r0,#0
+    bne 5f
+    add r5,r5,#16
+    cmp r6,#0
+    bne 1b
+5:  add sp,sp,#4
+    pop {r4-r11,lr}
+    ldr pc,=0x60000100
+    .ltorg

@@ -1,0 +1,42 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/ram_artifact.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Small deterministic ELF/CRC helpers shared by RAM-only builders."""
+import struct,zlib
+def elf_code(elf,base,limit):
+    phoff=struct.unpack_from('<I',elf,28)[0];size,n=struct.unpack_from('<HH',elf,42);parts=[]
+    for i in range(n):
+        typ,off,va,pa,fs,ms,flags,align=struct.unpack_from('<8I',elf,phoff+i*size)
+        if typ==1 and fs and flags&1:
+            assert va==base and fs<=limit;parts.append(elf[off:off+fs])
+    assert len(parts)==1
+    return parts[0]
+def symbols(elf):
+    off=struct.unpack_from('<I',elf,32)[0];size,n=struct.unpack_from('<HH',elf,46)
+    sections=[struct.unpack_from('<10I',elf,off+i*size) for i in range(n)];result={}
+    for s in sections:
+        if s[1]!=2:continue
+        t=sections[s[6]];strings=elf[t[4]:t[4]+t[5]]
+        for i in range(s[4],s[4]+s[5],s[9]):
+            name,value,sz,info,other,index=struct.unpack_from('<IIIBBH',elf,i)
+            if name:result[strings[name:strings.find(b'\0',name)].decode()]=value
+    return result
+def branch(pc,target):
+    delta=target-pc-8
+    assert delta%4==0 and -(1<<25)<=delta<(1<<25)
+    return 0xea000000|((delta//4)&0xffffff)
+def fix_crc(data):
+    data[0x1e0:0x1e4]=bytes(4);base=zlib.crc32(data);basis={}
+    for bit in range(32):
+        trial=bytearray(data);trial[0x1e0+bit//8]^=1<<(bit%8);v=zlib.crc32(trial)^base;mask=1<<bit
+        while v:
+            p=v.bit_length()-1
+            if p not in basis:basis[p]=(v,mask);break
+            v^=basis[p][0];mask^=basis[p][1]
+    v=<REDACTED:ARTIFACT_CRC>^base;solution=0
+    while v:
+        p=v.bit_length()-1;v^=basis[p][0];solution^=basis[p][1]
+    data[0x1e0:0x1e4]=struct.pack('<I',solution)
+    assert zlib.crc32(data)==<REDACTED:ARTIFACT_CRC>

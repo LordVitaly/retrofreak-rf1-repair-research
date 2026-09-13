@@ -1,0 +1,44 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/startup_slice_test_harness.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Bounded ARM tests of RAM transport and handoff. No peripheral emulation."""
+import hashlib,json,struct,sys
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'work/emulator_deps'))
+from unicorn import Uc,UC_ARCH_ARM,UC_MODE_ARM,UC_HOOK_CODE,UC_HOOK_MEM_WRITE
+from unicorn.arm_const import *
+r=json.loads((ROOT/'outputs/usb_ram_bridge_checkpoint_modefix_build.json').read_text())
+usb=(ROOT/'work/usb_ram_bridge_checkpoint_modefix.USBPLUG.OFFLINE_ONLY.bin').read_bytes()
+raw=(ROOT/'work/usb_ram_bridge_checkpoint_modefix.guarded_payload.RAM_ONLY.raw').read_bytes()
+for name in ('usb_ram_bridge_checkpoint_modefix.USBPLUG.OFFLINE_ONLY.bin','usb_ram_bridge_checkpoint_modefix.BOOT.OFFLINE_ONLY.bin','usb_ram_bridge_checkpoint_modefix.guarded_payload.RAM_ONLY.raw'):
+    assert hashlib.sha256((ROOT/'work'/name).read_bytes()).hexdigest()==r['files'][name]['sha256']
+symbols={k:int(v,16) for k,v in r['symbols'].items()}
+B,STAGE,BUF,SP,STOP=0x60000000,0x61000000,0x60050000,0x607ff000,0x607ffffc
+def machine():
+    u=Uc(UC_ARCH_ARM,UC_MODE_ARM,cpu=UC_CPU_ARM_CORTEX_A9)
+    for start,size in ((B,0x900000),(STAGE,0x30000),(0x61200000,0x20000),(0x62000000,0x1000)):
+        u.mem_map(start,size)
+    u.mem_write(B,usb)
+    u.emu_start(B+0x30,B+0x34,count=10000)
+    assert u.reg_read(UC_ARM_REG_PC)==B+0x34
+    assert u.reg_read(UC_ARM_REG_R0)==0x101027fc
+    assert bytes(u.mem_read(0x60800000,r['addon_bytes']))==usb[0xe000:0xe000+r['addon_bytes']]
+    # Appended storage is not persistent: original C startup/buffers may clear it.
+    u.mem_write(B+0xe000,bytes(4096))
+    return u
+def call(u,pc,args=(),ranges=(),budget=2000000,stop=STOP,return_lr=None):
+    u.reg_write(UC_ARM_REG_SP,SP);u.reg_write(UC_ARM_REG_LR,STOP if return_lr is None else return_lr)
+    for register,value in zip((UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3),args):
+        u.reg_write(register,value)
+    writes=[]
+    def write(uc,access,address,size,value,ctx):
+        assert SP-0x1000<=address and address+size<=SP or any(a<=address and address+size<=z for a,z in ranges),(hex(pc),hex(address),size,'instruction',hex(uc.reg_read(UC_ARM_REG_PC)))
+        writes.append((address,size))
+    handle=u.hook_add(UC_HOOK_MEM_WRITE,write)
+    u.emu_start(pc,stop,count=budget)
+    u.hook_del(handle)
+    assert u.reg_read(UC_ARM_REG_PC)==stop,hex(u.reg_read(UC_ARM_REG_PC))
+    return u.reg_read(UC_ARM_REG_R0),writes

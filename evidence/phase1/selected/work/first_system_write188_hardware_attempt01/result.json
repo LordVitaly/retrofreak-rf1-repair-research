@@ -1,0 +1,61 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/first_system_write188_hardware_attempt01/result.json",
+  "interpretation": "First separately authorized 2-MiB portion, with readback/reopen.",
+  "data": {
+    "all_pass": true,
+    "authorization": "User explicitly allowed ONLY first 2MiB [bc000,bd000), then report readback and reopened FTL, no next portion",
+    "writer_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "reader_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "capture_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "source_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "write_launches": 1,
+    "phase": "STOP_user_approval_required_for_next_portion",
+    "commands": "<REDACTED:RAW_LOG_OR_IDENTIFIER>",
+    "executions": [
+      {
+        "phase": "write",
+        "after_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "elapsed_seconds": 3.375,
+        "status_hex": "<REDACTED:HASH_OR_BYTES>"
+      },
+      {
+        "phase": "reopen_read",
+        "after_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "elapsed_seconds": 2.188000000001921,
+        "status_hex": "<REDACTED:HASH_OR_BYTES>"
+      },
+      {
+        "phase": "reopen_ftl_capture",
+        "after_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "elapsed_seconds": 2.061999999998079,
+        "status_hex": "<REDACTED:HASH_OR_BYTES>"
+      }
+    ],
+    "donor_RAM_exact": true,
+    "current_stage_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "writer_status": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+    "gate_state": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+    "journal": {
+      "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+      "original_items": 260
+    },
+    "postwrite_mapping": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+    "postwrite_map_changes": [
+      {
+        "logical": 188,
+        "before": 0,
+        "after": 312
+      }
+    ],
+    "immediate_readback_exact": true,
+    "reopened_readback": {
+      "bytes": 2097152,
+      "sha256": "<REDACTED:HASH_OR_BYTES>",
+      "expected_sha256": "<REDACTED:HASH_OR_BYTES>",
+      "mismatching_bytes": 0
+    },
+    "reopened_ftl": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+    "next_portion_started": false
+  }
+}

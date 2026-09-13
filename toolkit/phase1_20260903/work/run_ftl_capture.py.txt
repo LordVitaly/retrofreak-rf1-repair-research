@@ -1,0 +1,59 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/run_ftl_capture.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Capture live mode1 FTL RAM through already proved 2MiB window. Read-only NAND."""
+import hashlib,json,struct,sys
+from pathlib import Path
+from ram_console_session import RamConsole
+assert sys.argv[1:]==['--after-window-proof']
+ROOT=Path(__file__).resolve().parents[1]
+build=json.loads((ROOT/'outputs/ftl_capture_build.json').read_text());proof=json.loads((ROOT/'outputs/ftl_capture_offline.json').read_text())
+window=json.loads((ROOT/'work/system_ram_window_hardware_attempt01/result.json').read_text());assert window['all_pass']
+raw=(ROOT/'work/ftl_capture_v1/capture.raw').read_bytes()
+assert hashlib.sha256(raw).hexdigest()==build['sha256']==proof['sha256']=='<REDACTED:HASH_OR_BYTES>'
+assert proof['all_pass']
+out=ROOT/'work/ftl_capture_hardware_attempt01';out.mkdir(exist_ok=False)
+result=dict(all_pass=False,nand_write_enabled=False,system_repair_performed=False,payload_sha256=build['sha256'],commands=[]);c=None
+try:
+    c=RamConsole(out);c.select();result['commands']=c.commands
+    marker=out/'window_before.raw';c.command(f'RS 0x7efffe 0x1 {marker}')
+    assert marker.read_bytes()==b'RF1WIN01'+struct.pack('<IIII',0x800000,4096,0x63000000,16)+bytes(504)
+    before=out/'previous.raw';c.command(f'RS 0x7f0000 0xd1 {before}')
+    assert hashlib.sha256(before.read_bytes()).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+    for i,offset in enumerate(range(0,110080,8192)):
+        part=out/f'payload{i:02d}.bin'
+        with part.open('xb') as f:f.write(raw[offset:min(offset+8192,110080)])
+        c.command(f'WS {hex(0x7f0000+offset//512)} {part}')
+    before=out/'before.raw';c.command(f'RS 0x7f0000 0xd1 {before}');assert before.read_bytes()==raw
+    c.command('RD')
+    after=out/'after.raw';c.command(f'RS 0x7f0000 0xd1 {after}');data=after.read_bytes()
+    assert len(data)==110352 and data[:110080]==raw[:110080] and data[110348:]==bytes(4)
+    assert struct.unpack_from('<II',data,110080)==(0x44475453,0x600982e4)
+    assert struct.unpack_from('<I',data,110344)[0]==0x6009a1f8
+    result['after_sha256']=hashlib.sha256(data).hexdigest();result['bridge_returned']=True
+    export=out/'result_record.raw';c.command(f'RS 0x7f00d1 0x2 {export}');ex=export.read_bytes()
+    assert len(ex)==1056 and ex[:8]==b'RF1READ1' and struct.unpack_from('<IIII',ex,8)==(0x103000,1,0,0xa8000)
+    assert hashlib.sha256(ex[240:752]).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+    snapshot=bytearray()
+    for i in range(84):
+        file=out/f'capture{i:02d}.raw';c.command(f'RS {hex(0x800000+i*16)} 0x10 {file}')
+        block=file.read_bytes();assert len(block)==8448
+        assert all(block[j+512:j+528]==bytes(16) for j in range(0,8448,528))
+        snapshot.extend(b''.join(block[j:j+512] for j in range(0,8448,528)))
+    assert len(snapshot)==0xa8000
+    with (out/'ftl_nand_ram.bin').open('xb') as f:f.write(snapshot)
+    count=struct.unpack_from('<H',snapshot,0x180+0x10)[0]
+    mapping=list(struct.unpack_from('<1896H',snapshot,0xf00))
+    result.update(snapshot_sha256=hashlib.sha256(snapshot).hexdigest(),logical_count=count,ftl_header=snapshot[0x180:0x194].hex(),logical_to_physical=mapping)
+    assert count==1896 and all(p==0 or 12<=p<2048 for p in mapping)
+    assert [mapping[i] for i in (6,186,231,259)]==[22,151,2014,1985]
+    reference=json.loads((ROOT/'outputs/flashboot_offline_remap_full_stage3_extended_native_buffers.json').read_text())['logical_to_physical_u16']
+    result['mapping_differences_from_original_model']=[dict(logical=i,hardware=a,model=b) for i,(a,b) in enumerate(zip(mapping,reference)) if a!=b]
+    result['all_pass']=True
+except BaseException as e:result['error']=repr(e);raise
+finally:
+    if c:c.close()
+    with (out/'result.json').open('x') as f:json.dump(result,f,indent=2)
+    print(json.dumps({k:v for k,v in result.items() if k not in ('commands','logical_to_physical')},indent=2),flush=True)

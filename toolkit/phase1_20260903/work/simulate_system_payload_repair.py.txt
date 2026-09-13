@@ -1,0 +1,75 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/simulate_system_payload_repair.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""OFFLINE REPAIR SIMULATION, never an extraction of original data or a flash script.
+Only diagnosed missing/differing image blocks use official replacement bytes.
+All other bytes come from NAND logical view, including its recorded error superblock.
+"""
+import hashlib
+import io
+import json
+import zipfile
+from pathlib import Path
+from dissect.extfs import ExtFS
+from native_system_view import NativeSystemView
+from verify_native_ecc_page import BOOT
+ROOT=Path(__file__).parent
+inventory=json.loads((ROOT.parent/'outputs/native_ftl_inventory_2048blocks.json').read_text())
+audit=json.loads((ROOT.parent/'outputs/native_system_block_audit_2048blocks.json').read_text())
+missing=set(inventory['partitions']['system']['missing_logical_blocks'])
+damaged={r['logical_candidate'] for r in audit['candidates'] if not r['exact_reference_match']}
+assert len(missing)==11 and len(damaged)==7 and not missing&damaged
+replacement=missing|damaged
+reference=(BOOT.parent/'system.img').read_bytes()
+view=NativeSystemView()
+pieces=[]
+plan=[]
+for logical in range(186,260):
+    offset=(logical-186)*2097152
+    length=min(2097152,len(reference)-offset)
+    assert length>0
+    if logical in replacement:
+        data=reference[offset:offset+length]
+        candidates=inventory['partitions']['system']['candidates'].get(str(logical),[])
+        plan.append(dict(logical_block=logical,system_offset=offset,length=length,
+            reason='no_F200_mapping' if logical in missing else 'payload_differs',
+            replacement_sha256=hashlib.sha256(data).hexdigest(),
+            observed_physical_candidates=[r['physical_block'] for r in candidates],
+            physical_write_target=None,write_authorized=False))
+    else:
+        view.seek(offset)
+        data=view.read(length)
+    pieces.append(data)
+simulated=b''.join(pieces)
+assert len(simulated)==len(reference)
+differences=[i for i,(a,b) in enumerate(zip(simulated,reference)) if a!=b]
+assert differences and all(1024<=i<2048 for i in differences), 'Unexplained differences outside recorded superblock'
+fs=ExtFS(io.BytesIO(simulated))
+official=ExtFS(io.BytesIO(reference))
+files=[]
+for path in ('/bin/vold','/bin/servicemanager','/bin/surfaceflinger','/app/RetroFreakGUI.apk'):
+    actual=fs.get(path).open().read()
+    expected=official.get(path).open().read()
+    assert actual==expected, path+' not restored by proposed payload replacements'
+    row=dict(path=path,bytes=len(actual),sha256=hashlib.sha256(actual).hexdigest(),exact_official_match=True)
+    if path.endswith('.apk'):
+        with zipfile.ZipFile(io.BytesIO(actual)) as archive:
+            row['zip_members']=len(archive.infolist())
+            row['zip_first_bad_member']=archive.testzip()
+            assert row['zip_first_bad_member'] is None
+    files.append(row)
+report=dict(scope='OFFLINE SIMULATION ONLY: NAND remains unchanged; not a validated physical-write plan',
+    reference=str(BOOT.parent/'system.img'),reference_sha256=hashlib.sha256(reference).hexdigest(),
+    replacement_blocks=len(plan),replacement_payload_bytes=sum(r['length'] for r in plan),
+    retain_recorded_error_superblock=True,remaining_difference_offsets=differences,
+    ranges=plan,simulated_file_checks=files,
+    unresolved=['Physical programming ECC/OOB semantics','FTL mapping updates for missing ranges',
+                'Safe target allocation and rollback','Cache/superblock handling after data restoration',
+                'Hardware readback and successful boot'])
+out=ROOT.parent/'outputs/system_payload_repair_SIMULATION.json'
+with out.open('x') as f: json.dump(report,f,indent=2)
+print('SIMULATION:',len(plan),'replacement blocks,',sum(r['length'] for r in plan),'replacement bytes')
+print('Remaining differences only in recorded error superblock:',len(differences))
+for row in files: print(json.dumps(row))

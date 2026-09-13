@@ -1,0 +1,45 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/boot_visibility_verify/build.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+"""Offline mode0 derivatives of existing verified complete boot-block readers."""
+from pathlib import Path
+import hashlib,importlib.util,json,struct,sys,zlib
+sys.dont_write_bytecode=True
+OUT=Path(__file__).resolve().parent;WORK=OUT.parent
+OLD=Path('<EXTERNAL_STAGE_03>')
+def sha(b):return hashlib.sha256(b).hexdigest()
+hp=OLD/'work/ram_artifact.py'
+assert sha(hp.read_bytes())=='<HISTORICAL_HASH_REDACTED>'
+s=importlib.util.spec_from_file_location('helper',hp);h=importlib.util.module_from_spec(s);s.loader.exec_module(h)
+profiles={}
+for block in (6,9,10):
+ source=WORK/'white_screen_ftl_read'/f'boot_block{block}.raw'
+ proof=json.loads(source.with_suffix('.json').read_text());before=source.read_bytes()
+ assert proof['all_pass'] and proof['lba']==block*4096 and proof['sectors']==4096 and sha(before)==proof['sha256']
+ assert len(before)==110352 and before[110080:]==bytes(272)
+ assert before[0x76f8:0x76fc]==bytes.fromhex('0100a0e3')
+ after=bytearray(before[:110080]);after[0x76f8:0x76fc]=bytes.fromhex('0000a0e3');h.fix_crc(after)
+ after=bytes(after)+bytes(272)
+ differences=[i for i,(a,b) in enumerate(zip(before,after)) if a!=b]
+ assert all(0x1e0<=i<0x1e4 or i==0x76f8 for i in differences)
+ assert after[0x7040:0x71c0]==before[0x7040:0x71c0]
+ for off in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):assert after[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+ for off in (0xbbc8,0xbc90):assert after[off:off+4]==bytes.fromhex('feffffea')
+ assert after[0xb408:0xb40c]==bytes.fromhex('0101a0e3') and after[0xaf60:0xaf64]==bytes.fromhex('0003a0e1')
+ assert zlib.crc32(after[:110080])==0xad0dadee
+ path=OUT/f'boot_block{block}_mode0.raw';path.write_bytes(after)
+ profiles[str(block)]=dict(path=str(path),sha256=sha(after),source=str(source),source_sha256=sha(before),source_proof=str(source.with_suffix('.json')),
+    lba=block*4096,sectors=4096,bytes_to_export=2097152,fullmap_mode=0,
+    actual_changed_offsets=differences,helper_byte_exact=True,all8guards_2stops_retained=True,
+    original_capacity_geometry=True,export_magic='RF1READ2',status_offset=0,
+    metadata_RS=['0x7f00d1','0x2'],data_RS='0x800000',max_transfer_sectors=16,
+    required_status_words=[block*4096,4096,0,4096])
+report=dict(all_pass=True,hardware_access=False,profiles=profiles,
+  modification='Only file76f8 MOV r0,#1→MOV r0,#0 and CRC compensation1e0..1e3; existing full-block read helper unchanged.',
+  stage_crc32='0xad0dadee',payload_bytes=110352,cut_pc='0x600982e4',return_pc='0x60000100',
+  usage='Authenticated existing RAM bridge/window only; no DB. Stage through RAM WS, exact readback, RD once, require RF1READ2 exact status and all2MiB data equality. Outer RAM window aux16 must be all zero and stripped.')
+(OUT/'manifest.json').write_text(json.dumps(report,indent=2))
+print(json.dumps(report,indent=2))

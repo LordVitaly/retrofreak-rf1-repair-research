@@ -1,0 +1,29 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/analyze_cold.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+from pathlib import Path
+import json,struct,hashlib,sys
+OLD=Path('<EXTERNAL_STAGE_03>')
+HERE=Path(__file__).resolve().parent
+sys.path.insert(0,str(OLD/'work'))
+from audit_ram_loader_container import rc4
+def parts(raw):
+    return b''.join(raw[i:i+512] for i in range(0,len(raw),528)),[struct.unpack_from('<H',raw,i+512)[0] for i in range(0,len(raw),528)]
+data={}
+for name,p in [('cold12',HERE/'bbt_cold_attempt01/block12_full.raw'),('cold13',HERE/'bbt_cold_attempt01/block13_full.raw'),('afterwrite12',OLD/'work/bbt_copy12_restore_attempt01/final_block12.raw'),('beforewrite12',OLD/'work/bbt_copy12_restore_attempt01/before_block12.raw')]:
+    m,a=parts(p.read_bytes());data[name]=(m,a)
+    print(name,'first main halfwords',struct.unpack('<32H',m[:64]),'first aux',a[:16])
+print('cold12 exactly beforewrite',data['cold12']==data['beforewrite12'])
+print('main cold vs afterwrite',data['cold12'][0]==data['afterwrite12'][0])
+reader=(OLD/'work/bbt_ecc40_readonly_v1/usbplug.bin').read_bytes()
+writer=(OLD/'work/bbt_copy12_writer_v2/usbplug.bin').read_bytes()
+diffs=[i for i in range(min(len(reader),len(writer))) if reader[i]!=writer[i]]
+ranges=[]
+for i in diffs:
+    if ranges and i==ranges[-1][1]:ranges[-1][1]+=1
+    else:ranges.append([i,i+1])
+print('reader/writer diff before addon',[[hex(a),hex(z)] for a,z in ranges if a<0xe000])
+print('native read body same',reader[0x7420:0x7528]==writer[0x7420:0x7528],reader[0x787c+4:0x7a34]==writer[0x787c+4:0x7a34])

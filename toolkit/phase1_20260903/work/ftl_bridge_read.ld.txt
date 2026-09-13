@@ -1,0 +1,15 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/ftl_bridge_read.ld
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+ENTRY(ftl_bridge_read)
+SECTIONS {
+ . = 0x60007040;
+ .text : { *(.text*) *(.rodata*) }
+ ASSERT(SIZEOF(.text) <= 0x180, "Inside protected format body")
+ .data : { *(.data*) }
+ .bss : { *(.bss*) }
+ ASSERT(SIZEOF(.data) == 0 && SIZEOF(.bss) == 0, "No implicit data")
+ /DISCARD/ : { *(.ARM.exidx*) *(.ARM.extab*) *(.comment*) }
+}

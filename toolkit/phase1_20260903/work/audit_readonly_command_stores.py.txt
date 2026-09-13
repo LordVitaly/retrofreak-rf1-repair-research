@@ -1,0 +1,30 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/audit_readonly_command_stores.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Reproducible bounded static inventory, not a complete reachability proof."""
+import hashlib,json
+from pathlib import Path
+from capstone import Cs,CS_ARCH_ARM,CS_MODE_ARM
+ROOT=Path(__file__).resolve().parents[1]
+source=(ROOT/'work/FlashBoot.packet512.STATIC_ONLY.bin').read_bytes()
+candidate=(ROOT/'work/readonly_ram.FlashBoot.NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(source).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+assert hashlib.sha256(candidate).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+cs=Cs(CS_ARCH_ARM,CS_MODE_ARM);cs.skipdata=True
+instructions=list(cs.disasm(source[0x8000:0xc650],0x8000))
+stores=[]
+for n,i in enumerate(instructions):
+    if i.mnemonic.startswith('str') and ', #8]' in i.op_str:
+        stores.append(dict(offset=hex(i.address),instruction=i.mnemonic+' '+i.op_str,preceding=[x.mnemonic+' '+x.op_str for x in instructions[max(0,n-4):n]],classification='candidate only; includes RAM/controller registers, not necessarily NAND command port'))
+checks=[]
+for off,value in [(0xbb70,'#0x11'),(0xbb7c,'#0x10'),(0xbbbc,'#0x15'),(0xbc58,'#0xd0')]:
+    i=next(x for x in instructions if x.address==off)
+    assert i.op_str.endswith(value)
+    checks.append(dict(command_source_offset=hex(off),instruction=i.mnemonic+' '+i.op_str,blocked_confirm='0xbc90' if off==0xbc58 else '0xbbc8'))
+for off in (0xbbc8,0xbc90):assert candidate[off:off+4]==bytes.fromhex('feffffea')
+for off in (0xba10,0xbc1c,0xbd5c):assert candidate[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+report=dict(source_sha256=hashlib.sha256(source).hexdigest(),candidate_sha256=hashlib.sha256(candidate).hexdigest(),range=['0x8000','0xc650'],candidate_stores=stores,known_program_erase_confirm_checks=checks,known_confirm_stores_fail_stop=True,device_access=False,complete_coverage_proven=False,limitations=['Linear ARM scan of identified NAND code region only; not a full executable/control-flow inventory','Data-driven command values and vendor feature sequences remain outside this proof','Does not guarantee safety against arbitrary code corruption or USB parser bugs'],reference='https://www.mouser.com/datasheet/2/671/micron_technology_micts04808-1-1759201.pdf',reference_scope='Micron command-family reference only. Its listed 4KiB page geometry differs from RF-1 observed 8KiB; not accepted as exact RF-1 part identification.')
+(ROOT/'outputs/readonly_command_store_audit.json').write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps({k:v for k,v in report.items() if k!='candidate_stores'},indent=2))

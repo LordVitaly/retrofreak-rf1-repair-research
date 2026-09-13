@@ -1,0 +1,62 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/read_idb_copy6_postwrite_audit.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Read-only investigation after exact copy6 write; NEVER writes/retries/reset."""
+import hashlib,json,struct,time
+from pathlib import Path
+from ram_console_session import RamConsole
+from console_completion import ANSI,completed_response
+ROOT=Path(__file__).resolve().parents[1];prior=ROOT/'work/idb_copy6_restore_hardware_attempt03'
+r=json.loads((prior/'result.json').read_text())
+assert r['final_target_sha256']=='<REDACTED:HASH_OR_BYTES>'
+assert r['program_chunks_dispatched']==16 and 'Protected block 0' in r['error']
+out=ROOT/'work/idb_copy6_postwrite_readonly01';out.mkdir(exist_ok=False)
+result=dict(nand_write_commands=0,reset_commands=0,protected=[],complete=False);c=None
+def main(raw):return b''.join(raw[i:i+512] for i in range(0,len(raw),528))
+def read(name,sector,count):
+    assert (sector==0x7effff and count==1) or (sector<0x12000 and sector+count<=0x12000 and 0<count<=4096)
+    p=out/(name+'.raw');c.command(f'RS {hex(sector)} {hex(count)} {p}')
+    data=p.read_bytes();assert len(data)==count*528;return data
+def marker(name):
+    data=read(name,0x7effff,1);w=list(struct.unpack('<18I',data[:72]))
+    assert w[:10]==[0x31424449,0x06000103,3,0,1,0,64,0,0x6100,0],w
+    result[name]=w
+def command(value,token):
+    assert value in ('RID','RFI')
+    start=len(''.join(c.chunks));c.commands.append(value);c.send_once(value);until=time.monotonic()+45
+    while time.monotonic()<until:
+        text=''.join(c.chunks);response=completed_response(text,start,token)
+        if response is not None:return response
+        if 'Error:' in ANSI.sub('',text[start:]):raise RuntimeError('Read-only command error')
+        time.sleep(.005)
+    raise RuntimeError('No response; no retry')
+try:
+    c=RamConsole(out);c.select();marker('start_marker')
+    # Most important surviving copy first; then finish previously unperformed comparisons.
+    for b in [5]+[i for i in range(1,18) if i not in (5,6)]:
+        actual=main(read(f'after_block{b:02d}',b*4096,512 if b<12 else 4096))
+        before=main((prior/f'before_block{b:02d}.raw').read_bytes())
+        d=[i for i,(x,y) in enumerate(zip(actual,before)) if x!=y]
+        row=dict(block=b,exact=not d,main_mismatches=len(d),first_offsets=d[:16],sha256=hashlib.sha256(actual).hexdigest())
+        result['protected'].append(row);print(json.dumps(row),flush=True)
+    # Reproduce the original non-writing command context for block0. Its only
+    # mismatch was first2048 bytes repeating NAND ID versus allFF after writing.
+    result['rid']=command('RID','2C 44 44 4B A9')
+    result['rfi']=command('RFI','Flash Info:')
+    contextual=main(read('block00_after_rid_rfi',0,512))
+    before0=main((prior/'before_block00.raw').read_bytes())
+    after0=main((prior/'after_block00.raw').read_bytes())
+    result['block0_original_context_exact']=contextual==before0
+    result['block0_context_mismatches']=sum(x!=y for x,y in zip(contextual,before0))
+    result['block0_unconditioned_mismatches']=sum(x!=y for x,y in zip(after0,before0))
+    result['block0_after_first2048_exact']=contextual[2048:]==before0[2048:]==after0[2048:]
+    marker('final_marker')
+    result['complete']=True
+    result['all_protected_views_reproduced']=all(x['exact'] for x in result['protected']) and result['block0_original_context_exact']
+except BaseException as e:result['error']=repr(e);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    with (out/'result.json').open('x') as f:json.dump(result,f,indent=2)
+    print(json.dumps({k:v for k,v in result.items() if k not in ('protected','commands')},indent=2),flush=True)

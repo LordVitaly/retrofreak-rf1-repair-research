@@ -1,0 +1,27 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/cache_last_attempt/finalize.py
+Role: offline_source_or_preparation_case_specific
+Original repair session must not be resumed from this public copy.
+
+from pathlib import Path
+import os,subprocess,struct,hashlib,json,zlib
+out=Path('work/cache_last_attempt').resolve();image=out/'cache64.img';b=image.read_bytes();sha=lambda x:hashlib.sha256(x).hexdigest();assert len(b)==67108864
+sb=b[1024:2048];count=struct.unpack_from('<I',sb,4)[0];blocksize=1024<<struct.unpack_from('<I',sb,24)[0];assert count==16384 and blocksize==4096
+compat,incompat,rocompat=struct.unpack_from('<III',sb,92);assert (compat,incompat,rocompat)==(0x3c,0x42,0x3)
+bb,ib,it=struct.unpack_from('<III',b,4096);bitmap=b[bb*4096:(bb+1)*4096];allocated=[i for i in range(count) if bitmap[i//8]>>(i%8)&1];chunks=sorted({i//512 for i in allocated});assert chunks==[0,1,2] and len(allocated)==1293
+ranges=[]
+for n in allocated:
+ if ranges and ranges[-1][1]+1==n:ranges[-1][1]=n
+ else:ranges.append([n,n])
+proof=out/'cache64_unwritten_free_space_proof.img';overlay=bytearray(b)
+for chunk in range(32):
+ if chunk not in chunks:overlay[chunk*2097152:(chunk+1)*2097152]=bytes([0xa5])*2097152
+proof.write_bytes(overlay);env=dict(os.environ);env['PATH']=str(out/'portable/usr/bin')+os.pathsep+env['PATH'];p='/cygdrive/c/'+proof.as_posix()[3:]
+r=subprocess.run([str(out/'portable/usr/sbin/e2fsck.exe'),'-f','-n',p],env=env,capture_output=True,text=True,timeout=30);(out/'selective_write_fsck.log').write_text(r.stdout+'\n'+r.stderr);assert r.returncode==0;assert sha(proof.read_bytes())==sha(overlay);assert sha(image.read_bytes())==sha(b)
+blocks={}
+for c in chunks:
+ part=b[c*2097152:(c+1)*2097152];path=out/f'block{24+c}.source.bin';assert path.read_bytes()==part
+ blocks[str(24+c)]={'path':str(path),'sha256':sha(part),'crc32':hex(zlib.crc32(part)),'bytes':len(part),'cache_offset':c*2097152,'logical_block':24+c,'zero_chunk':not any(part)}
+manifest={'all_pass':True,'hardware_access':False,'only_local_regular_images_created_or_checked':True,'image_path':str(image),'image_sha256':sha(b),'image_bytes':len(b),'partition':'cache','cache_start_lba':0x18000,'cache_sector_count':0x20000,'logical_block_allowlist':[24,25,26],'source_blocks':blocks,'filesystem':{'type':'ext4','block_size':4096,'blocks':16384,'block_groups':1,'inodes':4096,'inode_size':256,'journal_bytes':4194304,'journal_start':0,'root_contents':['lost+found'],'state':'clean','feature_compat':hex(compat),'feature_incompat':hex(incompat),'feature_ro_compat':hex(rocompat),'features':['has_journal','ext_attr','resize_inode','dir_index','filetype','extent','sparse_super','large_file'],'no_64bit_metadata_csum_or_recovery':True,'kernel_compatibility':'Only legacy ext4 features present in existing kernel3.0.8; no modern features enabled.'},'allocation_proof':{'block_bitmap_fsblock':bb,'inode_bitmap_fsblock':ib,'inode_table_first_fsblock':it,'allocated_fsblocks':len(allocated),'allocated_fsblock_ranges_inclusive':ranges,'required_2MiB_cache_chunks':chunks,'every_allocated_block_inside_written_chunks':True,'all_unwritten_chunks_have_no_allocated_filesystem_blocks':True,'bitmap_sha256':sha(bitmap),'unwritten_free_space_test_pattern':'A5','unwritten_free_space_fsck_returncode':r.returncode,'unwritten_free_space_proof_image_sha256':sha(overlay)},'checks':{'mke2fs_returncode':0,'e2fsck_force_read_only_returncode':0,'dumpe2fs_returncode':0,'debugfs_root_read_only_returncode':0,'read_only_fsck_images_unchanged':True},'important_scope':'This resets cache filesystem metadata/journal. Unallocated space outside the three written chunks may retain old bytes; these are not referenced by the new empty filesystem. This is not a secure erasure.','init_root_permissions':'Stock on post-fs chowns /cache to system:cache and chmod0770 after mount.','files':{n:sha((out/n).read_bytes()) for n in ('mkfs.log','e2fsck.exe.log','dumpe2fs.exe.log','debugfs.exe.log','selective_write_fsck.log','portable_manifest.json','make_cache.py')}}
+(out/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8');print(json.dumps({'all_pass':True,'manifest_sha256':sha((out/'manifest.json').read_bytes()),'logical_blocks':list(blocks),'allocated_ranges':ranges,'selective_fsck_output':r.stdout},indent=2))

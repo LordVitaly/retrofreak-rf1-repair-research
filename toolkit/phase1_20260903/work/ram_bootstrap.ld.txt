@@ -1,0 +1,24 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/ram_bootstrap.ld
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+ENTRY(_start)
+SECTIONS {
+ . = 0x61000000;
+ .text : { KEEP(*(.text.bootstrap)) *(.text.entry) *(.text*) }
+ .rodata : { *(.rodata*) }
+ .data : { *(.data*) }
+ .payload : { KEEP(*(.payload)) }
+ . = ALIGN(4);
+ __load_end = .;
+ __load_size = __load_end - 0x61000000;
+ . = 0x61010000;
+ __bss_start = .;
+ .bss (NOLOAD) : { *(.bss*) *(COMMON) }
+ . = ALIGN(4);
+ __bss_end = .;
+ /DISCARD/ : { *(.ARM.exidx*) *(.ARM.extab*) *(.comment*) }
+ ASSERT(__load_size < 65534, "USB payload exceeds 16-bit limit")
+ ASSERT(__bss_end < 0x61020000, "BSS outside assigned RAM")
+}

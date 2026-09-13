@@ -1,0 +1,32 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/read_idb_postwrite_variability.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""One bounded read-only repeat of discrepant pages, never a write/retry."""
+import json,struct
+from pathlib import Path
+from ram_console_session import RamConsole
+ROOT=Path(__file__).resolve().parents[1];pre=ROOT/'work/idb_copy6_restore_hardware_attempt03';post=ROOT/'work/idb_copy6_postwrite_readonly01'
+out=ROOT/'work/idb_postwrite_variability01';out.mkdir(exist_ok=False);c=None
+result=dict(nand_write_commands=0,reset_commands=0,rows=[])
+def main(d):return b''.join(d[i:i+512] for i in range(0,len(d),528))
+def read(name,sector,count):
+    p=out/(name+'.raw');c.command(f'RS {hex(sector)} {hex(count)} {p}')
+    d=p.read_bytes();assert len(d)==count*528;return d
+try:
+    c=RamConsole(out);c.select()
+    for b,start in [(5,240),(14,16),(15,64),(16,0),(17,1024)]:
+        count=16;actual=main(read(f'block{b:02d}_record{start}',b*4096+start,count))
+        previous=main((post/f'after_block{b:02d}.raw').read_bytes())[start*512:(start+count)*512]
+        before=main((pre/f'before_block{b:02d}.raw').read_bytes())[start*512:(start+count)*512]
+        d=[i for i,(x,y) in enumerate(zip(previous,actual)) if x!=y]
+        row=dict(block=b,start_record=start,count=count,mismatch_vs_previous_readonly=len(d),bit_changes_vs_previous_readonly=sum((previous[i]^actual[i]).bit_count() for i in d),mismatch_vs_prewrite=sum(x!=y for x,y in zip(before,actual)),first_offsets=d[:16])
+        result['rows'].append(row);print(json.dumps(row),flush=True)
+    marker=read('end_marker',0x7effff,1);w=list(struct.unpack('<18I',marker[:72]))
+    assert w[:10]==[0x31424449,0x06000103,3,0,1,0,64,0,0x6100,0]
+    result['marker']=w
+except BaseException as e:result['error']=repr(e);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    with (out/'result.json').open('x') as f:json.dump(result,f,indent=2)

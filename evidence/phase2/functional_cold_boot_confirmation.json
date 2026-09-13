@@ -1,0 +1,14 @@
+{
+  "date": "2026-09-09",
+  "evidence_type": "operator-reported functional observation after complete power removal; not a new binary NAND read",
+  "test": "Disconnect PSU and PC USB; attach cartridge adapter and HDMI; power on normally; verify controller and the same Game Boy Color cartridge/game path.",
+  "normal_boot_after_power_removal_confirmed": true,
+  "stock_boot_confirmed_by_functional_test": true,
+  "cartridge_adapter_confirmed": true,
+  "controller_confirmed": true,
+  "gbc_cartridge_detection_confirmed": true,
+  "game_launch_confirmed": true,
+  "new_binary_nand_readback_after_that_power_cycle": false,
+  "save_import_observed_in_preceding_temporary_host_test": true,
+  "fresh_save_import_measured_after_final_power_cycle": false
+}

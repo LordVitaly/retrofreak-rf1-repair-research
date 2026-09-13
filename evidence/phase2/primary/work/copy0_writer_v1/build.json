@@ -1,0 +1,287 @@
+{
+  "build_only": true,
+  "device_access": false,
+  "ready_to_write": false,
+  "files": {
+    "writer.bin": {
+      "bytes": 249478,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "usbplug.bin": {
+      "bytes": 61440,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "addon.bin": {
+      "bytes": 3496,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "erase_copy0_once.bin": {
+      "bytes": 512,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "part000.main512.bin": {
+      "bytes": 8192,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "part016.main512.bin": {
+      "bytes": 8192,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "part032.main512.bin": {
+      "bytes": 8192,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "part048.main512.bin": {
+      "bytes": 8192,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "part064.main512.bin": {
+      "bytes": 8192,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "part080.main512.bin": {
+      "bytes": 8192,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "part096.main512.bin": {
+      "bytes": 8192,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "part112.main512.bin": {
+      "bytes": 8192,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "part128.main512.bin": {
+      "bytes": 8192,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "part144.main512.bin": {
+      "bytes": 8192,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "part160.main512.bin": {
+      "bytes": 8192,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "part176.main512.bin": {
+      "bytes": 8192,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "part192.main512.bin": {
+      "bytes": 8192,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "part208.main512.bin": {
+      "bytes": 8192,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "part224.main512.bin": {
+      "bytes": 8192,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    "part240.main512.bin": {
+      "bytes": 8192,
+      "sha256": "<HISTORICAL_HASH_REDACTED>"
+    }
+  },
+  "addon_bytes": 3496,
+  "symbols": {
+    "idb_copy6_guard.c": 0,
+    "$a": 1619004000,
+    "buffer_ok": 1619003464,
+    "saved_flashinfo": 1619004325,
+    "fail": 1619003512,
+    "geometry": 1619003544,
+    "page_crc": 1619004004,
+    "crc": 1619003760,
+    "low_pages": 1619004260,
+    "fill": 1619003868,
+    "$d": 1619003992,
+    "compiler_rt": 0,
+    "guarded_saved_flashinfo": 1619001484,
+    "__aeabi_unwind_cpp_pr0": 1619004000,
+    "guarded_saved_geometry": 1619001644,
+    "guarded_low_erase": 1619001828,
+    "native_erase": 1619003900,
+    "guarded_low_program": 1619001984,
+    "native_program": 1619003892,
+    "guarded_program": 1619002196,
+    "guarded_write": 1619002360,
+    "native_write_loop": 1619003908,
+    "guarded_read": 1619003128,
+    "native_read_loop": 1619003916,
+    "idb_preinit": 1619001344,
+    "__addon_size": 3496,
+    "read_status": 1619003940,
+    "_start": 1619001344
+  },
+  "patches": [
+    {
+      "offset": "0x30",
+      "before": "64009fe5",
+      "after": "f23700ea",
+      "why": "Same proved pre-BSS relocation as working RAM bridge"
+    },
+    {
+      "offset": "0x3620",
+      "before": "f1432de9",
+      "after": "eff21fea",
+      "why": "guarded_low_erase"
+    },
+    {
+      "offset": "0x3fa4",
+      "before": "ff4f2de9",
+      "after": "b5f01fea",
+      "why": "guarded_low_program"
+    },
+    {
+      "offset": "0x7528",
+      "before": "f0472de9",
+      "after": "89e31fea",
+      "why": "guarded_program"
+    },
+    {
+      "offset": "0x7718",
+      "before": "ff4f2de9",
+      "after": "36e31fea",
+      "why": "guarded_write"
+    },
+    {
+      "offset": "0x787c",
+      "before": "ff4f2de9",
+      "after": "9de31fea",
+      "why": "guarded_read"
+    },
+    {
+      "offset": "0x796c",
+      "before": "c9feffeb",
+      "after": "2ce41feb",
+      "why": "Observe original native read result only; no ECC, main or auxiliary changes"
+    },
+    {
+      "offset": "0x528c",
+      "before": "9afaffeb",
+      "after": "7eeb1feb",
+      "why": "Only saved FlashInfo for native parser; BL preserves parser return. No NAND write or changed normal read data."
+    },
+    {
+      "offset": "0x6d7c",
+      "before": "2bf5ffeb",
+      "after": "eae41feb",
+      "why": "Replace actual destructive geometry autodetect with known FlashInfo through the native parser"
+    },
+    {
+      "offset": "0x4230",
+      "before": "f05f2de9cc6a1fe5",
+      "after": "0000e0e31eff2fe1",
+      "why": "Destructive autodetect entry disabled even if another caller reaches it"
+    },
+    {
+      "offset": "0x75ac",
+      "before": "10402de90020b0e1",
+      "after": "0000e0e31eff2fe1",
+      "why": "Disable native erase wrapper and its retry/adjacent fallback"
+    },
+    {
+      "offset": "0x7614",
+      "before": "000050e31eff2f11",
+      "after": "0000e0e31eff2fe1",
+      "why": "Disable native erase wrapper and its retry/adjacent fallback"
+    },
+    {
+      "offset": "0x7624",
+      "before": "f0412de90060a0e1",
+      "after": "0000e0e31eff2fe1",
+      "why": "Disable native erase wrapper and its retry/adjacent fallback"
+    },
+    {
+      "offset": "0x1850",
+      "before": "0b0050e32f00000a090000ca070050e300f18f30140000ea180000ea190000ea1a0000ea1b0000ea1c0000ea1d0000ea1e0000ea210050e32800000a060000ca0c0050e32100000a1a0050e31900000a1b0050e30400001a1e0000ea220050e32000000aff0050e31400000a",
+      "after": "000050e31d00000a010050e31d00000a040050e32100000a050050e32100000a1a0050e32300000a1b0050e32900000a0d0000ea00f020e300f020e300f020e300f020e300f020e300f020e300f020e300f020e300f020e300f020e300f020e300f020e300f020e300f020e3",
+      "why": "Only identity/read/gated WS; EB, UL, format, logical writes and reset disallowed"
+    }
+  ],
+  "build_tag": 2276284487,
+  "source_sha256": "<HISTORICAL_HASH_REDACTED>",
+  "physical_block": 0,
+  "pages": [
+    0,
+    1,
+    2,
+    3,
+    6,
+    7,
+    10,
+    11,
+    14,
+    15,
+    18,
+    19,
+    22,
+    23,
+    26,
+    27,
+    30,
+    31,
+    34,
+    35,
+    38,
+    39,
+    42,
+    43,
+    46,
+    47,
+    50,
+    51,
+    54,
+    55,
+    58,
+    59,
+    62,
+    63,
+    66,
+    67,
+    70,
+    71,
+    74,
+    75,
+    78,
+    79,
+    82,
+    83,
+    86,
+    87,
+    90,
+    91,
+    94,
+    95,
+    98,
+    99,
+    102,
+    103,
+    106,
+    107,
+    110,
+    111,
+    114,
+    115,
+    118,
+    119,
+    122,
+    123
+  ],
+  "native_program_calls": 64,
+  "erase_calls": 1,
+  "marker_sector": "0x7effff",
+  "erase_control_sector": "0x7f0100",
+  "write_sector_range": [
+    "0x0000",
+    "0x0100"
+  ],
+  "state_address": "0x60801000",
+  "marker_version": "0x00000101",
+  "read_count_marker_word": 18,
+  "read_status_marker_word": 19,
+  "saved_geometry_sector": "0x5770",
+  "next": "Bounded actual ARM wrapper test including error/negative cases; fresh MaskROM required before this different USBplug can be installed"
+}

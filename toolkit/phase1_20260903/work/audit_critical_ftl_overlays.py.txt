@@ -1,0 +1,43 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/audit_critical_ftl_overlays.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Bounded offline overlay exclusion for boot/recovery/system, not full FTL emulation."""
+import json
+import struct
+from pathlib import Path
+from verify_native_ecc_page import extract
+ROOT=Path(__file__).parent
+inventory=json.loads((ROOT.parent/'outputs/native_ftl_inventory_2048blocks.json').read_text())
+assert inventory['indexed_physical_blocks']==2048
+groups=inventory['all_candidates']
+critical=lambda logical: 6<=logical<=18 or 186<=logical<=259
+targets={r['physical_block'] for k,rows in groups.items() if critical(int(k)) for r in rows}
+duplicates={k:rows for k,rows in groups.items() if len(rows)>1}
+hits=[dict(logical_id=k,candidate=row) for k,rows in duplicates.items() for row in rows if any(v in targets for v in row['metadata'][3:5])]
+def block(number):
+    chunk,local=divmod(number,64)
+    with (ROOT/'nand_native_ecc40'/f'NAND_{chunk:02d}.RAW').open('rb') as f:
+        f.seek(local*256*8448)
+        return f.read(256*8448)
+def page_meta(raw): return [int.from_bytes(raw[i*528+512:i*528+514],'little') for i in range(8)]
+logs=[]
+for number in (14,1919):
+    raw=block(number)
+    first_ff=next((p for p in range(256) if page_meta(raw[p*8448:(p+1)*8448])[0]==65535),256)
+    assert first_ff>0
+    last=raw[(first_ff-1)*8448:first_ff*8448]
+    meta=page_meta(last)
+    main=extract(last)
+    logs.append(dict(physical_block=number,first_ff_page=first_ff,last_page=first_ff-1,
+        last_metadata=meta,first3_main_u32=list(struct.unpack_from('<3I',main))))
+cache=json.loads((ROOT.parent/'outputs/native_cache_inventory_2048blocks.json').read_text())
+critical_cache=[e for e in cache['entries'] if critical(e['logical_block'])]
+report=dict(scope='Conservative possible exchange-pair sources from all duplicate F200 records; no hardware ECC success assumed',
+    critical_duplicate_logical_ids=[k for k in duplicates if critical(int(k))],
+    possible_pair_hits_on_critical_physical_blocks=hits,latest_service_records=logs,
+    critical_cache_entries=critical_cache)
+out=ROOT.parent/'outputs/critical_ftl_overlay_audit.json'
+with out.open('x') as f: json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

@@ -1,0 +1,43 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/test_system_writer_dry_handoff.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Exact new prelude and late return, bounded RAM writes. No peripheral expansion."""
+import hashlib,json,struct
+import startup_slice_test_harness as h
+from unicorn import UC_HOOK_CODE
+from unicorn.arm_const import UC_ARM_REG_R4,UC_ARM_REG_LR,UC_ARM_REG_PC
+build=json.loads((h.ROOT/'outputs/system_writer_dry_payload_build.json').read_text())
+raw=(h.ROOT/'work/system_writer_dry_payload_v1/dry.raw').read_bytes()
+assert hashlib.sha256(raw).hexdigest()==build['sha256']
+core=(h.ROOT/'work/system_writer_gated_v3/dry.NOT_FOR_UPLOAD.bin').read_bytes()
+u=h.machine()
+for p,n in ((0x61700000,0x5000),(0x61800000,0x2000),(0x62fff000,0x6000)):u.mem_map(p,n)
+u.mem_write(h.B,raw);u.mem_write(0x61700000,b'\x69'*32)
+h.call(u,h.B+4,ranges=((0x61800000,0x61800000+len(core)),(0x61700000,0x61700020)),stop=h.B+0x20)
+assert bytes(u.mem_read(0x61800000,len(core)))==core and bytes(u.mem_read(0x61700000,32))==bytes(32)
+# The unchanged original startup overwrites all prelude scratch registers.
+parent=(h.ROOT/'work/ftl_fullmap_system_read_v1/read.raw').read_bytes()
+assert raw[0x20:0x100]==parent[0x20:0x100]
+state=struct.pack('<8I',0,0xd002,0x31504752,0xbc000,0xbd000,1,0,0)
+journal=hashlib.shake_256(b'dry journal').digest(8192)
+mapping=hashlib.shake_256(b'dry mapping').digest(3792)
+calls=[]
+def core_contract(uc,pc,size,ctx):
+    assert [uc.reg_read(r) for r in (h.UC_ARM_REG_R0,h.UC_ARM_REG_R1,h.UC_ARM_REG_R2,h.UC_ARM_REG_R3)]==[0,0xbc000,4096,0x63000000]
+    uc.mem_write(0x61700000,state);uc.mem_write(0x61702000,journal);uc.mem_write(0x602b3f00,mapping)
+    uc.reg_write(h.UC_ARM_REG_R0,0xffffffff);uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR));calls.append(pc)
+u.hook_add(UC_HOOK_CODE,core_contract,begin=0x61800000,end=0x61800000)
+u.mem_write(0x62fff000,b'\x69'*0x6000);u.reg_write(UC_ARM_REG_R4,0x6009a1f8)
+h.call(u,int(build['helper_symbols']['writer_after'],16),ranges=((0x6101af2c,0x6101af30),(0x63000000,0x63000020),(0x63001000,0x63003000),(0x63003000,0x63003ed0)),stop=h.B+0x100)
+assert calls==[0x61800000] and u.reg_read(UC_ARM_REG_R4)==0x6009a1f8
+assert bytes(u.mem_read(0x63000000,32))==state
+assert bytes(u.mem_read(0x63001000,8192))==journal
+assert bytes(u.mem_read(0x63003000,3792))==mapping
+assert bytes(u.mem_read(0x63000020,0xfe0))==b'\x69'*0xfe0
+assert bytes(u.mem_read(0x63003ed0,0x1130))==b'\x69'*0x1130
+assert bytes(u.mem_read(0x6101af2c,4))==b'\xff'*4
+report=dict(all_pass=True,device_access=False,sha256=build['sha256'],early_copy_exact=True,late_arguments_fixed=True,old_return_preserved=True,bounded_export=True,limits=['Core is an ABI contract here; actual compiled gates/core and original FTL refusal are tested separately','No new full peripheral emulation; parent startup is hardware proven'])
+with (h.ROOT/'outputs/system_writer_dry_handoff_offline.json').open('x') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

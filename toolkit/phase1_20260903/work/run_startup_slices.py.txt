@@ -1,0 +1,366 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/run_startup_slices.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""One unchanged bridge DB, then two pinned prefix tests; NEVER full startup."""
+import argparse,hashlib,json,os,struct,subprocess,threading,time
+from pathlib import Path
+import sys
+actualusb='--actual-usb-entry-resume-existing-bridge' in sys.argv
+if actualusb:sys.argv.remove('--actual-usb-entry-resume-existing-bridge');sys.argv.append('--key-check-resume-existing-bridge')
+bootsetup='--key-check-resume-existing-bridge' in sys.argv
+if bootsetup:sys.argv.remove('--key-check-resume-existing-bridge');sys.argv.append('--service-return-resume-existing-bridge')
+service='--service-return-resume-existing-bridge' in sys.argv
+if service:sys.argv.remove('--service-return-resume-existing-bridge');sys.argv.append('--before-usb-resume-existing-bridge')
+preusb='--before-usb-resume-existing-bridge' in sys.argv
+if preusb:sys.argv.remove('--before-usb-resume-existing-bridge');sys.argv.append('--remap-return-resume-existing-bridge')
+localcheck='--remap-local-resume-existing-bridge' in sys.argv
+if localcheck:sys.argv.remove('--remap-local-resume-existing-bridge');sys.argv.append('--remap-return-resume-existing-bridge')
+remap='--remap-return-resume-existing-bridge' in sys.argv
+if remap:sys.argv.remove('--remap-return-resume-existing-bridge');sys.argv.append('--bbt-return-resume-existing-bridge')
+bbt='--bbt-return-resume-existing-bridge' in sys.argv
+if bbt:sys.argv.remove('--bbt-return-resume-existing-bridge');sys.argv.append('--ftl-vars-after-confirmed-cold-maskrom')
+ftlvars='--ftl-vars-after-confirmed-cold-maskrom' in sys.argv
+if ftlvars:sys.argv.remove('--ftl-vars-after-confirmed-cold-maskrom');sys.argv.append('--ftl-capacity-resume-existing-bridge')
+capacity='--ftl-capacity-resume-existing-bridge' in sys.argv
+if capacity:sys.argv.remove('--ftl-capacity-resume-existing-bridge');sys.argv.append('--nand-init-resume-existing-bridge')
+nandinit='--nand-init-resume-existing-bridge' in sys.argv
+if nandinit:sys.argv.remove('--nand-init-resume-existing-bridge');sys.argv.append('--nand-first-read-resume-existing-bridge')
+firstread='--nand-first-read-resume-existing-bridge' in sys.argv
+if firstread:sys.argv.remove('--nand-first-read-resume-existing-bridge');sys.argv.append('--nand-geometry-resume-existing-bridge')
+geometry='--nand-geometry-resume-existing-bridge' in sys.argv
+if geometry:sys.argv.remove('--nand-geometry-resume-existing-bridge');sys.argv.append('--nand-id-resume-existing-bridge')
+nandid='--nand-id-resume-existing-bridge' in sys.argv
+if nandid:sys.argv.remove('--nand-id-resume-existing-bridge');sys.argv.append('--nand-controller-resume-existing-bridge')
+controller='--nand-controller-resume-existing-bridge' in sys.argv
+if controller:sys.argv.remove('--nand-controller-resume-existing-bridge');sys.argv.append('--nand-entry-resume-existing-bridge')
+entry_partial='--nand-entry-resume-verified-partial' in sys.argv
+if entry_partial:sys.argv.remove('--nand-entry-resume-verified-partial');sys.argv.append('--nand-entry-resume-existing-bridge')
+entry='--nand-entry-resume-existing-bridge' in sys.argv
+if entry:sys.argv.remove('--nand-entry-resume-existing-bridge');sys.argv.append('--nand-pinmux-resume-existing-bridge')
+pinmux='--nand-pinmux-resume-existing-bridge' in sys.argv
+if pinmux:sys.argv.remove('--nand-pinmux-resume-existing-bridge');sys.argv.append('--common-storage-resume-existing-bridge')
+common='--common-storage-resume-existing-bridge' in sys.argv
+if common:sys.argv.remove('--common-storage-resume-existing-bridge');sys.argv.append('--bootmode-resume-existing-bridge')
+bootmode='--bootmode-resume-existing-bridge' in sys.argv
+if bootmode:sys.argv.remove('--bootmode-resume-existing-bridge');sys.argv.append('--l2-after-confirmed-cold-maskrom')
+l2='--l2-after-confirmed-cold-maskrom' in sys.argv
+if l2:sys.argv.remove('--l2-after-confirmed-cold-maskrom');sys.argv.append('--mmu-resume-existing-bridge')
+from direct_winpty_console import DirectConsole
+from read_device_identity import TOOL
+from console_completion import completed_response
+ROOT=Path(__file__).resolve().parents[1]
+p=argparse.ArgumentParser();p.add_argument('--after-confirmed-cold-maskrom',action='store_true');p.add_argument('--power-resume-existing-bridge',action='store_true');p.add_argument('--reloc-resume-existing-bridge',action='store_true');p.add_argument('--stack-resume-existing-bridge',action='store_true');p.add_argument('--stack-resume-verified-partial-upload',action='store_true');p.add_argument('--main-resume-existing-bridge',action='store_true');p.add_argument('--log-resume-existing-bridge',action='store_true');p.add_argument('--clock-cold-maskrom',action='store_true');p.add_argument('--irq-resume-existing-bridge',action='store_true');p.add_argument('--premmu-resume-existing-bridge',action='store_true');p.add_argument('--mmu-resume-existing-bridge',action='store_true');args=p.parse_args()
+power=args.power_resume_existing_bridge
+partial=args.stack_resume_verified_partial_upload
+mmu=args.mmu_resume_existing_bridge
+premmu=args.premmu_resume_existing_bridge or mmu
+irq=args.irq_resume_existing_bridge or premmu
+clocks=args.clock_cold_maskrom or irq
+logs=args.log_resume_existing_bridge or clocks
+main=args.main_resume_existing_bridge or logs
+stack=args.stack_resume_existing_bridge or partial or main
+reloc=args.reloc_resume_existing_bridge or stack
+resume=(power or reloc) and not args.clock_cold_maskrom and (not l2 or bootmode)
+if ftlvars:resume=False
+if bbt:resume=True
+if sum((args.after_confirmed_cold_maskrom,power,args.reloc_resume_existing_bridge,args.stack_resume_existing_bridge,partial,args.main_resume_existing_bridge,args.log_resume_existing_bridge,args.clock_cold_maskrom,irq))!=1:p.error('Choose exactly one cold/resume stage')
+loader=ROOT/'work/usb_ram_bridge_checkpoint_modefix.BOOT.OFFLINE_ONLY.bin'
+loader_sha='<REDACTED:HASH_OR_BYTES>'
+assert hashlib.sha256(loader.read_bytes()).hexdigest()==loader_sha
+cases=[('control_before_cpu','<REDACTED:HASH_OR_BYTES>',0x6000020c),
+       ('after_cpu','<REDACTED:HASH_OR_BYTES>',0x60000260)]
+if power:
+    cases=[('control_before_pmu','<REDACTED:HASH_OR_BYTES>',0x60000260),
+           ('after_pmu','<REDACTED:HASH_OR_BYTES>',0x6000026c),
+           ('after_remap','<REDACTED:HASH_OR_BYTES>',0x6000028c)]
+if reloc:
+    cases=[('control_before_reloc','<REDACTED:HASH_OR_BYTES>',0x6000028c),
+           ('after_vectors','<REDACTED:HASH_OR_BYTES>',0x6000029c),
+           ('after_image_copy','<REDACTED:HASH_OR_BYTES>',0x600002ac)]
+if stack:
+    cases=[('control_before_low_entry','<REDACTED:HASH_OR_BYTES>',0x600002ac),
+           ('at_low_entry','<REDACTED:HASH_OR_BYTES>',0xc0),
+           ('after_stacks','<REDACTED:HASH_OR_BYTES>',0xc4)]
+if partial:cases=cases[1:]
+if main:
+    cases=[('at_main','<REDACTED:HASH_OR_BYTES>',0x60097e68),
+           ('after_main_setup','<REDACTED:HASH_OR_BYTES>',0x60097ea8),
+           ('after_timer_init','<REDACTED:HASH_OR_BYTES>',0x60097eac)]
+if logs:
+    cases=[('after_log_init','<REDACTED:HASH_OR_BYTES>',0x60097eb0),
+           ('after_first_banner','<REDACTED:HASH_OR_BYTES>',0x60097ec0)]
+if clocks:
+    cases=[('clock_call_skipped','<REDACTED:HASH_OR_BYTES>',0x60097ec8),
+           ('after_clock_call','<REDACTED:HASH_OR_BYTES>',0x60097ec8)]
+if irq:
+    cases=[('irq_call_skipped','<REDACTED:HASH_OR_BYTES>',0x60097ecc),
+           ('after_irq_call','<REDACTED:HASH_OR_BYTES>',0x60097ecc)]
+if premmu:
+    cases=[('premmu_control','<REDACTED:HASH_OR_BYTES>',0x60097ecc),
+           ('before_mmu_enable','<REDACTED:HASH_OR_BYTES>',0x60097f18)]
+if mmu:
+    cases=[('mmu_control','<REDACTED:HASH_OR_BYTES>',0x60097f18),
+           ('after_mmu_before_l2','<REDACTED:HASH_OR_BYTES>',0x60094e24)]
+if l2:
+    cases=[('l2_control','<REDACTED:HASH_OR_BYTES>',0x60094e24),
+           ('after_l2_init','<REDACTED:HASH_OR_BYTES>',0x60097f1c)]
+if bootmode:cases=[('before_storage_init','<REDACTED:HASH_OR_BYTES>',0x600980a8)]
+if common:
+    cases=[('common_storage_control','<REDACTED:HASH_OR_BYTES>',0x60080c64),
+           ('after_common_storage','<REDACTED:HASH_OR_BYTES>',0x60080c68)]
+if pinmux:cases=[('after_nand_pinmux','<REDACTED:HASH_OR_BYTES>',0x6008c484)]
+if entry:cases=[('moved_helper_control','<REDACTED:HASH_OR_BYTES>',0x6008c484),('nand_ram_prepared','<REDACTED:HASH_OR_BYTES>',0x6008a238)]
+if controller:cases=[('nand_controller_configured','<REDACTED:HASH_OR_BYTES>',0x6008a2b0)]
+if nandid:cases=[('nand_ids_read','<REDACTED:HASH_OR_BYTES>',0x6008a3b4)]
+if geometry:cases=[('nand_geometry_ready','<REDACTED:HASH_OR_BYTES>',0x6008aa30)]
+if firstread:cases=[('nand_first_read_return','<REDACTED:HASH_OR_BYTES>',0x6008aa34)]
+if nandinit:cases=[('nand_init_return','<REDACTED:HASH_OR_BYTES>',0x60086c6c)]
+if capacity:cases=[('ftl_capacity_original','<REDACTED:HASH_OR_BYTES>',0x60086b00),('ftl_capacity_fixed','<REDACTED:HASH_OR_BYTES>',0x60086b00)]
+if ftlvars:cases=[('ftl_vars_return','<REDACTED:HASH_OR_BYTES>',0x60086c80)]
+if bbt:cases=[('bbt_return','<REDACTED:HASH_OR_BYTES>',0x60086c84)]
+if remap:cases=[('remap_return','<REDACTED:HASH_OR_BYTES>',0x60086ccc)]
+if localcheck:cases=[('remap_local','<REDACTED:HASH_OR_BYTES>',0x60085700)]
+if preusb:cases=[('before_usb_init','<REDACTED:HASH_OR_BYTES>',0x600980c4)]
+if service:cases=[('service_return','<REDACTED:HASH_OR_BYTES>',0x600980c8)]
+if bootsetup:cases=[('before_key_check','<REDACTED:HASH_OR_BYTES>',0x600980ec),('after_key_check','<REDACTED:HASH_OR_BYTES>',0x600980f0)]
+if actualusb:cases=[('actual_usb_entry','<REDACTED:HASH_OR_BYTES>',0x600982e4)]
+payloads=[]
+for name,digest,cut in cases:
+    folder='startup_slices_v13_common' if common else 'startup_slices_v12_bootmode' if bootmode else 'startup_slices_v11_l2' if l2 else 'startup_slices_v10_return_selector' if mmu else 'startup_slices_v9_premmu' if premmu else 'startup_slices_v8_frame' if irq else f'startup_slices_v{7 if clocks else 6 if logs else 5 if main else 4 if stack else 3 if reloc else 2 if power else 1}'
+    if pinmux:folder='startup_slices_v14_pinmux'
+    if entry:folder='startup_slices_v15_nand_entry'
+    if controller:folder='startup_slices_v16_nand_controller'
+    if nandid:folder='startup_slices_v17_nand_id'
+    if geometry:folder='startup_slices_v18_nand_geometry'
+    if firstread:folder='startup_slices_v19_nand_first_read'
+    if nandinit:folder='startup_slices_v20_nand_init'
+    if capacity:folder='startup_slices_v21_ftl_capacity'
+    if ftlvars:folder='startup_slices_v22_ftl_vars'
+    if bbt:folder='startup_slices_v23_bbt'
+    if remap:folder='startup_slices_v24_remap'
+    if localcheck:folder='startup_slices_v25_remap_local'
+    if preusb:folder='startup_slices_v26_before_usb'
+    if service:folder='startup_slices_v27_service'
+    if bootsetup:folder='startup_slices_v30_key_check'
+    if actualusb:folder='startup_slices_v33_actual_usb'
+    raw=(ROOT/f'work/{folder}/{name}.raw').read_bytes()
+    assert len(raw)==110352 and raw[110080:]==bytes(272)
+    assert hashlib.sha256(raw).hexdigest()==digest
+    payloads.append(raw)
+offline=json.loads((ROOT/('outputs/startup_common_storage_offline.json' if common else 'outputs/startup_bootmode_slice_offline.json' if bootmode else 'outputs/startup_l2_slices_offline.json' if l2 else 'outputs/startup_mmu_return_selector_offline.json' if mmu else 'outputs/startup_premmu_slices_offline.json' if premmu else 'outputs/startup_irq_frame_slices_offline.json' if irq else 'outputs/startup_clock_slices_offline.json' if clocks else 'outputs/startup_log_slices_offline.json' if logs else 'outputs/startup_main_slices_offline.json' if main else 'outputs/startup_stack_slices_offline.json' if stack else 'outputs/startup_reloc_slices_offline.json' if reloc else 'outputs/startup_power_slices_offline.json' if power else 'outputs/startup_slices_offline.json')).read_text())
+if pinmux:offline=json.loads((ROOT/'outputs/startup_nand_pinmux_offline.json').read_text())
+if entry:offline=json.loads((ROOT/'outputs/startup_nand_entry_offline.json').read_text())
+if controller:offline=json.loads((ROOT/'outputs/startup_nand_controller_offline.json').read_text())
+if nandid:offline=json.loads((ROOT/'outputs/startup_nand_id_offline.json').read_text())
+if geometry:offline=json.loads((ROOT/'outputs/startup_nand_geometry_offline.json').read_text())
+if firstread:offline=json.loads((ROOT/'outputs/startup_nand_first_read_offline.json').read_text())
+if nandinit:offline=json.loads((ROOT/'outputs/startup_nand_init_offline.json').read_text())
+if capacity:offline=json.loads((ROOT/'outputs/startup_ftl_capacity_offline.json').read_text())
+if ftlvars:offline=json.loads((ROOT/'outputs/startup_ftl_vars_offline.json').read_text())
+if bbt:offline=json.loads((ROOT/'outputs/startup_bbt_return_offline.json').read_text())
+if remap and not localcheck:offline=json.loads((ROOT/'outputs/startup_remap_return_offline.json').read_text())
+if localcheck:offline=json.loads((ROOT/'outputs/startup_remap_local_offline.json').read_text())
+if preusb:offline=json.loads((ROOT/'outputs/startup_before_usb_offline.json').read_text())
+if service:offline=json.loads((ROOT/'outputs/startup_service_return_offline.json').read_text())
+if bootsetup:offline=json.loads((ROOT/'outputs/startup_key_check_offline.json').read_text())
+if actualusb:offline=json.loads((ROOT/'outputs/startup_actual_usb_entry_offline.json').read_text())
+assert offline['all_pass'] and offline['bridge_sha256']==loader_sha
+expected_cases={ (n,m) for n,_,_ in cases for m in (('0x12',) if irq else ('0x13','0x12')) }
+actual_cases={ (r['name'],r['mode']) for r in offline['cases'] }
+assert expected_cases<=actual_cases if partial else expected_cases==actual_cases
+assert all(r['pass_test'] if resume or clocks else r['tail_record_exact'] and r['sram_and_sctlr_restored'] for r in offline['cases'])
+if power:assert len(offline['cases'])==15 and sum(r['refused'] for r in offline['cases'])==2
+if reloc:assert len(offline['cases'])==(2 if actualusb else 4 if bootsetup else 2 if ftlvars else 4 if capacity else 2 if controller else 4 if entry else 2 if pinmux else 4 if common else 2 if bootmode else 4 if logs else 6) and all(r['all_saved_ram_restored'] and r['copy_contents_exact'] for r in offline['cases'])
+if ftlvars:assert all(r['extended_ram_restored'] and r['ftl_variable_init_returned'] and (bbt or r['bbt_scan_not_entered']) for r in offline['cases'])
+if preusb:assert all(r['usb_init_not_entered'] and r['lower_stack_restored'] for r in offline['cases'])
+elif localcheck:assert all(r['saved_block_size']==0 and r['lower_stack_restored'] and r['remap_scan_not_entered'] for r in offline['cases'])
+elif remap:assert all(r['remap_return']==0 and r['lower_stack_restored'] for r in offline['cases'])
+elif bbt:assert {r['bbt_return'] for r in offline['cases']}=={0,0xffffffff}
+if irq:assert all(r['gic_restored'] and r['original_epilogues_executed'] and r['eoi_count']==1 for r in offline['cases'])
+if mmu:assert all(r['cp15_restored'] for r in offline['cases'])
+if l2:assert all(r['l2_restored'] for r in offline['cases'])
+if common:assert all(r['mmc_commands_absent'] for r in offline['cases'])
+if firstread:assert all(r['read_only_page_commands'] and r['id_record_verified'] for r in offline['cases'])
+elif nandid:assert all(r['only_reset_and_read_id'] and r['id_record_verified'] for r in offline['cases'])
+elif controller:assert all(r['nand_media_commands_absent'] for r in offline['cases'])
+elif pinmux:assert all(r['nand_controller_not_entered'] for r in offline['cases'])
+if entry:assert all(r['helper_moved'] and r['nand_original_function_exact'] for r in offline['cases'])
+running=subprocess.run(['tasklist','/FI','IMAGENAME eq Android_Console_Tool.exe','/FO','CSV','/NH'],capture_output=True,text=True,check=True).stdout
+assert 'Android_Console_Tool.exe' not in running
+out=ROOT/('work/startup_actual_usb_entry_hardware_attempt01' if actualusb else 'work/startup_key_check_hardware_attempt01' if bootsetup else 'work/startup_service_return_hardware_attempt01' if service else 'work/startup_before_usb_hardware_attempt01' if preusb else 'work/startup_remap_local_hardware_attempt01' if localcheck else 'work/startup_remap_return_hardware_attempt01' if remap else 'work/startup_bbt_return_hardware_attempt01' if bbt else 'work/startup_ftl_vars_hardware_attempt01' if ftlvars else 'work/startup_ftl_capacity_hardware_attempt01' if capacity else 'work/startup_nand_init_hardware_attempt01' if nandinit else 'work/startup_nand_first_read_hardware_attempt01' if firstread else 'work/startup_nand_geometry_hardware_attempt01' if geometry else 'work/startup_nand_id_hardware_attempt01' if nandid else 'work/startup_nand_controller_hardware_attempt01' if controller else 'work/startup_nand_entry_hardware_resume01' if entry_partial else 'work/startup_nand_entry_hardware_attempt01' if entry else 'work/startup_nand_pinmux_hardware_attempt01' if pinmux else 'work/startup_common_storage_hardware_attempt01' if common else 'work/startup_bootmode_slice_hardware_attempt01' if bootmode else 'work/startup_l2_slices_hardware_attempt01' if l2 else 'work/startup_mmu_return_selector_hardware_attempt01' if mmu else 'work/startup_premmu_slices_hardware_attempt01' if premmu else 'work/startup_irq_frame_slices_hardware_attempt01' if irq else 'work/startup_clock_slices_hardware_attempt01' if clocks else 'work/startup_log_slices_hardware_attempt01' if logs else 'work/startup_main_slices_hardware_attempt01' if main else 'work/startup_stack_slices_hardware_resume01' if partial else 'work/startup_stack_slices_hardware_attempt01' if stack else 'work/startup_reloc_slices_hardware_attempt01' if reloc else 'work/startup_power_slices_hardware_attempt01' if power else 'work/startup_slices_hardware_attempt01');out.mkdir(exist_ok=False)
+env=dict(os.environ);env['__COMPAT_LAYER']='RunAsInvoker'
+proc=DirectConsole.spawn([str(TOOL)],cwd=str(TOOL.parent),env=env,dimensions=(40,160),backend=1)
+chunks=[];done=threading.Event();stream=(out/'transcript.txt').open('x',encoding='utf-8')
+result=dict(commands=[],cases=[],loader_sha256=loader_sha,system_repair_performed=False,
+    scope='Existing bridge; bounded startup prefixes only, no full FlashBoot/FTL init')
+def read():
+    try:
+        while proc.isalive():
+            text=proc.read(4096)
+            if text:chunks.append(text);stream.write(text);stream.flush()
+    except EOFError:pass
+    finally:done.set()
+threading.Thread(target=read,daemon=True).start()
+def wait(fragment,start=0):
+    deadline=time.monotonic()+45
+    while time.monotonic()<deadline:
+        text=''.join(chunks)
+        if fragment in text[start:]:return text[start:]
+        if done.is_set():break
+        time.sleep(.05)
+    raise RuntimeError('Response missing; stop without retry')
+def command(value):
+    op=value.split()[0]
+    tokens={'DB':'Download boot ok','RS':'Read Sector to file (100%)','WS':'Write Sector from file (100%)','RD':'Reset Device OK'}
+    assert op in tokens
+    result['commands'].append(value);start=len(''.join(chunks));proc.write(value+'\r\n')
+    deadline=time.monotonic()+45
+    while time.monotonic()<deadline:
+        response=completed_response(''.join(chunks),start,tokens[op])
+        if response is not None:return response
+        if done.is_set():break
+        time.sleep(.05)
+    raise RuntimeError('Command completion missing; no retry or next stage')
+try:
+    intro=wait('Select input')
+    assert all(t in intro for t in (('Found 1 rockusb','DevNo=1') if resume else ('Found 1 rockusb','DevNo=1','Maskrom')))
+    start=len(''.join(chunks));proc.write('1\r\n');wait('Rockusb>',start)
+    if not resume:command(f'DB {loader}')
+    marker=out/'bridge_marker.raw';command(f'RS 0x7effff 0x1 {marker}')
+    expected_marker=b'RF1CKP02'+struct.pack('<II',110080,<REDACTED:ARTIFACT_CRC>)+bytes(512)
+    if resume:expected_marker=b'RF1CKP02'+struct.pack('<IIII',110080,<REDACTED:ARTIFACT_CRC>,1,0x60000004)+bytes(504)
+    assert marker.read_bytes()==expected_marker,'Wrong bridge: no WS allowed'
+    result['bridge_marker_exact']=True
+    if resume:
+        previous=out/'previous_stage.raw';command(f'RS 0x7f0000 0xd1 {previous}')
+        previous_sha='<REDACTED:HASH_OR_BYTES>' if reloc else '<REDACTED:HASH_OR_BYTES>'
+        if stack:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if partial:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if main:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if logs:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if irq:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if premmu:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if mmu:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if bootmode:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if common:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if pinmux:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if entry:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if entry_partial:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if controller:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if nandid:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if geometry:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if firstread:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if nandinit:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if capacity:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if bbt:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if remap:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if remap and not localcheck:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if preusb:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if service:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if bootsetup:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        if actualusb:previous_sha='<REDACTED:HASH_OR_BYTES>'
+        assert hashlib.sha256(previous.read_bytes()).hexdigest()==previous_sha,'Previous exact hardware state lost: stop without upload'
+        result['previous_hardware_state_exact']=True
+    for (name,digest,cut),raw in zip(cases,payloads):
+        case=dict(name=name,sha256=digest,cut_pc=hex(cut),returned=False)
+        result['cases'].append(case)
+        for i,offset in enumerate(range(0,110080,8192)):
+            if entry_partial and name=='moved_helper_control' and i<2:continue
+            if partial and name=='at_low_entry' and i<13:continue
+            part=out/f'{name}_{i:02d}.bin'
+            with part.open('xb') as f:f.write(raw[offset:min(offset+8192,110080)])
+            command(f'WS {hex(0x7f0000+offset//512)} {part}')
+        before=out/f'{name}_before.raw';command(f'RS 0x7f0000 0xd1 {before}')
+        assert before.read_bytes()==raw,'RAM payload differs: no RD'
+        case['RAM_exact_before']=True
+        print('RAM EXACT; testing '+name,flush=True)
+        command('RD');time.sleep(.5)
+        after=out/f'{name}_after.raw';command(f'RS 0x7f0000 0xd1 {after}')
+        data=after.read_bytes()
+        result_len=268 if firstread else 264 if geometry else 192 if nandid else 124 if l2 else 88 if mmu else 60 if irq else 40 if stack else 32 if reloc else 48 if power else 24
+        assert len(data)==len(raw) and data[:110080]==raw[:110080] and data[110080+result_len:]==bytes(272-result_len)
+        record=struct.unpack_from('<31I' if l2 else '<22I' if mmu else '<15I' if irq else '<10I' if stack else '<8I' if reloc else '<12I' if power else '<6I',data,110080)
+        case['result_record']=[hex(x) for x in record]
+        if nandid:
+            case['nand_ids']=[data[110204+i*16:110210+i*16].hex() for i in range(4)]
+            case['nand_controller_revision']=struct.unpack_from('<I',data,110268)[0]
+        if geometry:case['nand_geometry_bytes']=data[110272:110344].hex()
+        if firstread:case['first_read_return']=hex(struct.unpack_from('<I',data,110344)[0])
+        if nandinit:case['nand_init_return']=case.pop('first_read_return')
+        if preusb:
+            case['startup_r0']=case.pop('nand_init_return')
+            if actualusb:
+                case['main_control_pointer']=case.pop('startup_r0')
+                assert int(case['main_control_pointer'],16)==0x6009a1f8,'Main control pointer corrupted: stop'
+        elif localcheck:
+            case['saved_block_size']=int(case.pop('nand_init_return'),16)
+        elif bbt:
+            case['bbt_return']=case.pop('nand_init_return')
+            assert int(case['bbt_return'],16) in (0,0xffffffff)
+            if remap:case['remap_return']=case.pop('bbt_return')
+        elif capacity:
+            case['ftl_block_count']=int(case.pop('nand_init_return'),16)
+            assert case['ftl_block_count']==(2048 if name=='ftl_capacity_fixed' or ftlvars else 0)
+        tag,actual_cut,sctlr_before,sctlr_after,sram_after,sram_before=record[:6]
+        assert tag==(0x44475453 if common else 0x43475453 if bootmode else 0x42475453 if l2 else 0x41475453 if mmu else 0x39475453 if premmu else 0x38475453 if irq else 0x37475453 if clocks else 0x36475453 if logs else 0x35475453 if main else 0x34475453 if stack else 0x33475453 if reloc else 0x32475453 if power else 0x31475453) and actual_cut==cut,'Stage refused or no fresh stage-specific result: '+str(case['result_record'])
+        assert sctlr_before&5==0,'Unexpected bridge CPU state; stop'
+        assert sctlr_after==(sctlr_before if name=='control_before_cpu' else sctlr_before&~0x10003805)
+        if reloc:
+            assert sram_after in (sram_before,0x18)
+            if clocks:assert record[6]&~0xe==0 and record[7]==0x100a
+            else:assert record[6:8]==(0xe,0x100a)
+        else:assert sram_after==(sram_before if name=='control_before_cpu' else 0x18)
+        if power:
+            pmu_before,pmu_after,rom,ga,grf_before,grf_after=record[6:]
+            assert pmu_before&~0xe==0 and grf_before&0x1000
+            assert pmu_after==(pmu_before if name=='control_before_pmu' else 0xe)
+            assert ga==(0x200080a0 if rom==0x56313030 else 0x20008150) and grf_before==grf_after
+        if irq:
+            frame,cpsr,saved_c_lr,saved_usb_lr,slot=record[10:15]
+            assert cpsr&0x1f==0x12 and saved_c_lr==0x600011fc and saved_usb_lr==0x600009c0 and slot==frame+60
+        if mmu:
+            assert all(record[i]==0 for i in (15,16,19)) and record[21] in (0,1),'Unexpected L2/TTBCR/FCSE/CSSELR'
+            assert record[20]==sctlr_after|(0x1005 if name=='after_mmu_before_l2' or l2 else 0),'MMU/L1 state at cut differs'
+        if l2:assert record[22]&0xfff==0xc8 and record[28]==int(name=='after_l2_init' or bootmode) and record[29]==0,'L2 guard/enable/disable differs'
+        case.update(returned=True,
+            after_sha256=hashlib.sha256(data).hexdigest())
+        print('PREFIX RETURN PROVED '+name+' '+hex(cut),flush=True)
+    result['conclusion']=('Prefix through 0x288 returned; next untested stage is relocation at 0x28c. PMU secondary-CPU shutdown retained. Not full FlashBoot success.' if power else 'Early prefix through 0x25c returned; next untested stage starts at 0x260. Not full FlashBoot success.')
+    if reloc:result['conclusion']='Both original relocation loops returned through 0x2a8; next untested instruction is relocated-entry jump at 0x2ac. Not full FlashBoot success.'
+    if stack:result['conclusion']='Original low entry and stack setup returned at low PC0xc4; next untested stage is main at 0x60097e68. Not full FlashBoot success.'
+    if main:result['conclusion']='Main prologue, ROM flag and timer initialization returned; next untested call at 0x60097eac targets 0x600810bc. Not full FlashBoot success.'
+    if logs:result['conclusion']='Log initialization and first banner returned; next untested call at 0x60097ec4 targets clock setup0x6008073c. Stop for today per user. Not full FlashBoot success.'
+    if clocks:result['conclusion']='Clock skipped and original clock call both returned to USB at0x60097ec8. Clock setup alone did not prevent return. Next untested call0x60080b90. Not full FlashBoot success.'
+    if irq:result['conclusion']='Original GIC init returned at0x60097ecc with restoration and exactly one EOI handoff. Next untested call0x60080384. No full FlashBoot USB/FTL proof.'
+    if premmu:result['conclusion']='Grouped software structures, boot flag, identity table construction returned at0x60097f18. Next untested call60094de4 enables MMU/caches. No full FlashBoot USB/FTL proof.'
+    if mmu:result['conclusion']='Original MMU/L1 sequence returned at60094e24 before L2 initializer60094c38. Next untested stage L2 init. No full FlashBoot USB/FTL proof.'
+    if l2:result['conclusion']='Original L2 init60094c38 returned to main60097f1c; L2 enabled at cut and disabled before bridge return. Next untested call60097db4. No full FlashBoot USB/FTL proof.'
+    if bootmode:result['conclusion']='PMU boot-mode function and switch returned at600980a8, before storage initializer60080c60. No storage/USB/NAND init; no full FlashBoot proof.'
+    if common:result['conclusion']='Common MMC-controller setup6008c4a0 returned at60080c68, before storage backend selection. No NAND/backend init or sector commands. MMC configuration retained; USB responds.'
+    if pinmux:result['conclusion']='First backend selection and original pinmux60080828 returned at6008c484. No NAND controller or FTL init; next branch targets60086c28. Pinmux configuration retained; USB responds.'
+    if entry:result['conclusion']='Moved helper control and original NAND software setup returned. Cut6008a238 before first controller register store; no NAND media commands. Original60087948 restored, existing bridge responds.'
+    if controller:result['conclusion']='Original NAND controller revision/config and timing60087948 completed; cut6008a2b0 before ID reads. Configuration retained, no media commands, USB responds.'
+    if nandid:result['conclusion']='Original four NAND ID callbacks completed at6008a3b4. ID bytes/revision captured from hardware before RAM restore. No page reads/program/erase; USB responds.'
+    if geometry:result['conclusion']='Original Micron geometry and initial ECC configuration completed at6008aa30 before first page-read call. Hardware ID/revision/geometry captured; no page/program/erase. USB responds.'
+    if firstread:result['conclusion']='First original four-sector read600894c0 returned at6008aa34; read code captured. No FTL continuation/program/erase, USB responds. Page content integrity not captured by this checkpoint.'
+    if nandinit:result['conclusion']='Original NAND initializer6008a1ac returned at60086c6c; status and selected geometry captured. No FTL continuation/program/erase, USB responds.'
+    if capacity:result['conclusion']='Hardware A/B: original fallback produces0 FTL blocks; one-instruction4GiB correction produces2048. Both return to USB, no BBT/FTL service writes. Full FlashBoot enumeration not yet proved.'
+    if ftlvars:result['conclusion']='Full original FtlVarInit60086aac returned at60086c80 with2048blocks; BBT scan60085ff0 not entered. Additional RAM restored; bridge USB responds. Not full FlashBoot USB/FTL proof.'
+    if bbt:result['conclusion']='Original BBT scan60085ff0 returned at60086c84; return code captured, next startup branch not executed. Guarded NAND writes remain disabled. Not full FlashBoot USB/FTL proof.'
+    if remap:result['conclusion']='Original GetRemapTbl6008561c(mode0) returned at60086ccc; code captured before status branch. Original BBT and NAND init completed, bridge USB responds. Not full startup or mapping content proof.'
+    if localcheck:result['conclusion']='Hardware cut60085700 immediately after64byte stack memset. SP+24c captured as saved_block_size, expected4096 if intact. No remap scan, bridge USB return proved.'
+    if preusb:result['conclusion']='Original storage initialization, clock query and NAND timing reached600980c4 BEFORE USB initializer60092b34. Existing bridge responds. No full FlashBoot USB proof.'
+    if service:result['conclusion']='Original service-cache initializer60092b34 returned at600980c8, before60097ccc. Existing guarded service writes retained. This is not USB initialization.'
+    if bootsetup:result['conclusion']='Before/after key check600801ec captured at600980ec/f0, full original hardware delay/ADC path not replaced. USB bridge return is proof of completion, not full FlashBoot enumeration.'
+    if actualusb:result['conclusion']='Entire original main prefix reached600982e4 BEFORE USB driver60081ae4. Storage/remap/service/key/config path completed; USB bridge responds. Do not execute overwritten USB carrier in diagnostic image.'
+    print(json.dumps(result,indent=2),flush=True)
+except BaseException as exc:
+    result['error']=repr(exc)
+    raise
+finally:
+    if proc.isalive():proc.terminate(force=True)
+    done.wait(2)
+    if done.is_set():stream.close()
+    with (out/'result.json').open('x',encoding='utf-8') as f:json.dump(result,f,indent=2)

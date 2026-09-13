@@ -1,0 +1,21 @@
+{
+  "hardware_access": false,
+  "nand_writes": false,
+  "all_pass": true,
+  "original_image_path": "<THREAD_ROOT>\\work\\live_adb_after_cache\\userdata_raw\\userdata_linux.img",
+  "original_sha256": "<HISTORICAL_HASH_REDACTED>",
+  "original_unchanged": true,
+  "copy_path": "<THREAD_ROOT>\\work\\userdata_repair_trial\\userdata_repaired_trial.img",
+  "repair_command": [
+    "<THREAD_ROOT>\\work\\cache_last_attempt\\portable\\usr\\sbin\\e2fsck.exe",
+    "-f",
+    "-y",
+    "<THREAD_ROOT>/work/userdata_repair_trial/userdata_repaired_trial.img"
+  ],
+  "repair_returncode": 1,
+  "repaired_sha256": "<HISTORICAL_HASH_REDACTED>",
+  "elapsed_seconds": 3.610000000000582,
+  "verify_returncode": 0,
+  "verify_unchanged": true,
+  "verify_sha256": "<HISTORICAL_HASH_REDACTED>"
+}

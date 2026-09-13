@@ -1,0 +1,61 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/pmic_readonly_hardware_attempt01/result.json",
+  "interpretation": "Five PMIC register reads without voltage changes.",
+  "data": {
+    "all_pass": true,
+    "nand_writes": 0,
+    "pmic_value_writes": 0,
+    "phase": "FIVE_PMIC_REGISTERS_READ_BUS_RESTORED",
+    "payload_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "intro": "<REDACTED:RAW_LOG_OR_IDENTIFIER>",
+    "status": 0,
+    "completed_reads": 5,
+    "registers": [
+      {
+        "register": "0x3f",
+        "status": 0,
+        "value": "0x0",
+        "i2c_ipd": "0x1b"
+      },
+      {
+        "register": "0x40",
+        "status": 0,
+        "value": "0x34",
+        "i2c_ipd": "0x1b"
+      },
+      {
+        "register": "0x50",
+        "status": 0,
+        "value": "0x12",
+        "i2c_ipd": "0x1b"
+      },
+      {
+        "register": "0x52",
+        "status": 0,
+        "value": "0x2",
+        "i2c_ipd": "0x1b"
+      },
+      {
+        "register": "0x38",
+        "status": 0,
+        "value": "0xd",
+        "i2c_ipd": "0x1b"
+      }
+    ],
+    "bus_before": [
+      "0x0",
+      "0x6",
+      "0x60006"
+    ],
+    "bus_after": [
+      "0x0",
+      "0x6",
+      "0x60006"
+    ],
+    "current_stage_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "usb_return_verified": true,
+    "marker_status": 1,
+    "commands": "<REDACTED:RAW_LOG_OR_IDENTIFIER>"
+  }
+}

@@ -1,0 +1,72 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/run_post_idb_powerheld_boot.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Reuse two previously hardware-tested RAM payloads after fresh MaskROM.
+One DEV_ON=4 (only if original0), readback, then one stock normal warm reset.
+No NAND commands/FTL in bridge or payload; normal firmware may write on boot.
+"""
+import hashlib,json,os,struct,sys,time
+from pathlib import Path
+from ram_console_session import RamConsole
+from console_completion import ANSI,completed_response
+ROOT=Path(__file__).resolve().parents[1]
+assert sys.argv[1:]==['--fresh-maskrom-hdmi-ready-buttons-released']
+loader=ROOT/'work/usb_ram_bridge_checkpoint_modefix.BOOT.OFFLINE_ONLY.bin'
+assert hashlib.sha256(loader.read_bytes()).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+proof=json.loads((ROOT/'outputs/usb_ram_bridge_checkpoint_modefix_offline_tests.json').read_text())
+assert all(proof[k] for k in ('six_NAND_entry_guards_reject_without_writes','all_256_opcodes_checked','checkpoint_roundtrip_passed'))
+devon=(ROOT/'work/pmic_devon_v1/pmic.raw').read_bytes();reset=(ROOT/'work/normal_warm_reset_v1/reset.raw').read_bytes()
+assert hashlib.sha256(devon).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+assert hashlib.sha256(reset).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+for name in ('pmic_devon_hardware_attempt01','normal_warm_reset_hardware_attempt01'):
+    assert (ROOT/'work'/name/'result.json').exists()
+out=ROOT/'work/post_idb_powerheld_boot_attempt01';out.mkdir(exist_ok=False);c=None
+result=dict(nand_commands=0,ftl_init=False,pmic_write_attempted=False,normal_reset_sent=False,phase='authenticate')
+def save(name,value):
+    with (out/name).open('x') as f:json.dump(value,f,indent=2);f.flush();os.fsync(f.fileno())
+def read(name,sector,count):
+    assert (sector,count) in ((0x7effff,1),(0x7f0000,0xd1))
+    p=out/(name+'.raw');c.command(f'RS {hex(sector)} {hex(count)} {p}')
+    b=p.read_bytes();assert len(b)==count*528;return b
+def upload(name,data):
+    assert data in (devon,reset) and len(data)==110352
+    for i,off in enumerate(range(0,110080,8192)):
+        p=out/f'{name}_part{i:02d}.bin'
+        with p.open('xb') as f:f.write(data[off:min(off+8192,110080)])
+        c.command(f'WS {hex(0x7f0000+off//512)} {p}')
+    assert read(name+'_before',0x7f0000,0xd1)==data
+try:
+    c=RamConsole(out);intro=c.wait('Select input');assert 'Found 1 rockusb' in intro and 'Maskrom' in intro;c.select()
+    cmd='DB '+os.path.relpath(loader,out);start=len(''.join(c.chunks));c.commands.append(cmd);c.send_once(cmd);until=time.monotonic()+45
+    while time.monotonic()<until:
+        text=''.join(c.chunks)
+        if completed_response(text,start,'Download boot ok') is not None:break
+        if 'Error:' in ANSI.sub('',text[start:]):raise RuntimeError('DB error; no retry')
+        time.sleep(.005)
+    else:raise RuntimeError('No DB completion; no retry')
+    expected=b'RF1CKP02'+struct.pack('<II',110080,<REDACTED:ARTIFACT_CRC>)
+    assert read('marker_loaded',0x7effff,1)==expected+bytes(512)
+    result['phase']='set_devon_once';upload('devon',devon)
+    save('DEVON_DISPATCHED_NO_RETRY.json',dict(expected_original=0,only_write=4,register='DEVCTRL0x3f'))
+    result['pmic_write_attempted']=True;c.command('RD')
+    after=read('devon_after',0x7f0000,0xd1);assert after[:110080]==devon[:110080]
+    snap=after[110080:];assert snap[:8]==b'RF1PHLD1'
+    status,count=struct.unpack_from('<II',snap,8);bus=struct.unpack_from('<6I',snap,16)
+    rows=[struct.unpack_from('<4I',snap,48+i*16) for i in range(3)]
+    result['pmic_snapshot']=dict(status=status,count=count,bus=bus,rows=rows)
+    assert status==0 and count==3 and bus[:3]==bus[3:]
+    assert [r[:3] for r in rows]==[(63,0,0),(63,0,4),(63,0,4)]
+    marker=read('marker_after_devon',0x7effff,1);assert marker[:16]==expected and marker[20:24]==struct.pack('<I',0x60000004)
+    result['devon_verified']=True
+    result['phase']='stock_normal_reset_once';upload('reset',reset)
+    save('NORMAL_RESET_DISPATCHED_NO_RETRY.json',dict(warning='RAM payload writes no NAND. Ordinary boot firmware may write its own data.'))
+    start=len(''.join(c.chunks));c.commands.append('RD');c.send_once('RD');result['normal_reset_sent']=True
+    until=time.monotonic()+5
+    while time.monotonic()<until and not c.done.is_set():time.sleep(.05)
+    result.update(phase='AWAIT_USER_LED_AND_HDMI_OBSERVATION',console_after_reset=''.join(c.chunks)[start:])
+except BaseException as e:result['error']=repr(e);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    save('result.json',result);print(json.dumps(result,indent=2),flush=True)

@@ -1,0 +1,70 @@
+{
+  "hardware_access": false,
+  "only_4_data_chunks_damaged": true,
+  "data_repair_chunks": [
+    {
+      "logical_ftl_block": 192,
+      "system_relative_byte_offset": 12582912,
+      "system_relative_4KiB_seek": 3072,
+      "bytes": 2097152,
+      "source_path": "<THREAD_ROOT>\\work\\live_system_audit\\logical192.official.bin",
+      "source_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "source_md5": "<HISTORICAL_HASH_REDACTED>",
+      "old_live_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "old_live_md5": "<HISTORICAL_HASH_REDACTED>",
+      "old_first_last_8192_equal": true,
+      "old_interior_all_FF": true,
+      "old_header_magic": "6465790a30333600",
+      "old_first8192_sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    {
+      "logical_ftl_block": 195,
+      "system_relative_byte_offset": 18874368,
+      "system_relative_4KiB_seek": 4608,
+      "bytes": 2097152,
+      "source_path": "<THREAD_ROOT>\\work\\live_system_audit\\logical195.official.bin",
+      "source_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "source_md5": "<HISTORICAL_HASH_REDACTED>",
+      "old_live_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "old_live_md5": "<HISTORICAL_HASH_REDACTED>",
+      "old_first_last_8192_equal": true,
+      "old_interior_all_FF": true,
+      "old_header_magic": "5041524d69020000",
+      "old_first8192_sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    {
+      "logical_ftl_block": 198,
+      "system_relative_byte_offset": 25165824,
+      "system_relative_4KiB_seek": 6144,
+      "bytes": 2097152,
+      "source_path": "<THREAD_ROOT>\\work\\live_system_audit\\logical198.official.bin",
+      "source_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "source_md5": "<HISTORICAL_HASH_REDACTED>",
+      "old_live_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "old_live_md5": "<HISTORICAL_HASH_REDACTED>",
+      "old_first_last_8192_equal": true,
+      "old_interior_all_FF": true,
+      "old_header_magic": "5041524d69020000",
+      "old_first8192_sha256": "<HISTORICAL_HASH_REDACTED>"
+    },
+    {
+      "logical_ftl_block": 204,
+      "system_relative_byte_offset": 37748736,
+      "system_relative_4KiB_seek": 9216,
+      "bytes": 2097152,
+      "source_path": "<THREAD_ROOT>\\work\\live_system_audit\\logical204.official.bin",
+      "source_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "source_md5": "<HISTORICAL_HASH_REDACTED>",
+      "old_live_sha256": "<HISTORICAL_HASH_REDACTED>",
+      "old_live_md5": "<HISTORICAL_HASH_REDACTED>",
+      "old_first_last_8192_equal": true,
+      "old_interior_all_FF": true,
+      "old_header_magic": "5041524d69020000",
+      "old_first8192_sha256": "<HISTORICAL_HASH_REDACTED>"
+    }
+  ],
+  "other_difference": "58 bytes in primary superblock error state/history fields; see live_compare_report. No other byte ranges differ.",
+  "expected_superblock_path": "<THREAD_ROOT>\\work\\live_system_audit\\superblock.official.bin",
+  "official_system_sha256": "b9ca511124e6c3d9ee2a1e31220f6bf5a858f06d88f9003f5fd7f7e25cf5676a",
+  "official_system_md5": "04130d8d95d155dc377569b06e750b4b"
+}

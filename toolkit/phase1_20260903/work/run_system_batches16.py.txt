@@ -1,0 +1,321 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/run_system_batches16.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Authorized remaining system, 16MiB batches of proven 2MiB writers.
+First error stops; no retries/resume. Two full read passes + FTL reopen per batch.
+Finally independently read entire system. No cold reboot or boot/userdata writes.
+"""
+import hashlib,json,os,struct,sys,time,zlib
+from pathlib import Path
+from ram_console_session import RamConsole
+RESUME=sys.argv[1:]==['--verify-stopped-batch1-then-only-next16mib']
+NEXT32B=sys.argv[1:]==['--after-verified-204-219-only-next32mib']
+FINISH=sys.argv[1:]==['--finish-236-259-batches32-and-full-readback']
+NEXT32=FINISH or NEXT32B or sys.argv[1:]==['--after-verified-batch2-only-next32mib']
+assert RESUME or NEXT32 or sys.argv[1:]==['--authorized-remaining-system-16mib-stop-on-first-error']
+ROOT=Path(__file__).resolve().parents[1]
+manifest=json.loads((ROOT/'work/system_batch_artifacts_v1/manifest.json').read_text());assert manifest['all_pass']
+cases={c['logical']:c for c in manifest['cases']};assert sorted(cases)==list(range(186,260))
+prior=json.loads((ROOT/'work/second_system_write189_hardware_attempt01/result.json').read_text());assert prior['all_pass']
+mapping=list(prior['reopened_ftl']['logical_to_physical']);assert mapping[188:190]==[312,960]
+initial_snapshot=(ROOT/'work/second_system_write189_hardware_attempt01/ftl.after_reopen.bin').read_bytes()
+assert hashlib.sha256(initial_snapshot).hexdigest()==prior['reopened_ftl']['snapshot_sha256']
+donor=Path(manifest['donor']).read_bytes();assert len(donor)==155185152 and hashlib.sha256(donor).hexdigest()==manifest['donor_sha256']=='b9ca511124e6c3d9ee2a1e31220f6bf5a858f06d88f9003f5fd7f7e25cf5676a'
+protected=set(manifest['protected_blocks']);remaining=manifest['remaining']
+assert remaining==[i for i in range(186,260) if i not in (188,189)]
+batches=[remaining[i:i+8] for i in range(0,len(remaining),8)];assert len(batches)==9
+assert sum(cases[i]['bytes'] for i in remaining)==150990848
+def artifact(spec,readonly=False):
+    b=(ROOT/spec['file']).read_bytes()
+    assert len(b)==110352 and hashlib.sha256(b).hexdigest()==spec['sha256'] and zlib.crc32(b[:110080])==<REDACTED:ARTIFACT_CRC>
+    if readonly:
+        for p in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):assert b[p:p+8]==bytes.fromhex('0000e0e31eff2fe1')
+        for p in (0xbbc8,0xbc90):assert b[p:p+4]==bytes.fromhex('feffffea')
+    return b
+def decode_argument(data,at,reg):
+    w=struct.unpack_from('<I',data,at)[0]
+    if w&0xfffff000==0xe3a00000|(reg<<12):
+        imm=w&255;rot=((w>>8)&15)*2
+        return ((imm>>rot)|(imm<<(32-rot)))&0xffffffff if rot else imm
+    assert w&0xfffff000==0xe59f0000|(reg<<12)
+    p=at+8+(w&4095);assert 0x7180<=p<=0x7184
+    return struct.unpack_from('<I',data,p)[0]
+for i,c in cases.items():
+    expected=donor[c['offset']:c['offset']+c['bytes']]
+    assert c['lba']==i*4096 and c['sectors']*512==len(expected) and c['offset']==(i-186)*2097152
+    assert hashlib.sha256(expected).hexdigest()==c['sha256'] and c['lba']+c['sectors']<=0x103ff8<0x13a000
+    w=artifact(c['writer']);artifact(c['reader'],True)
+    assert decode_argument(w,0x7098,1)==c['lba'] and decode_argument(w,0x709c,2)==c['sectors']
+assert cases[188]['writer']['sha256']=='<REDACTED:HASH_OR_BYTES>'
+assert cases[189]['writer']['sha256']=='<REDACTED:HASH_OR_BYTES>'
+capture={'file':'work/ftl_capture_v1/capture.raw','sha256':'<REDACTED:HASH_OR_BYTES>'}
+artifact(capture,True);artifact(manifest['tail_reader'],True)
+for base in (ROOT/'work/nand_native_ecc40',Path('<HOST_PATH>')):
+    assert all((base/f'NAND_{i:02d}.RAW').is_file() for i in range(32))
+OLD=ROOT/'work/system_batches16_hardware_attempt01'
+OUT=ROOT/('work/system_finish236_259_attempt01' if FINISH else ('work/system_next32_220_235_attempt01' if NEXT32B else ('work/system_next32_attempt01' if NEXT32 else ('work/system_recovery_b1_next16_attempt03' if RESUME else 'work/system_batches16_hardware_attempt01'))));OUT.mkdir(exist_ok=False)
+result=dict(all_pass=False,authorization='Remaining system in 16MiB batches after full-range check, two readbacks/reopen per batch, first error STOP',batch_mib=16,batches=batches,range_binding_pass=True,already_written=[188,189],write_attempts=[],completed_batches=[],executions=[],phase='preflight',current_stage_sha256=prior['current_stage_sha256'])
+console=None;transport_dir=None;seq=0
+if RESUME:
+    stopped=json.loads((OLD/'result.json').read_text())
+    assert stopped['write_attempts']==batches[0] and not stopped['all_pass']
+    saved=(OLD/'batch01/exec009_write195/gate_export.bin').read_bytes()
+    mapping=list(struct.unpack_from('<1896H',saved,0x3000))
+    assert mapping[186:196]==[1028,1032,312,960,1036,1040,1044,1048,1052,1056]
+    for logical in batches[0]:
+        paths=list((OLD/'batch01').glob(f'exec*_write{logical}/PASS.json'))
+        assert len(paths)==1 and json.loads(paths[0].read_text())['all_pass']
+    result.update(authorization='Finish batch1 read-only verification, then ONLY logical196..203 (16MiB); no retries',already_written=list(range(186,196)),current_stage_sha256=stopped['current_stage_sha256'])
+    assert result['current_stage_sha256']=='<REDACTED:HASH_OR_BYTES>'
+    remaining=list(range(196,204));batches=[remaining];result['batches']=batches
+if NEXT32:
+    verified_root=ROOT/('work/system_next32_220_235_attempt01' if FINISH else ('work/system_next32_attempt01' if NEXT32B else 'work/system_recovery_b1_next16_attempt03'))
+    verified=json.loads((verified_root/'result.json').read_text())
+    batch2=json.loads((verified_root/('BATCH32_VERIFIED.json' if FINISH or NEXT32B else 'BATCH2_VERIFIED.json')).read_text())
+    assert verified['all_pass'] and verified['completed_batches']==([4] if FINISH else ([3] if NEXT32B else [1,2]))
+    prior_group=list(range(220,236) if FINISH else (range(204,220) if NEXT32B else range(196,204)))
+    assert verified['write_attempts']==prior_group
+    assert batch2['all_pass'] and batch2['two_full_readback_passes']
+    assert batch2['logical_portions']==prior_group
+    mapping=list(batch2['reopened_ftl']['logical_to_physical'])
+    assert not batch2['reopened_ftl']['changes_on_reopen']
+    snapshot_paths=list((verified_root/('end_ftl' if FINISH or NEXT32B else 'b2_end_ftl')).glob('exec*/ftl.bin'))
+    assert len(snapshot_paths)==1
+    verified_snapshot=snapshot_paths[0].read_bytes()
+    assert hashlib.sha256(verified_snapshot).hexdigest()==batch2['reopened_ftl']['snapshot_sha256']
+    if NEXT32B:
+        assert hashlib.sha256(verified_snapshot).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+    remaining=list(range(236,260) if FINISH else (range(220,236) if NEXT32B else range(204,220)))
+    batches=[remaining[i:i+16] for i in range(0,len(remaining),16)]
+    assert sum(cases[i]['bytes'] for i in remaining)==(50327552 if FINISH else 33554432)
+    result.update(authorization=f'User approved {"all remaining system and full final readback" if FINISH else "next32MiB"}; ONLY logical{remaining[0]}..{remaining[-1]}, first error STOP',batch_mib=32,batches=batches,already_written=list(range(186,remaining[0])),current_stage_sha256=verified['current_stage_sha256'])
+def save(path,value):
+    with path.open('x',encoding='utf-8') as f:json.dump(value,f,indent=2);f.flush();os.fsync(f.fileno())
+save(OUT/'execution_plan.json',{k:v for k,v in result.items() if k!='executions'})
+def source(logical):
+    c=cases[logical];return donor[c['offset']:c['offset']+c['bytes']]
+def open_console(directory):
+    global console,transport_dir
+    transport_dir=directory;directory.mkdir(exist_ok=False);console=RamConsole(directory);console.select()
+    p=directory/'marker.raw';console.command(f'RS 0x7efffe 0x1 {p}')
+    assert p.read_bytes()==b'RF1WIN01'+struct.pack('<IIII',0x800000,4096,0x63000000,16)+bytes(504)
+    p=directory/'stage_before.raw';console.command(f'RS 0x7f0000 0xd1 {p}')
+    assert hashlib.sha256(p.read_bytes()).hexdigest()==result['current_stage_sha256']
+def close_console():
+    global console
+    if console:
+        console.close();save(transport_dir/'commands.json',console.commands);console=None
+def chunks(data,name):
+    d=OUT/'input_chunks'/name;d.mkdir(parents=True,exist_ok=True);paths=[]
+    assert 0<len(data)<=2097152 and len(data)%512==0
+    for i,off in enumerate(range(0,len(data),8192)):
+        p=d/f'{i:03d}.bin';part=data[off:off+8192]
+        if p.exists():assert p.read_bytes()==part
+        else:
+            with p.open('xb') as f:f.write(part)
+        paths.append(p)
+    return paths
+def send_data(data,name):
+    for i,p in enumerate(chunks(data,name)):console.command(f'WS {hex(0x800000+i*16)} {p}')
+def receive(sectors,directory):
+    directory.mkdir(exist_ok=False);out=bytearray()
+    for i,off in enumerate(range(0,sectors,16)):
+        count=min(16,sectors-off);p=directory/f'{i:03d}.raw'
+        console.command(f'RS {hex(0x800000+off)} {hex(count)} {p}');b=p.read_bytes()
+        assert len(b)==count*528 and all(b[j+512:j+528]==bytes(16) for j in range(0,len(b),528))
+        out.extend(b''.join(b[j:j+512] for j in range(0,len(b),528)))
+    return bytes(out)
+def execute(spec,label,logical=None):
+    global seq
+    readonly=logical is None;data=artifact(spec,readonly);seq+=1
+    d=transport_dir/f'exec{seq:03d}_{label}';d.mkdir(exist_ok=False)
+    for i,off in enumerate(range(0,110080,8192)):
+        p=d/f'payload{i:02d}.bin'
+        with p.open('xb') as f:f.write(data[off:min(off+8192,110080)])
+        console.command(f'WS {hex(0x7f0000+off//512)} {p}')
+    p=d/'before.raw';console.command(f'RS 0x7f0000 0xd1 {p}');assert p.read_bytes()==data
+    if logical is not None:
+        assert logical in remaining and logical not in result['write_attempts']
+        assert spec==cases[logical]['writer']
+        save(OUT/f'WRITE_ATTEMPTED_{logical}_DO_NOT_REPEAT.json',dict(logical=logical,lba=cases[logical]['lba'],sectors=cases[logical]['sectors'],sha256=spec['sha256'],time=time.time()))
+        result['write_attempts'].append(logical)
+    result['phase']=label;start=time.monotonic();console.command('RD')
+    p=d/'after.raw';console.command(f'RS 0x7f0000 0xd1 {p}');after=p.read_bytes()
+    result['current_stage_sha256']=hashlib.sha256(after).hexdigest()
+    assert len(after)==110352 and after[:110080]==data[:110080] and after[110348:]==bytes(4)
+    assert struct.unpack_from('<II',after,110080)==(0x44475453,0x600982e4) and struct.unpack_from('<I',after,110344)[0]==0x6009a1f8
+    p=d/'status.raw';console.command(f'RS 0x7f00d1 0x1 {p}');status=p.read_bytes();assert len(status)==528
+    entry=dict(label=label,logical=logical,sha256=spec['sha256'],after_sha256=result['current_stage_sha256'],elapsed_seconds=time.monotonic()-start,status_hex=status[:32].hex());result['executions'].append(entry);save(d/'execution.json',entry)
+    return status,d
+def map_changes(before,after):return [dict(logical=i,before=a,after=b) for i,(a,b) in enumerate(zip(before,after)) if a!=b]
+def write_one(logical):
+    global mapping
+    c=cases[logical];data=source(logical)
+    send_data(data,f'source{logical}');assert receive(c['sectors'],transport_dir/f'source_check{logical}')==data
+    status,d=execute(c['writer'],f'write{logical}',logical);words=struct.unpack_from('<8I',status)
+    snapshot=receive(32,d/'gate_export');state=struct.unpack_from('<8I',snapshot)
+    with (d/'gate_export.bin').open('xb') as f:f.write(snapshot)
+    assert state[5]<=512
+    journal=[struct.unpack_from('<4I',snapshot,0x1000+i*16) for i in range(state[5])]
+    after=list(struct.unpack_from('<1896H',snapshot,0x3000));changes=map_changes(mapping,after)
+    touched=sorted({b//4096 for a,b,s,t in journal});owners={str(p):[i for i,v in enumerate(mapping) if v==p] for p in touched}
+    audit=dict(logical=logical,writer_status=[hex(v) for v in words],gate_state=[hex(v) for v in state],map_changes=changes,touched_blocks=touched,baseline_owners=owners,journal=[dict(kind=a,sector=hex(b),status=hex(s),portion=hex(t)) for a,b,s,t in journal])
+    save(d/'write_audit.json',audit)
+    assert words==(0x31575246,c['lba'],c['sectors'],6,c['sectors'],c['lba']+3968,0,0),('Writer error',audit)
+    assert state[:5]==(0,0,0x31504752,c['lba'],c['lba']+4096) and state[5]==state[6]+state[7] and state[6]>0
+    assert all(a in (1,2) and b//4096 not in protected and s==0 and t==c['lba'] for a,b,s,t in journal),('Physical/status violation',audit)
+    assert all(x['logical']==logical for x in changes),('Unexpected mapping',audit)
+    assert all(v==[] or v==[logical] for v in owners.values()),('Unexpected physical owner',audit)
+    assert after[logical] and all(p<2048 for p in after)
+    mapping=after;save(d/'PASS.json',dict(all_pass=True,logical=logical,immediate_readback_bytes=c['bytes']))
+    print(f'WRITE PASS logical{logical}, {c["bytes"]} bytes immediate exact, program{state[6]}/erase{state[7]}, blocks{touched}',flush=True)
+def read_case(logical,phase):
+    c=cases[logical];expected=source(logical)
+    send_data(bytes(x^255 for x in expected),f'complement{logical}')
+    status,d=execute(c['reader'],f'{phase}_{logical}')
+    assert status[:8]==b'RF1READ2' and struct.unpack_from('<4I',status,8)==(c['lba'],c['sectors'],0,c['sectors']),('Read status',logical,status[:24].hex())
+    readback=receive(c['sectors'],d/'data')
+    with (d/'readback.bin').open('xb') as f:f.write(readback)
+    audit=dict(logical=logical,bytes=len(readback),sha256=hashlib.sha256(readback).hexdigest(),expected_sha256=c['sha256'],mismatching_bytes=sum(a!=b for a,b in zip(readback,expected)))
+    save(d/'readback.json',audit);assert readback==expected,('READBACK MISMATCH STOP',audit)
+    print(f'{phase} PASS logical{logical}, {len(readback)} bytes exact',flush=True)
+    return readback
+def capture_map(label):
+    status,d=execute(capture,label)
+    assert status[:8]==b'RF1READ1' and struct.unpack_from('<4I',status,8)==(0x103000,1,0,0xa8000)
+    data=receive(1344,d/'ftl_data')
+    with (d/'ftl.bin').open('xb') as f:f.write(data)
+    after=list(struct.unpack_from('<1896H',data,0xf00));changes=map_changes(mapping,after)
+    audit=dict(snapshot_sha256=hashlib.sha256(data).hexdigest(),header_hex=data[0x180:0x194].hex(),logical_to_physical=after,changes_on_reopen=changes)
+    save(d/'ftl.json',audit)
+    assert data[0x180:0x194]==initial_snapshot[0x180:0x194] and not changes,('Unexpected reopened FTL',changes)
+    return audit
+def read_tail(label):
+    send_data(b'\xa5'*8192,'tail_sentinel')
+    status,d=execute(manifest['tail_reader'],label)
+    assert status[:8]==b'RF1READ2' and struct.unpack_from('<4I',status,8)==(0x103ff0,16,0,16)
+    b=receive(16,d/'tail')
+    with (d/'tail.bin').open('xb') as f:f.write(b)
+    return b
+try:
+    if FINISH:
+        open_console(OUT/'preflight')
+        assert receive(1344,transport_dir/'current_ftl')==verified_snapshot
+        tail_before=read_tail('tail_before')
+        baseline_tail=(OLD/'preflight/exec001_tail_before/tail.bin').read_bytes()
+        assert len(tail_before)==len(baseline_tail)==8192 and tail_before[4096:]==baseline_tail[4096:]
+        result['preserved_tail_sha256']=hashlib.sha256(tail_before[4096:]).hexdigest()
+        close_console()
+        for batch_no,group in enumerate(batches,5):
+            before=list(mapping)
+            print(f'BATCH{batch_no} START {group}: {sum(cases[i]["bytes"] for i in group)} bytes',flush=True)
+            for logical in group:
+                open_console(OUT/f'write_{logical}');write_one(logical);close_console()
+            for logical in group:
+                open_console(OUT/f'readback1_{logical}');read_case(logical,'readback1');close_console()
+            open_console(OUT/f'b{batch_no}_reopen');capture_map('batch_reopen');close_console()
+            for logical in group:
+                open_console(OUT/f'readback2_{logical}');read_case(logical,'readback2');close_console()
+            open_console(OUT/f'b{batch_no}_end_ftl');ftla=capture_map('batch_end_ftl');close_console()
+            save(OUT/f'BATCH{batch_no}_VERIFIED.json',dict(all_pass=True,logical_portions=group,bytes=sum(cases[i]['bytes'] for i in group),two_full_readback_passes=True,map_changes=map_changes(before,mapping),reopened_ftl=ftla))
+            result['completed_batches'].append(batch_no)
+            print(f'BATCH{batch_no} VERIFIED: both readbacks exact, FTL stable',flush=True)
+        open_console(OUT/'tail_after')
+        tail_after=read_tail('tail_after');assert tail_after[4096:]==tail_before[4096:],'PRESERVED TAIL MISMATCH STOP'
+        result['tail_preserved_exact']=True;close_console()
+        digest=hashlib.sha256();count=0
+        with (OUT/'system.final_readback.img').open('xb') as f:
+            for logical in range(186,260):
+                open_console(OUT/f'final_{logical}')
+                data=read_case(logical,'full_system_final');close_console()
+                f.write(data);digest.update(data);count+=len(data)
+            f.flush();os.fsync(f.fileno())
+        result['full_system_readback']=dict(bytes=count,sha256=digest.hexdigest(),exact=count==len(donor) and digest.hexdigest()==manifest['donor_sha256'])
+        assert result['full_system_readback']['exact']
+        open_console(OUT/'final_ftl');result['final_ftl']=capture_map('final_ftl');close_console()
+        result.update(all_pass=True,phase='SYSTEM_WRITTEN_AND_VERIFIED_AWAIT_NORMAL_BOOT',cold_boot_verified=False)
+        print('FULL SYSTEM EXACT: all155185152 bytes verified, tail preserved, FTL stable; STOP FOR NORMAL BOOT',flush=True)
+        sys.exit(0)
+    if NEXT32:
+        open_console(OUT/'preflight')
+        assert receive(1344,transport_dir/'current_ftl')==verified_snapshot
+        close_console();before=list(mapping);group=list(remaining)
+        print(f'NEXT32MiB START: verified previous batch baseline; logical{group[0]}..{group[-1]} only',flush=True)
+        for logical in group:
+            open_console(OUT/f'write_{logical}');write_one(logical);close_console()
+        for logical in group:
+            open_console(OUT/f'readback1_{logical}');read_case(logical,'readback1');close_console()
+        open_console(OUT/'reopen');capture_map('batch_reopen');close_console()
+        for logical in group:
+            open_console(OUT/f'readback2_{logical}');read_case(logical,'readback2');close_console()
+        open_console(OUT/'end_ftl');ftla=capture_map('batch_end_ftl');close_console()
+        save(OUT/'BATCH32_VERIFIED.json',dict(all_pass=True,logical_portions=group,bytes=33554432,two_full_readback_passes=True,map_changes=map_changes(before,mapping),reopened_ftl=ftla))
+        result.update(all_pass=True,phase='NEXT32MIB_VERIFIED_STOP',completed_batches=[4 if NEXT32B else 3])
+        print('NEXT32MiB VERIFIED: both32MiB readbacks exact, reopened mapping stable; STOP',flush=True)
+        sys.exit(0)
+    if RESUME:
+        # Recover the existing RAM result first. No payload execution or NAND write.
+        open_console(OUT/'recover_ram186')
+        recovered=receive(4096,transport_dir/'data')
+        assert recovered==source(186), 'Existing RAM readback mismatch STOP'
+        save(transport_dir/'PASS.json',dict(all_pass=True,bytes=len(recovered),sha256=hashlib.sha256(recovered).hexdigest()))
+        close_console();print('RECOVERED RAM186: all2097152 bytes exact',flush=True)
+        group=[186,187,190,191,192,193,194,195]
+        for logical in group[1:]:
+            open_console(OUT/f'b1_readback1_{logical}');read_case(logical,'readback1');close_console()
+        open_console(OUT/'b1_reopen');capture_map('batch1_reopen');close_console()
+        for logical in group:
+            open_console(OUT/f'b1_readback2_{logical}');read_case(logical,'readback2');close_console()
+        open_console(OUT/'b1_end_ftl');ftla=capture_map('batch1_end_ftl');close_console()
+        save(OUT/'BATCH1_VERIFIED.json',dict(all_pass=True,logical_portions=group,bytes=16777216,two_full_readback_passes=True,reopened_ftl=ftla))
+        result['completed_batches'].append(1)
+        print('BATCH1 VERIFIED: both16MiB readbacks exact, reopened mapping stable; next16MiB authorized',flush=True)
+        before=list(mapping);group=list(range(196,204))
+        for logical in group:
+            open_console(OUT/f'b2_write_{logical}');write_one(logical);close_console()
+        for logical in group:
+            open_console(OUT/f'b2_readback1_{logical}');read_case(logical,'readback1');close_console()
+        open_console(OUT/'b2_reopen');capture_map('batch2_reopen');close_console()
+        for logical in group:
+            open_console(OUT/f'b2_readback2_{logical}');read_case(logical,'readback2');close_console()
+        open_console(OUT/'b2_end_ftl');ftla=capture_map('batch2_end_ftl');close_console()
+        save(OUT/'BATCH2_VERIFIED.json',dict(all_pass=True,logical_portions=group,bytes=16777216,two_full_readback_passes=True,map_changes=map_changes(before,mapping),reopened_ftl=ftla))
+        result['completed_batches'].append(2)
+        result.update(all_pass=True,phase='NEXT16MIB_VERIFIED_STOP_NO_BATCH3')
+        print('BATCH2 VERIFIED: both16MiB readbacks exact, reopened mapping stable; STOP, no batch3',flush=True)
+        sys.exit(0)
+    open_console(OUT/'preflight')
+    assert receive(1344,transport_dir/'current_ftl')==initial_snapshot
+    tail_before=read_tail('tail_before');result['preserved_tail_sha256']=hashlib.sha256(tail_before[4096:]).hexdigest()
+    close_console();print('FULL RANGE PASS; starting9 batches of8 portions (16MiB, final shorter)',flush=True)
+    for batch_no,group in enumerate(batches,1):
+        open_console(OUT/f'batch{batch_no:02d}')
+        before=list(mapping);print(f'BATCH {batch_no}/9 START {group}',flush=True)
+        for logical in group:write_one(logical)
+        for logical in group:read_case(logical,'readback1')
+        capture_map('batch_reopen')
+        for logical in group:read_case(logical,'readback2')
+        ftla=capture_map('batch_end_ftl')
+        report=dict(all_pass=True,batch=batch_no,logical_portions=group,bytes=sum(cases[i]['bytes'] for i in group),map_changes=map_changes(before,mapping),reopened_ftl=ftla,two_full_readback_passes=True)
+        save(transport_dir/'PASS.json',report);result['completed_batches'].append(batch_no)
+        close_console();print(f'BATCH {batch_no}/9 COMPLETE: two readbacks exact, FTL stable',flush=True)
+    open_console(OUT/'final_verification')
+    tail_after=read_tail('tail_after');assert tail_after[4096:]==tail_before[4096:],'PRESERVED TAIL MISMATCH STOP'
+    result['tail_preserved_exact']=True
+    digest=hashlib.sha256();count=0
+    with (OUT/'system.final_readback.img').open('xb') as f:
+        for logical in range(186,260):
+            data=read_case(logical,'full_system_final');f.write(data);digest.update(data);count+=len(data)
+        f.flush();os.fsync(f.fileno())
+    result['full_system_readback']=dict(bytes=count,sha256=digest.hexdigest(),exact=count==len(donor) and digest.hexdigest()==manifest['donor_sha256'])
+    assert result['full_system_readback']['exact']
+    result['final_ftl']=capture_map('final_ftl')
+    result.update(all_pass=True,phase='SYSTEM_WRITTEN_AND_VERIFIED_AWAIT_NORMAL_BOOT',cold_boot_verified=False)
+except SystemExit:
+    raise
+except BaseException as e:result['error']=repr(e);raise
+finally:
+    close_console();save(OUT/'result.json',result)
+    print(json.dumps({k:v for k,v in result.items() if k not in ('executions','final_ftl')},indent=2),flush=True)

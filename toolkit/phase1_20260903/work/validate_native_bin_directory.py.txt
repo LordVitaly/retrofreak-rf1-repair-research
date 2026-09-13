@@ -1,0 +1,37 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/validate_native_bin_directory.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Strict directory record checks, distinguishing corrupt records from an empty directory."""
+import json
+import struct
+from pathlib import Path
+from dissect.extfs import ExtFS
+from native_system_view import NativeSystemView
+view=NativeSystemView()
+fs=ExtFS(view)
+data=fs.get('/bin').open().read()
+issues=[]
+valid=[]
+for start in range(0,len(data),fs.block_size):
+    pos=start
+    end=min(start+fs.block_size,len(data))
+    while pos<end:
+        if end-pos<8:
+            issues.append(dict(offset=pos,reason='Truncated record header'))
+            break
+        inode,length,namelen,kind=struct.unpack_from('<IHBB',data,pos)
+        if length<8 or length%4 or pos+length>end or namelen>length-8 or inode>fs.sb.s_inodes_count:
+            issues.append(dict(offset=pos,inode=inode,record_length=length,name_length=namelen,
+                               reason='Invalid ext directory record fields',block_all_ff=all(x==255 for x in data[start:end])))
+            break
+        valid.append(dict(offset=pos,inode=inode,name=data[pos+8:pos+8+namelen].decode('ascii','replace')))
+        pos+=length
+report=dict(scope='Actual /bin directory bytes via NAND logical view, no reference substitution',
+            corrupt_records=issues,valid_records=valid)
+output=Path(__file__).parent.parent/'outputs/native_bin_directory_validation.json'
+with output.open('x') as f: json.dump(report,f,indent=2)
+print('corrupt records',issues)
+print('valid records in other blocks',len(valid))
+assert len(issues)==2 and all(i['block_all_ff'] for i in issues)

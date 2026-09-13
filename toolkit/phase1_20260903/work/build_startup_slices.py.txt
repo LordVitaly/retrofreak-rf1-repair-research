@@ -1,0 +1,319 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/build_startup_slices.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Two diagnostic RAM payloads, exact EXISTING checkpoint bridge. No upload.
+
+Keep the bridge's legacy CRC using an unreachable reserved word. CRC is not an
+identity/authentication claim: the host must pin each diagnostic payload SHA256.
+"""
+import argparse,hashlib,json,struct,subprocess,zlib
+from pathlib import Path
+import sys
+actualusb='--actual-usb-entry-slice' in sys.argv
+if actualusb:sys.argv.remove('--actual-usb-entry-slice');sys.argv.append('--usb-entry-slice')
+bootsetup='--usb-entry-slice' in sys.argv
+if bootsetup:sys.argv.remove('--usb-entry-slice');sys.argv.append('--service-return-slice')
+service='--service-return-slice' in sys.argv
+if service:sys.argv.remove('--service-return-slice');sys.argv.append('--before-usb-slice')
+preusb='--before-usb-slice' in sys.argv
+if preusb:sys.argv.remove('--before-usb-slice');sys.argv.append('--remap-return-slice')
+localcheck='--remap-local-slice' in sys.argv
+if localcheck:sys.argv.remove('--remap-local-slice');sys.argv.append('--remap-return-slice')
+remap='--remap-return-slice' in sys.argv
+if remap:sys.argv.remove('--remap-return-slice');sys.argv.append('--bbt-return-slice')
+bbt='--bbt-return-slice' in sys.argv
+if bbt:sys.argv.remove('--bbt-return-slice');sys.argv.append('--ftl-vars-slice')
+ftlvars='--ftl-vars-slice' in sys.argv
+if ftlvars:sys.argv.remove('--ftl-vars-slice');sys.argv.append('--ftl-capacity-slices')
+capacity='--ftl-capacity-slices' in sys.argv
+if capacity:sys.argv.remove('--ftl-capacity-slices');sys.argv.append('--nand-init-slice')
+nandinit='--nand-init-slice' in sys.argv
+if nandinit:sys.argv.remove('--nand-init-slice');sys.argv.append('--nand-first-read-slice')
+firstread='--nand-first-read-slice' in sys.argv
+if firstread:sys.argv.remove('--nand-first-read-slice');sys.argv.append('--nand-geometry-slice')
+geometry='--nand-geometry-slice' in sys.argv
+if geometry:sys.argv.remove('--nand-geometry-slice');sys.argv.append('--nand-id-slice')
+nandid='--nand-id-slice' in sys.argv
+if nandid:sys.argv.remove('--nand-id-slice');sys.argv.append('--nand-controller-slice')
+controller='--nand-controller-slice' in sys.argv
+if controller:sys.argv.remove('--nand-controller-slice');sys.argv.append('--nand-entry-slices')
+entry='--nand-entry-slices' in sys.argv
+if entry:sys.argv.remove('--nand-entry-slices');sys.argv.append('--nand-pinmux-slice')
+pinmux='--nand-pinmux-slice' in sys.argv
+if pinmux:sys.argv.remove('--nand-pinmux-slice');sys.argv.append('--common-storage-slices')
+common='--common-storage-slices' in sys.argv
+if common:sys.argv.remove('--common-storage-slices');sys.argv.append('--bootmode-slice')
+bootmode='--bootmode-slice' in sys.argv
+if bootmode:sys.argv.remove('--bootmode-slice');sys.argv.append('--l2-slices')
+l2='--l2-slices' in sys.argv
+if l2:sys.argv.remove('--l2-slices');sys.argv.append('--mmu-slices')
+parser=argparse.ArgumentParser();parser.add_argument('--power-slices',action='store_true');parser.add_argument('--reloc-slices',action='store_true');parser.add_argument('--stack-slices',action='store_true');parser.add_argument('--main-slices',action='store_true');parser.add_argument('--log-slices',action='store_true');parser.add_argument('--clock-slices',action='store_true');parser.add_argument('--irq-slices',action='store_true');parser.add_argument('--premmu-slices',action='store_true');parser.add_argument('--mmu-slices',action='store_true');args=parser.parse_args()
+power=args.power_slices
+mmu=args.mmu_slices
+premmu=args.premmu_slices or mmu
+irq=args.irq_slices or premmu
+clocks=args.clock_slices or irq
+logs=args.log_slices or clocks
+main=args.main_slices or logs
+stack=args.stack_slices or main
+reloc=args.reloc_slices or stack
+assert sum((power,args.reloc_slices,args.stack_slices,args.main_slices,args.log_slices,args.clock_slices,irq))<=1
+assert not (power and reloc)
+extended=power or reloc
+stem='startup_reloc_slice' if reloc else 'startup_power_slice' if power else 'startup_slice'
+definitions=([('control_before_reloc',0x28c),('after_vectors',0x29c),('after_image_copy',0x2ac)] if reloc else [('control_before_pmu',0x260),('after_pmu',0x26c),('after_remap',0x28c)] if power else [('control_before_cpu',0x20c),('after_cpu',0x260)])
+if stack:definitions=[('control_before_low_entry',0x2ac),('at_low_entry',0xc0),('after_stacks',0xc4)]
+if main:definitions=[('at_main',0x1889c),('after_main_setup',0x188dc),('after_timer_init',0x188e0)]
+if logs:definitions=[('after_log_init',0x188e4),('after_first_banner',0x188f4)]
+if clocks:definitions=[('clock_call_skipped',0x188fc),('after_clock_call',0x188fc)]
+if irq:definitions=[('irq_call_skipped',0x18900),('after_irq_call',0x18900)]
+if premmu:definitions=[('premmu_control',0x18900),('before_mmu_enable',0x1894c)]
+if mmu:definitions=[('mmu_control',0x1894c),('after_mmu_before_l2',0x15858)]
+if l2:definitions=[('l2_control',0x15858),('after_l2_init',0x18950)]
+if bootmode:definitions=[('before_storage_init',0x18adc)]
+if common:definitions=[('common_storage_control',0x1698),('after_common_storage',0x169c)]
+if pinmux:definitions=[('after_nand_pinmux',0xceB8)] #6008c484, before B60086c28
+if entry:definitions=[('moved_helper_control',0xceb8),('nand_ram_prepared',0xac6c)] #6008a238
+if controller:definitions=[('nand_controller_configured',0xace4)] #6008a2b0, before ID reads
+if nandid:definitions=[('nand_ids_read',0xade8)] #6008a3b4 after four ID callbacks
+if geometry:definitions=[('nand_geometry_ready',0xb464)] #6008aa30 before first page read
+if firstread:definitions=[('nand_first_read_return',0xb468)] #6008aa34 after600894c0
+if nandinit:definitions=[('nand_init_return',0x76a0)] #60086c6c before FTL init
+if capacity:definitions=[('ftl_capacity_original',0x7534),('ftl_capacity_fixed',0x7534)] #60086b00
+if ftlvars:definitions=[('ftl_vars_return',0x76b4)] #60086c80, BEFORE BBT scan
+if bbt:definitions=[('bbt_return',0x76b8)] #60086c84
+if remap:definitions=[('remap_return',0x7700)] #60086ccc
+if localcheck:definitions=[('remap_local',0x6134)] #60085700, immediately after stack memset
+if preusb:definitions=[('before_usb_init',0x18af8)] #600980c4 before60092b34
+if service:definitions=[('service_return',0x18afc)] #600980c8 after60092b34
+if bootsetup:definitions=[('before_key_check',0x18b20),('after_key_check',0x18b24)] #600980ec/f0
+if actualusb:definitions=[('actual_usb_entry',0x18d18)] #600982e4 before USB driver
+ROOT=Path(__file__).resolve().parents[1]
+bridge=ROOT/'work/usb_ram_bridge_checkpoint_modefix.BOOT.OFFLINE_ONLY.bin'
+assert hashlib.sha256(bridge.read_bytes()).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+original=(ROOT/'work/readonly_ram.FlashBoot.NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(original).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+assert original[0x100:0x1e4]==bytes(0xe4)
+out=ROOT/('work/startup_slices_v10_return_selector' if mmu else 'work/startup_slices_v9_premmu' if premmu else 'work/startup_slices_v8_frame' if irq else f'work/startup_slices_v{7 if clocks else 6 if logs else 5 if main else 4 if stack else 3 if reloc else 2 if power else 1}');out.mkdir(exist_ok=True)
+if l2:out=ROOT/'work/startup_slices_v11_l2';out.mkdir(exist_ok=True)
+if bootmode:out=ROOT/'work/startup_slices_v12_bootmode';out.mkdir(exist_ok=True)
+if common:out=ROOT/'work/startup_slices_v13_common';out.mkdir(exist_ok=True)
+if pinmux:out=ROOT/'work/startup_slices_v14_pinmux';out.mkdir(exist_ok=True)
+if entry:out=ROOT/'work/startup_slices_v15_nand_entry';out.mkdir(exist_ok=True)
+if controller:out=ROOT/'work/startup_slices_v16_nand_controller';out.mkdir(exist_ok=True)
+if nandid:out=ROOT/'work/startup_slices_v17_nand_id';out.mkdir(exist_ok=True)
+if geometry:out=ROOT/'work/startup_slices_v18_nand_geometry';out.mkdir(exist_ok=True)
+if firstread:out=ROOT/'work/startup_slices_v19_nand_first_read';out.mkdir(exist_ok=True)
+if nandinit:out=ROOT/'work/startup_slices_v20_nand_init';out.mkdir(exist_ok=True)
+if capacity:out=ROOT/'work/startup_slices_v21_ftl_capacity';out.mkdir(exist_ok=True)
+if ftlvars:out=ROOT/'work/startup_slices_v22_ftl_vars';out.mkdir(exist_ok=True)
+if bbt:out=ROOT/'work/startup_slices_v23_bbt';out.mkdir(exist_ok=True)
+if remap:out=ROOT/'work/startup_slices_v24_remap';out.mkdir(exist_ok=True)
+if localcheck:out=ROOT/'work/startup_slices_v25_remap_local';out.mkdir(exist_ok=True)
+if preusb:out=ROOT/'work/startup_slices_v26_before_usb';out.mkdir(exist_ok=True)
+if service:out=ROOT/'work/startup_slices_v27_service';out.mkdir(exist_ok=True)
+if bootsetup:out=ROOT/'work/startup_slices_v30_key_check';out.mkdir(exist_ok=True)
+if actualusb:out=ROOT/'work/startup_slices_v33_actual_usb';out.mkdir(exist_ok=True)
+assert not any((out/(n+'.raw')).exists() for n,_ in definitions), 'Preserve already produced payloads'
+
+def branch(site,target):
+    d=target-(0x60000000+site+8)
+    assert d%4==0 and -(1<<25)<=d<1<<25
+    return struct.pack('<I',0xea000000|((d//4)&0xffffff))
+
+def compensate(data,at,target):
+    data[at:at+4]=bytes(4)
+    base=zlib.crc32(data);basis={}
+    for bit in range(32):
+        trial=bytearray(data);trial[at+bit//8]^=1<<(bit%8)
+        v=zlib.crc32(trial)^base;mask=1<<bit
+        while v:
+            p=v.bit_length()-1
+            if p not in basis:basis[p]=(v,mask);break
+            v^=basis[p][0];mask^=basis[p][1]
+    assert len(basis)==32
+    v=target^base;solution=0
+    while v:
+        p=v.bit_length()-1;v^=basis[p][0];solution^=basis[p][1]
+    data[at:at+4]=struct.pack('<I',solution)
+    assert zlib.crc32(data)==target
+
+cases=[]
+for name,cut in definitions:
+    runtime_cut=0x60080000+cut-0xa34 if main else cut if stack and cut<0x200 else 0x60000000+cut
+    elfpath=out/(name+'.elf')
+    subprocess.run([str(ROOT/'work/toolchain/zig-x86_64-windows-0.14.1/zig.exe'),'cc',
+        '-target','arm-freestanding-eabi','-mcpu=cortex_a9','-marm','-nostdlib',
+        f'-DRF_CUT_PC={hex(runtime_cut)}',f'-DRF_STAGE_TAG={hex(0x44475453 if common else 0x43475453 if bootmode else 0x42475453 if l2 else 0x41475453 if mmu else 0x39475453 if premmu else 0x38475453 if irq else 0x37475453 if clocks else 0x36475453 if logs else 0x35475453 if main else 0x34475453 if stack else 0x33475453)}',
+        *(['-DRF_STACK_SLICE=1'] if stack else []),*(['-DRF_MAIN_SLICE=1'] if main else []),*(['-DRF_CLOCK_SLICE=1'] if clocks else []),f'work/{stem}.S',
+        *(['-DRF_IRQ_SLICE=1','work/startup_irq_slice_extra.S'] if irq else []),*(['-DRF_EXEC_IRQ=1'] if irq and (name=='after_irq_call' or premmu) else []),*(['-DRF_PREMMU_SLICE=1'] if premmu else []),
+        *(['-DRF_MMU_SLICE=1','work/startup_mmu_slice_extra.S'] if mmu else []),
+        *(['-DRF_L2_SLICE=1','work/startup_l2_slice_extra.S'] if l2 else []),
+        *(['-DRF_COMMON_STORAGE=1'] if common else []),
+        *(['-DRF_NAND_ENTRY=1'] if entry else []),
+        *(['-DRF_NAND_ID=1'] if nandid else []),
+        *(['-DRF_NAND_GEOMETRY=1'] if geometry else []),
+        *(['-DRF_NAND_FIRST_READ=1'] if firstread else []),
+        *(['-DRF_FTL_VARS=1'] if ftlvars else []),
+        *(['-DRF_BBT=1'] if bbt else []),
+        *(['-DRF_REMAP=1'] if remap else []),
+        *(['-DRF_LOCAL_CHECK=1'] if localcheck else []),
+        *(['-DRF_BOOT_SETUP=1'] if bootsetup else []),
+        *(['-DRF_ACTUAL_USB=1'] if actualusb else []),
+        f'-Wl,-T,work/{stem}.ld','-o',str(elfpath)],cwd=ROOT,check=True)
+    elf=elfpath.read_bytes();phoff=struct.unpack_from('<I',elf,28)[0]
+    size,count=struct.unpack_from('<HH',elf,42)
+    data=bytearray(original);regions=[]
+    segments=[struct.unpack_from('<8I',elf,phoff+i*size) for i in range(count)]
+    if irq:
+        # LOAD segment spans the gap to the explicit diagnostic slot. Copy only
+        # executable sections, never its zero-filled intervening original code.
+        shoff=struct.unpack_from('<I',elf,32)[0]
+        shsize,shcount,shstr=struct.unpack_from('<HHH',elf,46)
+        headers=[struct.unpack_from('<10I',elf,shoff+i*shsize) for i in range(shcount)]
+        names_header=headers[shstr];names=elf[names_header[4]:names_header[4]+names_header[5]]
+        segments=[];seen_sections=set()
+        for no,typ,flags,va,o,fs,*rest in headers:
+            if not flags&2 or not fs:continue
+            section_name=names[no:].split(b'\0',1)[0].decode()
+            assert section_name in ('.before','.after','.helpers','.extra') and flags&4 and typ==1,section_name
+            seen_sections.add(section_name);segments.append((1,o,va,va,fs,fs,1,4))
+        assert seen_sections=={'.before','.after','.helpers','.extra'}
+    for typ,o,va,pa,fs,ms,flags,align in segments:
+        if typ!=1 or not fs:continue
+        if not flags&1:
+            assert o==0 and va<=0x60000000 and va+fs<=0x60000000+(0x20 if extended else 0x100), 'Unexpected non-code segment'
+            continue # ELF headers, not payload code
+        extra_base=0x60002000 if entry else 0x60008000
+        assert (0x60000000+(0x20 if extended else 0x100)<=va and va+fs<=0x600001e0) or (irq and extra_base<=va and va+fs<=extra_base+(0x600 if mmu else 0x400))
+        off=va-0x60000000;data[off:off+fs]=elf[o:o+fs];regions.append([off,off+fs])
+        if off<0x2000:assert original[off:off+fs]==bytes(fs)
+    data[4:8]=branch(4,0x60000020 if extended else 0x60000100)
+    if main:
+        data[cut:cut+4]=branch(runtime_cut-0x60000000,0x60000100)
+        cut_range=[cut,cut+4]
+    elif stack and cut==0xc0:
+        data[0x3d0:0x3d8]=struct.pack('<II',0xe51ff004,0x60000100)
+        cut_range=[0x3d0,0x3d8]
+    elif stack and cut==0xc4:
+        data[0x3d8:0x3dc]=struct.pack('<I',0x60000100)
+        cut_range=[0x3d8,0x3dc]
+    else:
+        data[cut:cut+4]=branch(cut,0x60000100 if extended else 0x60000140)
+        cut_range=[cut,cut+4]
+    allowed=regions+[[4,8],cut_range,[0x1e0,0x1e4]]
+    if clocks and name=='clock_call_skipped':
+        opcode=struct.unpack_from('<I',original,0x188f8)[0]
+        displacement=(opcode&0xffffff);displacement-=0x1000000 if displacement&0x800000 else 0
+        assert opcode>>24==0xeb and 0x60097ec4+8+4*displacement==0x6008073c
+        data[0x188f8:0x188fc]=struct.pack('<I',0xe1a00000) # MOV r0,r0; omit this BL only.
+        allowed.append([0x188f8,0x188fc])
+    if irq and name=='irq_call_skipped':
+        opcode=struct.unpack_from('<I',original,0x188fc)[0]
+        displacement=(opcode&0xffffff);displacement-=0x1000000 if displacement&0x800000 else 0
+        assert opcode>>24==0xeb and 0x60097ec8+8+4*displacement==0x60080b90
+        data[0x188fc:0x18900]=struct.pack('<I',0xe1a00000)
+        allowed.append([0x188fc,0x18900])
+    if capacity and (name=='ftl_capacity_fixed' or ftlvars):
+        assert original[0xb408:0xb40c]==bytes.fromhex('0101a0e3')
+        data[0xb408:0xb40c]=struct.pack('<I',0xe3a00502) #MOVr0,0x00800000 sectors: observed4GiB
+        allowed.append([0xb408,0xb40c])
+    if entry:assert all(data[i]==original[i] for i in range(0x8000,0xc650) if not cut<=i<cut+4 and not (capacity and (name=='ftl_capacity_fixed' or ftlvars) and 0xb408<=i<0xb40c))
+    if entry:assert data[0x837c:0x84d4]==original[0x837c:0x84d4]
+    compensate(data,0x1e0,<REDACTED:ARTIFACT_CRC>)
+    assert all(any(a<=i<b for a,b in allowed) for i,(a,b) in enumerate(zip(data,original)) if a!=b)
+    for off in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):
+        assert data[off:off+8]==original[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+    raw=bytes(data)+bytes(272);path=out/(name+'.raw')
+    with path.open('xb') as f:f.write(raw)
+    cases.append(dict(name=name,file=str(path.relative_to(ROOT)),cut_offset=hex(cut),cut_pc=hex(runtime_cut),
+        bytes=len(raw),sha256=hashlib.sha256(raw).hexdigest(),crc32=hex(zlib.crc32(data)),
+        patch_ranges=allowed,crc_compensation=data[0x1e0:0x1e4].hex()))
+report=dict(device_access=False,bridge_unchanged=True,bridge_sha256=hashlib.sha256(bridge.read_bytes()).hexdigest(),
+    cases=cases,scope='Only startup prefix through 0x25c; CPU/SRAM state saved and restored. No PMU/GRF/USB/NAND init. Same hardware-proven loader binary.',
+    result_offset=110080,result_bytes=24,result_tag='STG1',
+    warning='CRC equality is compatibility only; host SHA pins are mandatory. Marker PC60000004 belongs to old bridge protocol, not this slice location. Use new tail record.')
+if power:
+    report.update(scope='Prefix through 0x288, before relocation. PMU secondary-core shutdown retained; no wake/restore. Require initial PMU contains only bits 1..3 and existing remap bit already set. No NAND/USB init.',result_bytes=48,result_tag='STG2')
+if reloc:
+    report.update(scope='Prefix through 0x2a8, before relocated entry. Save/restore low 0..0x724 and image RAM 0x60080000..0x6009a488. Require observed ROM56313031, PMU=e and remap set. No NAND/USB init.',result_bytes=32,result_tag='STG3')
+if stack:report.update(scope='Original low entry and stack setup only, stop before main. Save/restore SVC/ABT SP; existing bridge restores incoming IRQ frame. All relocation memory restored.',result_bytes=40,result_tag='STG4')
+if main:report.update(scope='Main prologue, ROM flag setup, two original timer writes only. Stop before next call. Save/restore 0x603d3000..0x603d5000 in addition to existing RAM/stacks. Timer initialization retained, no USB/NAND init.',result_tag='STG5')
+if logs:report.update(scope='Original log-port initialization and first banner only. Existing prior bounded trace reused; no external UART device. Timer/log registers retained. No PLL/USB/NAND init.',result_tag='STG6')
+if clocks:report.update(scope='Same post-call point 0x60097ec8, first omit BL0x6008073c, then execute it. Fresh-PMU0 or previous secondary-core bits accepted. Original APLL/GPLL writes retained. No DDR PLL, USB or NAND init.',result_tag='STG7')
+if irq:report.update(scope='Original GIC init or skipped call. Snapshot/restore8 GIC registers. Original EOI executed once: verified USB saved LR adjusted9c0->9c4 to avoid diagnostic duplicate EOI. No new bridge, USB/NAND init.',result_bytes=60,result_tag='STG8')
+if premmu:report.update(scope='Grouped software structures, PMU boot flag and 16KB identity table construction. Stop before BL60094de4 enabling MMU. Extra RAM and PMU flag saved/restored. No USB/NAND init.',result_tag='STG9')
+if mmu:report.update(scope='Original MMU/L1 sequence only, stop60094e24 before L2 init. Refuse inherited L2/TTBCR/FCSE nonzero or CSSELR>1. Save/select L1 data/restore CSSELR. Original L1 clean before disabling caches and restoring CPU/RAM state. No L2 writes, USB/NAND init.',result_tag='STGA',result_bytes=88)
+if l2:report.update(scope='Original L2 init60094c38, then cut60097f1c. Require disabled r3p2 PL310 on entry; save five config registers and ACTLR, clean L1 then L2 before disabling/restoring. No USB/NAND init.',result_tag='STGB',result_bytes=124)
+if bootmode:report.update(scope='Same proven L2 return helper, extend original startup through PMU boot-mode and switch only. Stop600980a8 before storage initializer60080c60. No storage/USB/NAND init.',result_tag='STGC')
+if common:report.update(scope='Storage prologue and common MMC controller preparation6008c4a0; stop60080c68 before backend selection/callback. Extra8KB RAM and GIC targets saved/restored; MMC configuration retained. No sector commands or NAND backend init.',result_tag='STGD')
+if actualusb:
+    report.update(scope='Remaining original main path through600982e4 BEFORE USB driver60081ae4. Existing guards/USB-only branch retained. Do not execute overwritten USB helper carrier.',result_tag='STGD',result_bytes=268)
+    report['image_snapshot']={'source':'60080000','destination':'61600000','bytes':262144}
+    report['captured_register']='Original main R4 (control pointer), not R0'
+    with (ROOT/'outputs/startup_actual_usb_entry_v33_build.json').open('x',encoding='utf-8') as f:json.dump(report,f,indent=2)
+    print(json.dumps(report,indent=2));sys.exit(0)
+if bootsetup:
+    report.update(scope='Before/after key-check600801ec at600980ec/f0. Additional boot-config RAM saved/restored. No USB driver execution, all NAND guards retained.',result_tag='STGD',result_bytes=268)
+    with (ROOT/'outputs/startup_key_check_build.json').open('x',encoding='utf-8') as f:json.dump(report,f,indent=2)
+    print(json.dumps(report,indent=2));sys.exit(0)
+if service:
+    report.update(scope='Original service-cache init60092b34 returns600980c8, before60097ccc. No USB init; all existing physical/service write guards retained.',result_tag='STGD',result_bytes=268)
+    with (ROOT/'outputs/startup_service_return_build.json').open('x',encoding='utf-8') as f:json.dump(report,f,indent=2)
+    print(json.dumps(report,indent=2));sys.exit(0)
+if preusb:
+    report.update(scope='Complete storage initializer and original clock query/NAND timing return to600980c4 BEFORE USB init60092b34. No new peripheral contract, all NAND guards retained.',result_tag='STGD',result_bytes=268)
+    with (ROOT/'outputs/startup_before_usb_build.json').open('x',encoding='utf-8') as f:json.dump(report,f,indent=2)
+    print(json.dumps(report,indent=2));sys.exit(0)
+if localcheck:
+    report.update(scope='Stop60085700 immediately after64byte stack clear in GetRemapTbl, capture saved block size SP+24c. No remap scan, preserve extended RAM/stack and all guards.',result_tag='STGD',result_bytes=268)
+    with (ROOT/'outputs/startup_remap_local_build.json').open('x',encoding='utf-8') as f:json.dump(report,f,indent=2)
+    print(json.dumps(report,indent=2));sys.exit(0)
+if remap:
+    report.update(scope='GetRemapTbl6008561c mode0 return60086ccc; stop before status branch. Extra RAM and lower stack saved/restored. Corrected4GiB capacity; all NAND guards retained.',result_tag='STGD',result_bytes=268)
+    with (ROOT/'outputs/startup_remap_return_build.json').open('x',encoding='utf-8') as f:json.dump(report,f,indent=2)
+    print(json.dumps(report,indent=2));sys.exit(0)
+if bbt:
+    report.update(scope='Original BBT scan60085ff0 return60086c84; no later startup. Corrected4GiB capacity, extended RAM restored, all existing NAND guards retained.',result_tag='STGD',result_bytes=268)
+    with (ROOT/'outputs/startup_bbt_return_build.json').open('x',encoding='utf-8') as f:json.dump(report,f,indent=2)
+    print(json.dumps(report,indent=2));sys.exit(0)
+if ftlvars:
+    report.update(scope='Full FtlVarInit return60086c80, BEFORE BBT scan; corrected4GiB capacity, additional RAM602b3000..60352000 saved/restored via61400000. No later FTL scan or NAND writes.',result_tag='STGD',result_bytes=268)
+    with (ROOT/'outputs/startup_ftl_vars_build.json').open('x',encoding='utf-8') as f:json.dump(report,f,indent=2)
+    print(json.dumps(report,indent=2));sys.exit(0)
+if capacity:
+    report.update(scope='A/B original versus one-instruction4GiB fallback correction at6008a9d4. Cut60086b00 after FTL capacity division/UXTH only, before tables/BBT. NAND unmodified.',result_tag='STGD',result_bytes=268)
+    with (ROOT/'outputs/startup_ftl_capacity_build.json').open('x',encoding='utf-8') as f:json.dump(report,f,indent=2)
+    print(json.dumps(report,indent=2));sys.exit(0)
+if nandinit:
+    report.update(scope='Original NAND initializer6008a1ac return, cut60086c6c before FTL. Existing write guards retained. Read-only controller/IDB parameter path; captures return and geometry.',result_tag='STGD',result_bytes=268)
+    with (ROOT/'outputs/startup_nand_init_build.json').open('x',encoding='utf-8') as f:json.dump(report,f,indent=2)
+    print(json.dumps(report,indent=2));sys.exit(0)
+if firstread:
+    report.update(scope='Original first four-sector IDB read600894c0, cut6008aa34 after return. Commands reset/read-ID/page-read only, program/erase guards retained. Return code captured; not full FTL init.',result_tag='STGD',result_bytes=268)
+    with (ROOT/'outputs/startup_nand_first_read_build.json').open('x',encoding='utf-8') as f:json.dump(report,f,indent=2)
+    print(json.dumps(report,indent=2));sys.exit(0)
+if geometry:
+    report.update(scope='Original Micron ID geometry and ECC24 initial setup; cut6008aa30 BEFORE first page-read call600894c0. Only reset/read-ID commands and controller config; no page/program/erase.',result_tag='STGD',result_bytes=264)
+    with (ROOT/'outputs/startup_nand_geometry_build.json').open('x',encoding='utf-8') as f:json.dump(report,f,indent=2)
+    print(json.dumps(report,indent=2));sys.exit(0)
+if nandid:
+    report.update(scope='Original four reset/read-ID callbacks60088bc8 and ID classification; cut6008a3b4 before geometry/config continuation. Only resetFF/read-ID90 command writes; no page/program/erase.',result_tag='STGD',result_bytes=192)
+    with (ROOT/'outputs/startup_nand_id_build.json').open('x',encoding='utf-8') as f:json.dump(report,f,indent=2)
+    print(json.dumps(report,indent=2));sys.exit(0)
+if controller:
+    report.update(scope='Same moved helper. Original NAND controller revision/configuration and timing60087948; stop6008a2b0 before ID reads. Only control/timing registers; no NAND media commands. Configuration retained.',result_tag='STGD')
+    with (ROOT/'outputs/startup_nand_controller_build.json').open('x',encoding='utf-8') as f:json.dump(report,f,indent=2)
+    print(json.dumps(report,indent=2));sys.exit(0)
+if entry:
+    report.update(scope='Helper moved to bounded USB command-handler carrier2000..2600; original NAND code8000..c650 preserved except declared stop. Original NAND software setup only, stop6008a238 before controller access. Additional48KB RAM saved/restored. Not a full FlashBoot payload.',result_tag='STGD')
+    with (ROOT/'outputs/startup_nand_entry_build.json').open('x',encoding='utf-8') as f:json.dump(report,f,indent=2)
+    print(json.dumps(report,indent=2));sys.exit(0)
+if pinmux:
+    report.update(scope='First backend selection and original NAND pinmux60080828 only; stop6008c484 before B60086c28. Four GRF configuration writes retained. No NAND-controller access or FTL init.',result_tag='STGD')
+    with (ROOT/'outputs/startup_nand_pinmux_build.json').open('x',encoding='utf-8') as f:json.dump(report,f,indent=2)
+    print(json.dumps(report,indent=2));sys.exit(0)
+with (ROOT/('outputs/startup_common_storage_build.json' if common else 'outputs/startup_bootmode_slice_build.json' if bootmode else 'outputs/startup_l2_slices_build.json' if l2 else 'outputs/startup_mmu_return_selector_build.json' if mmu else 'outputs/startup_premmu_slices_build.json' if premmu else 'outputs/startup_irq_frame_slices_build.json' if irq else 'outputs/startup_clock_slices_build.json' if clocks else 'outputs/startup_log_slices_build.json' if logs else 'outputs/startup_main_slices_build.json' if main else 'outputs/startup_stack_slices_build.json' if stack else 'outputs/startup_reloc_slices_build.json' if reloc else 'outputs/startup_power_slices_build.json' if power else 'outputs/startup_slices_build.json')).open('x',encoding='utf-8') as f:json.dump(report,f,indent=2)
+print(json.dumps(report,indent=2))

@@ -1,0 +1,49 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/read_copy6_after_cold_boot.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""One guarded DB after user-confirmed cold boot, then read-only persistence check."""
+import hashlib,json,os,struct,time
+from pathlib import Path
+from ram_console_session import RamConsole
+from console_completion import ANSI,completed_response
+ROOT=Path(__file__).resolve().parents[1];loader=ROOT/'work/idb_copy6_guard_v10/writer.bin'
+assert hashlib.sha256(loader.read_bytes()).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+source=(ROOT/'work/idb_restore_material_v1/copy6.BOOT_ORDER_MAIN512.NOT_FOR_UPLOAD.bin').read_bytes()
+assert hashlib.sha256(source).hexdigest()=='<REDACTED:HASH_OR_BYTES>'
+out=ROOT/'work/copy6_cold_readonly_attempt01';out.mkdir(exist_ok=False);c=None
+result=dict(user_normal_boot='no HDMI signal; power not held; user returned device to MaskROM',nand_write_commands=0,reset_commands=0,reads=[])
+def command(value,token):
+    assert value in ('RID','RFI') or value=='DB '+os.path.relpath(loader,out)
+    start=len(''.join(c.chunks));c.commands.append(value);c.send_once(value);until=time.monotonic()+45
+    while time.monotonic()<until:
+        text=''.join(c.chunks);response=completed_response(text,start,token)
+        if response is not None:return response
+        if 'Error:' in ANSI.sub('',text[start:]):raise RuntimeError('Command error; no retry')
+        time.sleep(.005)
+    raise RuntimeError('No command completion; no retry')
+def read(name,sector,count):
+    assert (sector,count) in ((0x7effff,1),(0x6000,256),(0x5000,256))
+    p=out/(name+'.raw');c.command(f'RS {hex(sector)} {hex(count)} {p}')
+    d=p.read_bytes();assert len(d)==528*count;return d
+def main(d):return b''.join(d[i:i+512] for i in range(0,len(d),528))
+def marker(name):
+    d=read(name,0x7effff,1);w=list(struct.unpack('<18I',d[:72]));result[name]=w
+    assert w[:10]==[0x31424449,0x06000103,0,0,0,0,0,0,0x6000,0],w
+    assert w[13]==1,w
+try:
+    c=RamConsole(out);intro=c.wait('Select input');assert 'Found 1 rockusb' in intro and 'Maskrom' in intro;c.select()
+    command('DB '+os.path.relpath(loader,out),'Download boot ok')
+    result['identity']=command('RID','2C 44 44 4B A9');marker('loaded_marker')
+    result['flash_info']=command('RFI','Flash Info:')
+    for name in ('copy6_cold_first','copy6_cold_second'):
+        d=main(read(name,0x6000,256));diff=[i for i,(x,y) in enumerate(zip(d,source)) if x!=y]
+        result['reads'].append(dict(name=name,exact=not diff,sha256=hashlib.sha256(d).hexdigest(),mismatches=len(diff),first_offsets=diff[:24]))
+    d=main(read('copy5_cold',0x5000,256));result['copy5_sha256']=hashlib.sha256(d).hexdigest()
+    marker('final_marker');result['copy6_persistence_exact']=all(x['exact'] for x in result['reads'])
+except BaseException as e:result['error']=repr(e);raise
+finally:
+    if c:c.close();result['commands']=c.commands
+    with (out/'result.json').open('x') as f:json.dump(result,f,indent=2)
+    print(json.dumps(result,indent=2),flush=True)

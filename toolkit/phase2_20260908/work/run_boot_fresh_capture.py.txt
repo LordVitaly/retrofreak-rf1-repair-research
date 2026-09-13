@@ -1,0 +1,68 @@
+ARCHIVAL SNAPSHOT — NOT AN EXECUTABLE REPAIR RECIPE.
+Paths, selectors and historical hashes were redacted.
+Source within this thread: work/run_boot_fresh_capture.py
+Role: historical_device_runner_or_stateful_scenario_review_before_any_use
+Original repair session must not be resumed from this public copy.
+
+"""Capture native FTL state, read-only, through the authenticated existing RAM window."""
+from pathlib import Path
+import hashlib,json,os,struct,sys,zlib
+HERE=Path(__file__).resolve().parent
+OLD=Path('<EXTERNAL_STAGE_03>')
+sys.path.insert(0,str(OLD/'work'))
+from ram_console_session import RamConsole
+def sha(b):return hashlib.sha256(b).hexdigest()
+assert sys.argv[1:]==['--resume-window-session']
+statefile=HERE/'white_screen_read_state.json'
+state=json.loads(statefile.read_text());assert state['valid']
+previous=Path(state['ram_path']).read_bytes();assert sha(previous)==state['ram_sha256']
+raw=(HERE/'boot_diagnostic_writer/fresh_ftl_capture.raw').read_bytes()
+assert sha(raw)=='<HISTORICAL_HASH_REDACTED>'
+assert len(raw)==110352 and zlib.crc32(raw[:110080])==0xad0dadee and raw[110080:]==bytes(272)
+assert raw[0xb408:0xb40c]==bytes.fromhex('0101a0e3') and raw[0xaf60:0xaf64]==bytes.fromhex('0003a0e1')
+for off in (0x1934,0x3b0c,0x5b60,0x7038,0x7dcc,0xba10,0xbc1c,0xbd5c):assert raw[off:off+8]==bytes.fromhex('0000e0e31eff2fe1')
+for off in (0xbbc8,0xbc90):assert raw[off:off+4]==bytes.fromhex('feffffea')
+out=HERE/'boot_fresh_capture_attempt01';out.mkdir(exist_ok=False)
+result=dict(all_pass=False,nand_writes_enabled=False,payload_sha256=sha(raw));c=None
+def save(p,obj):
+    with p.open('x') as f:json.dump(obj,f,indent=2);f.flush();os.fsync(f.fileno())
+def update(obj):
+    tmp=statefile.with_suffix('.tmp');tmp.write_text(json.dumps(obj,indent=2));os.replace(tmp,statefile)
+def read(name,lba,count):
+    assert (lba,count) in ((0x7effff,1),(0x7efffe,1),(0x7f0000,209),(0x7f00d1,2)) or (0x800000<=lba<0x800540 and 0<count<=16 and lba+count<=0x800540)
+    p=out/name;c.command(f'RS {hex(lba)} {hex(count)} {p}');data=p.read_bytes();assert len(data)==count*528;return data
+marker=b'RF1CKP02'+struct.pack('<IIII',110080,0xad0dadee,1,0x60000004)+bytes(504)
+window=b'RF1WIN01'+struct.pack('<IIII',0x800000,4096,0x63000000,16)+bytes(504)
+try:
+    c=RamConsole(out);c.select()
+    assert read('marker_before.raw',0x7effff,1)==marker and read('window.raw',0x7efffe,1)==window
+    assert read('previous.raw',0x7f0000,209)==previous
+    for offset in range(0,1344,16):
+        p=out/f'prefill_{offset:04d}.bin';p.write_bytes(hashlib.shake_256(f'ftlcapture/{offset}'.encode()).digest(8192));c.command(f'WS {hex(0x800000+offset)} {p}')
+    for i,offset in enumerate(range(0,110080,8192)):
+        p=out/f'part{i:02d}.bin';p.write_bytes(raw[offset:min(offset+8192,110080)]);c.command(f'WS {hex(0x7f0000+offset//512)} {p}')
+    assert read('ram_before.raw',0x7f0000,209)==raw
+    save(out/'DISPATCHED_NO_RETRY.json',dict(payload_sha256=sha(raw),nand_writes_enabled=False))
+    update(dict(valid=False,phase='dispatching_fresh_ftl_capture'))
+    c.command('RD')
+    assert read('marker_after.raw',0x7effff,1)==marker
+    after=read('ram_after.raw',0x7f0000,209)
+    assert after[:110080]==raw[:110080] and after[110348:]==bytes(4)
+    assert struct.unpack_from('<2I',after,110080)==(0x44475453,0x600982e4)
+    status=read('status.raw',0x7f00d1,2);result['status_hex']=status[:32].hex()
+    assert status[:8]==b'RF1READ1' and struct.unpack_from('<4I',status,8)==(0x103000,1,0,0xa8000)
+    captured=bytearray()
+    for offset in range(0,1344,16):
+        data=read(f'data_{offset:04d}.raw',0x800000+offset,16)
+        assert all(data[j+512:j+528]==bytes(16) for j in range(0,len(data),528))
+        captured.extend(b''.join(data[j:j+512] for j in range(0,len(data),528)))
+    assert len(captured)==0xa8000
+    (out/'ftl_snapshot.bin').write_bytes(captured)
+    mapping=list(struct.unpack_from('<1896H',captured,0xf00))
+    assert all(v<2048 for v in mapping)
+    result.update(all_pass=True,snapshot_sha256=sha(captured),logical_to_physical=mapping,FTL_header_hex=captured[0x180:0x1a0].hex(),boot_physical={str(i):mapping[i] for i in range(6,14)})
+    update(dict(valid=True,ram_path=str(out/'ram_after.raw'),ram_sha256=sha(after),last_case='fresh_ftl_capture',batch='boot_baseline'))
+finally:
+    if c:c.close();result['commands']=c.commands
+    save(out/'result.json',result)
+    print(json.dumps({k:v for k,v in result.items() if k not in ('commands','logical_to_physical')},indent=2),flush=True)

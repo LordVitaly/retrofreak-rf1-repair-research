@@ -1,0 +1,52 @@
+HISTORICAL REDACTED SOURCE SNAPSHOT — NOT A READY-TO-RUN TOOL.
+Original relative path: work/inspect_reference_nand_elf.py
+Private inputs/hash pins/vendor binaries omitted; current source may differ from earlier builds.
+Do not execute archived hardware writers or replace missing guards blindly.
+
+"""Validate extracted module against official boot CPIO, inspect ELF without execution."""
+import hashlib
+import json
+from pathlib import Path
+from elftools.elf.elffile import ELFFile
+from elftools.elf.relocation import RelocationSection
+ROOT=Path(__file__).parent
+BASE=Path(r'<HOST_PATH>')
+MODULE=BASE/'recovery_deep/rf_boot/rk30xxnand_ko.ko.3.0.8+'
+archive=(BASE/'android_boot_parts/boot/ramdisk.cpio').read_bytes()
+pos=0
+found=False
+while pos+110<=len(archive):
+    assert archive[pos:pos+6] in (b'070701',b'070702')
+    fields=[int(archive[pos+6+i*8:pos+14+i*8],16) for i in range(13)]
+    size,namelen=fields[6],fields[11]
+    name=archive[pos+110:pos+110+namelen-1].decode()
+    body=(pos+110+namelen+3)&~3
+    if 'nand' in name.lower():
+        print('CPIO ENTRY',name,'mode',oct(fields[1]),'size',size,
+              'link='+repr(archive[body:body+size]) if fields[1]&0xf000==0xa000 else '')
+    if name.lstrip('./')==MODULE.name:
+        assert archive[body:body+size]==MODULE.read_bytes()
+        print('CPIO EXACT MATCH',name,'SHA256',hashlib.sha256(MODULE.read_bytes()).hexdigest())
+        found=True
+    pos=(body+size+3)&~3
+    if name=='TRAILER!!!': break
+assert found
+with MODULE.open('rb') as stream:
+    elf=ELFFile(stream)
+    symtab=elf.get_section_by_name('.symtab')
+    symbols=[dict(name=s.name,value=s['st_value'],size=s['st_size'],section=s['st_shndx'],type=s['st_info']['type']) for s in symtab.iter_symbols()]
+    sections=[dict(index=i,name=s.name,offset=s['sh_offset'],size=s['sh_size']) for i,s in enumerate(elf.iter_sections())]
+    relocs=[]
+    for section in elf.iter_sections():
+        if isinstance(section,RelocationSection):
+            syms=elf.get_section(section['sh_link'])
+            for rel in section.iter_relocations():
+                relocs.append(dict(section=section['sh_info'],offset=rel['r_offset'],type=rel['r_info_type'],symbol=syms.get_symbol(rel['r_info_sym']).name))
+    result=dict(module=str(MODULE),symbols=symbols,sections=sections,relocations=relocs)
+    output=ROOT.parent/'outputs/reference_nand_module_elf.json'
+    if not output.exists():
+        with output.open('x') as f: json.dump(result,f,indent=2)
+    print('ELF',elf['e_machine'],'symbols',len(symbols),'relocations',len(relocs))
+    for s in symbols:
+        if any(t in s['name'].lower() for t in ('ftl','maptbl','sysblk','nandinit')):
+            print(s)

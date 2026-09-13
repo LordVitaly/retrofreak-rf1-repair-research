@@ -1,0 +1,74 @@
+{
+  "publication_notice": "Edited evidence projection; raw logs, full arrays/maps, identifiers and private hashes omitted.",
+  "source": "work/second_system_write189_hardware_attempt01/result.json",
+  "interpretation": "Second separately authorized 2-MiB portion.",
+  "data": {
+    "all_pass": true,
+    "authorization": "User explicitly allowed ONLY second 2MiB [bd000,be000), all readbacks/FTL scope audit; STOP on any discrepancy, no third portion",
+    "writer_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "reader_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "capture_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "source_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "write_launches": 1,
+    "phase": "STOP_user_approval_required_for_next_portion",
+    "commands": "<REDACTED:RAW_LOG_OR_IDENTIFIER>",
+    "executions": [
+      {
+        "phase": "write",
+        "after_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "elapsed_seconds": 3.389999999999418,
+        "status_hex": "<REDACTED:HASH_OR_BYTES>"
+      },
+      {
+        "phase": "reopen_read",
+        "after_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "elapsed_seconds": 2.172000000002299,
+        "status_hex": "<REDACTED:HASH_OR_BYTES>"
+      },
+      {
+        "phase": "reopen_ftl_capture",
+        "after_sha256": "<REDACTED:HASH_OR_BYTES>",
+        "elapsed_seconds": 2.063000000001921,
+        "status_hex": "<REDACTED:HASH_OR_BYTES>"
+      }
+    ],
+    "baseline_ftl_snapshot_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "donor_RAM_exact": true,
+    "current_stage_sha256": "<REDACTED:HASH_OR_BYTES>",
+    "writer_status": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+    "gate_state": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+    "journal": {
+      "publication_omission": "Full array/trace omitted; not a complete map or operation ledger.",
+      "original_items": 257
+    },
+    "postwrite_mapping": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+    "postwrite_map_changes": [
+      {
+        "logical": 189,
+        "before": 2037,
+        "after": 960
+      }
+    ],
+    "physical_scope_audit": {
+      "touched_blocks": [
+        960
+      ],
+      "baseline_logical_owners": {
+        "960": []
+      },
+      "protected_blocks_touched": [],
+      "all_journal_portions_are_189": true,
+      "program_errors": 0,
+      "erase_errors": 0
+    },
+    "immediate_readback_exact": true,
+    "reopened_readback": {
+      "bytes": 2097152,
+      "sha256": "<REDACTED:HASH_OR_BYTES>",
+      "expected_sha256": "<REDACTED:HASH_OR_BYTES>",
+      "mismatching_bytes": 0
+    },
+    "reopened_ftl": "<REDACTED:DEVICE_TABLE_OR_BYTES>",
+    "next_portion_started": false
+  }
+}
