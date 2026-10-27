@@ -4,6 +4,11 @@ The archive preserves the research tools that were used to understand the RF-1. 
 
 ## Directories
 
+For focused lookup, use the [source index guide](SOURCE_INDEX.md),
+[family catalog](../toolkit/SOURCE_FAMILIES.json) and local
+`scripts/query_research.py`. The detailed index preserves every original
+`path`/`kind` entry and adds purpose, family and header-derived status.
+
 ### `toolkit/phase1_20260903/`
 
 Early work around:

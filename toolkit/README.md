@@ -8,6 +8,7 @@ checker. No runnable device flasher is distributed.
 - [Offline checker](offline/) — the read-only RF-1 boot-ID verifier.
 - [Tooling guide](../docs/TOOLING.md) — scope and usage.
 - [Machine-readable index](INDEX.json) — every toolkit file and its role.
+- [Detailed source navigation](../docs/SOURCE_INDEX.md) and [source families](SOURCE_FAMILIES.json) — purpose, inputs, dependencies, evidence and original header status without changing any snapshot.
 
 Historical sources retain an extra `.txt` extension and a non-executable header.
 They are snapshots of a stateful repair environment, including abandoned variants,

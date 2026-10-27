@@ -4,6 +4,12 @@ This is selected, redacted evidence, not a new device test or a complete private
 forensic acquisition. [INDEX.json](INDEX.json) lists every included record.
 [The evidence map](../docs/EVIDENCE_MAP.md) connects conclusions to records.
 
+[Field explanations](../docs/EVIDENCE_FIELD_GUIDE.md) and the
+[machine-readable annotation catalog](../docs/EVIDENCE_FIELDS.json) clarify
+ambiguous flags without modifying the original records. The
+[case catalog](../docs/CASE_CATALOG.md) separates the original repair from the
+second owner's working-recovery report.
+
 - `phase1/selected/` — 37 early public records. The editorial `interpretation`
   field was translated into English; other JSON fields were preserved. These
   cover acquisition, diagnostic experiments, modeled repair and actual early

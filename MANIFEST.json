@@ -39,8 +39,13 @@
     },
     {
       "path": "AGENTS.md",
-      "bytes": 1630,
-      "sha256": "d0558d9f287b853c932e8726d0c34f2846aab6798651308e36fe391c76442729"
+      "bytes": 2021,
+      "sha256": "913f90161edecd46628a49caffc8406c7b19f8eff375d83d7c84231d9c8ce3f5"
+    },
+    {
+      "path": "CASES.json",
+      "bytes": 4668,
+      "sha256": "03176f0df1523143b2c4638960dd364b5b402d9f47fe7dd59362c77e1bfc12f5"
     },
     {
       "path": "CITATION.cff",
@@ -79,8 +84,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 12323,
-      "sha256": "b8b7f148109dc00793b4ed3985d269b9a4c1efb917a66955235b43897c4de078"
+      "bytes": 12601,
+      "sha256": "33e16c5305b28be282425bd06417630e53b064a238ea322bdc5807474a04d81c"
     },
     {
       "path": "REPAIR_SUMMARY.json",
@@ -89,8 +94,8 @@
     },
     {
       "path": "REPO_FILE_INDEX.txt",
-      "bytes": 37495,
-      "sha256": "3f6cfbf6df485d7016d2a5fd48c77f49ceeb2a72c22e5c2a079782787cac458b"
+      "bytes": 37767,
+      "sha256": "0550f347001c15aef1813a9ed1b999e6ea4f4bc499566fe81757db303715d918"
     },
     {
       "path": "SECURITY.md",
@@ -113,6 +118,11 @@
       "sha256": "52f7a91d79263c4839df312c70cb9daaa312eecd6878f78b0da8d36d99e3e8bd"
     },
     {
+      "path": "docs/CASE_CATALOG.md",
+      "bytes": 2437,
+      "sha256": "e0bb1b0af686a47a5a4ce9f3b8152d4914efd85a585195bd36186ddef6678694"
+    },
+    {
       "path": "docs/COMMUNITY_RECOVERY_CASE_01.md",
       "bytes": 5331,
       "sha256": "9b09ad67d07f292770bb51eea553d1b7ad1c63f6bd8e1b9e15636da90427657e"
@@ -123,9 +133,19 @@
       "sha256": "91a794143398867779f9d718e10261c72d40a4c568a986431f6f0469239d9f6b"
     },
     {
+      "path": "docs/EVIDENCE_FIELDS.json",
+      "bytes": 8154,
+      "sha256": "d06f6a70f51fe3f02b9cfaf528eb295628c32f713da89e71c7b2a877b7318920"
+    },
+    {
+      "path": "docs/EVIDENCE_FIELD_GUIDE.md",
+      "bytes": 2992,
+      "sha256": "b6b1c66b086e842f1f6b8c63cb6296998e1cefcc6b9d3cfcc3cf2cade677ea50"
+    },
+    {
       "path": "docs/EVIDENCE_MAP.md",
-      "bytes": 5992,
-      "sha256": "46481b3c87562af0f8bc372380b11ad0360c1c46e7afc18cec655a4d0dfbe910"
+      "bytes": 6218,
+      "sha256": "73ffa33159cef8d24586ff1623b7e28a7f88fb819d798f3b5cb4035ee174db6d"
     },
     {
       "path": "docs/FIRMWARE_REFERENCE.md",
@@ -149,8 +169,8 @@
     },
     {
       "path": "docs/README.md",
-      "bytes": 1967,
-      "sha256": "6d791e33a26d0eed18a2dd5a64c08693c66afb9bd307c8f7269d96e2d3da5fd1"
+      "bytes": 2346,
+      "sha256": "c9e1a38241bf31cc665156e7564e2fe07e76cbb277e887312aca927600a1ef53"
     },
     {
       "path": "docs/RECOVERY_SD.md",
@@ -178,6 +198,11 @@
       "sha256": "20ec8376e64b64f318701ca72158e019b87d9746562e85d1725c751c4018353f"
     },
     {
+      "path": "docs/SOURCE_INDEX.md",
+      "bytes": 4507,
+      "sha256": "e8a1c20ed3a1c41593bccb0b12b52b6b3afab829ee51d235eb5b2627890e8a42"
+    },
+    {
       "path": "docs/SUCCESSFUL_RECOVERY_PATH.md",
       "bytes": 7259,
       "sha256": "bcbc27709072c6e25bd3deb4ba51c80769301f5bb040a650600dc5e2c8d1f3d1"
@@ -189,13 +214,13 @@
     },
     {
       "path": "docs/TOOLING.md",
-      "bytes": 1968,
-      "sha256": "26c189a9487733cc1c76d7fc1ff89fa1a4d7280066ec639d03535050733d82fa"
+      "bytes": 2241,
+      "sha256": "42f71df8ccb5d8d13ae7f45cf837d5459cc27aaa58f802fe0860da26e01bc451"
     },
     {
       "path": "docs/VALIDATION.md",
-      "bytes": 2370,
-      "sha256": "996aa2ef1321969e9aa264e36b6b6afb47d243542ed9b36f2b179dcab8547e5a"
+      "bytes": 2738,
+      "sha256": "a1f0011916fc4eec151ed3d3703e4085e58fb326f03f0abbb6593d6fc91bf371"
     },
     {
       "path": "docs/assets/board/PHOTOS.json",
@@ -244,8 +269,8 @@
     },
     {
       "path": "evidence/README.md",
-      "bytes": 1507,
-      "sha256": "fd7e013d3c545167c7812fb0c20d976dc364c3082ee49eb0c50d2b214578fe3f"
+      "bytes": 1825,
+      "sha256": "07df531552f4ee58e32cc331a1defc79a42466e572d9d900f8d881a71b70303b"
     },
     {
       "path": "evidence/phase1/selected/outputs/boot.from_nand.verified.json",
@@ -678,6 +703,11 @@
       "sha256": "26e414082140d33fd1040256ed706cee6756b55e34f6c277b0c2076ea4149280"
     },
     {
+      "path": "provenance/NAVIGATION_REVISION_2026-10-27.md",
+      "bytes": 2489,
+      "sha256": "bfec1548e8f87586711009f16d0724188ae4e0b5d20fd832f26181fa3f7e9df8"
+    },
+    {
       "path": "provenance/PUBLICATION_UPDATE_2026-09-13.md",
       "bytes": 1919,
       "sha256": "6f4f6f507dd695787cf40f4f883a97433cc25c5344d0d2bdfece08268a28aa8a"
@@ -714,8 +744,8 @@
     },
     {
       "path": "scripts/check_repository.py",
-      "bytes": 9143,
-      "sha256": "8c49d54a5101497c9f7b336a48af5a16a5c2c676e55d437d993109e9d9312ef4"
+      "bytes": 9337,
+      "sha256": "ffe2e44ce7867c7c1f09b0253f92ea003c63b37d4bfaa0c7138334aa6c834353"
     },
     {
       "path": "scripts/download_cygwin_packages.py",
@@ -723,14 +753,24 @@
       "sha256": "fc595f1d8e46f8d22716b18e99ec0f1d5df0eb4e7b85978e8524af700738481c"
     },
     {
+      "path": "scripts/navigation_support.py",
+      "bytes": 8109,
+      "sha256": "e63d765172816266e8741cbd6e719610157e4422dab0a1cfaf6e733eee4c4468"
+    },
+    {
       "path": "scripts/photo_support.py",
       "bytes": 3546,
       "sha256": "92945aeaebacba34e5783cc500d953048c0e9844d32694ea9c46acb286d8688b"
     },
     {
+      "path": "scripts/query_research.py",
+      "bytes": 3912,
+      "sha256": "6bbca17efddca48fb68044afbd9eb5737fde45ba2d2c0dd84da85e0990ebccc1"
+    },
+    {
       "path": "scripts/refresh_metadata.py",
-      "bytes": 3123,
-      "sha256": "26d6badfdebbc532cb66b77d0c502b4749a63e31d82fedd1cb0447ccfe02f8de"
+      "bytes": 2709,
+      "sha256": "c8edde36a9e9a2c7fd180cdad2fe50764e9fe6f42c357a8ac187259c6beb1627"
     },
     {
       "path": "scripts/repo_support.py",
@@ -744,8 +784,8 @@
     },
     {
       "path": "tests/README.md",
-      "bytes": 571,
-      "sha256": "c2397517f4ca1700aa804635e0f1fb282ea7c2c9c1a3dc2ea6b62a5de4066552"
+      "bytes": 867,
+      "sha256": "4f75565d6f7fd16c8679f163a12933b1d3384acce5367ed90a43e26d2de6c432"
     },
     {
       "path": "tests/test_checker_cli.py",
@@ -771,6 +811,11 @@
       "path": "tests/test_repository_integrity.py",
       "bytes": 3507,
       "sha256": "9f4d348563cbf5a25a2aa8c67fbcbd68c511389d0000c1ebf999ea908bf46f80"
+    },
+    {
+      "path": "tests/test_research_navigation.py",
+      "bytes": 6463,
+      "sha256": "afac93534daa01ef2829c19851c9a1ae8a3167b12879f8edfdbc5430cd4a645e"
     },
     {
       "path": "tests/test_rf1_boot_digest.py",
@@ -859,13 +904,18 @@
     },
     {
       "path": "toolkit/INDEX.json",
-      "bytes": 61459,
-      "sha256": "84413062dd17da8df97bbeac25312ae2c7cc87c789554179524878fa6448db17"
+      "bytes": 204373,
+      "sha256": "6c7c378aa387d74e9f9bce1529ad05fbd6514a7dc6358bd56bb829b0224084c1"
     },
     {
       "path": "toolkit/README.md",
-      "bytes": 1348,
-      "sha256": "2fbbd73df7f99fd3db897c6828a15e8f1ac5d50509519459c38d9a4ed9b5f204"
+      "bytes": 1550,
+      "sha256": "98c7128ddbeed9199f10d989f79d578f695351a19d63ea762d4fe45cf16bae15"
+    },
+    {
+      "path": "toolkit/SOURCE_FAMILIES.json",
+      "bytes": 48603,
+      "sha256": "6a9d804d9316e395a33ae16815a50d733965399d739edc901ea6e620df949364"
     },
     {
       "path": "toolkit/offline/README.md",

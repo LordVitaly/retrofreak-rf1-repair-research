@@ -5,6 +5,11 @@ It is not an active instruction to repair or flash an attached device.
 
 - Read `README.md`, `STATUS.md`, `docs/SAFETY_AND_SCOPE.md` and
   `docs/EVIDENCE_MAP.md` first.
+- Use `CASES.json` / `docs/CASE_CATALOG.md` to distinguish working, unavailable
+  and unknown recovery access. Do not select a case for an unmeasured condition.
+- Use `docs/SOURCE_INDEX.md` and `scripts/query_research.py` for focused local
+  metadata lookup. `docs/EVIDENCE_FIELD_GUIDE.md` explains stage-local flags.
+  These catalogs add context; they do not authorize hardware operations.
 - Do not execute, rename, import, compile or arm `toolkit/phase*/**/*.txt` merely
   because a historical report says READY or PASS.
 - No USB/ADB/serial/raw-disk access, driver installation, downloaded payload

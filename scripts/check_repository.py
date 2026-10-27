@@ -12,6 +12,7 @@ import urllib.parse
 from repo_support import load_json, publication_files, sha256, canonical_path
 from verify_manifest import verify
 from photo_support import validate_photo
+from navigation_support import validate_navigation
 
 BAD_ENDINGS = ('.img', '.raw', '.dump', '.dmp', '.bin', '.apk', '.so', '.exe', '.dll',
                '.sys', '.pem', '.key', '.zip', '.7z', '.pyc')
@@ -159,6 +160,9 @@ def audit(root: Path) -> tuple[list[str], dict]:
         if not p.is_file() or p.stat().st_size != entry['bytes'] or sha256(p) != entry['sha256']:
             errors.append('Historical snapshot changed: ' + rel)
     counts['preserved_snapshots_checked'] = len(preserved['files'])
+    navigation_errors, navigation_counts = validate_navigation(root)
+    errors.extend(navigation_errors)
+    counts.update(navigation_counts)
     return errors, counts
 
 

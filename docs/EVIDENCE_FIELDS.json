@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "path_base": "repository_root",
+  "scope": "Additive editorial explanations; original records and their fields remain unchanged. expected_values pins only the cited fields.",
+  "pointer_format": "RFC 6901 JSON Pointer; each expected_values key addresses the original record.",
+  "general_rules": [
+    {
+      "field": "all_pass",
+      "meaning": "Success of the specific script checks at that stage; read interpretation and write/readback state."
+    },
+    {
+      "field": "hardware_ready",
+      "meaning": "Historical readiness of exact old inputs and guards, never current authorization or portable hardware validation."
+    },
+    {
+      "field": "data_writes",
+      "meaning": "Runner-specific name; in the annotated system runner it means userdata partition writes."
+    },
+    {
+      "field": "final / pending",
+      "meaning": "Resolve stage and observation time; stage-local final and earlier pending flags may precede the current summary."
+    },
+    {
+      "field": "redacted paths / hashes",
+      "meaning": "Unavailable original inputs; do not replace them with guessed values or treat work paths as repository-relative."
+    }
+  ],
+  "notes": [
+    {
+      "id": "system-data-writes",
+      "case_id": "rf1-lordvitaly-2026-09",
+      "record": "evidence/phase2/primary/work/linux_system_four_repair_attempt01/result.json",
+      "expected_values": {
+        "/data_writes": false,
+        "/write_attempts": [
+          192,
+          195,
+          198,
+          204
+        ]
+      },
+      "meaning": "data_writes means writes to Android userdata (/data) in this runner. Four /system ranges were written; this is not a no-NAND-write flag.",
+      "do_not_infer": "Do not translate data_writes=false into no device data was written.",
+      "related_sources": [
+        "toolkit/phase2_20260908/work/repair_linux_system_four.py.txt"
+      ]
+    },
+    {
+      "id": "pass-means-damaged-bbt-measured",
+      "case_id": "rf1-lordvitaly-2026-09",
+      "record": "evidence/phase1/selected/work/bbt_physical_ecc40_attempt01/result.json",
+      "expected_values": {
+        "/data/all_pass": true
+      },
+      "meaning": "The measurement completed successfully and found two damaged BBT copies; interpretation in the same record states this explicitly.",
+      "do_not_infer": "Do not infer healthy BBT, repair success or a bootable console from all_pass=true.",
+      "related_sources": []
+    },
+    {
+      "id": "failed-check-after-idb-write",
+      "case_id": "rf1-lordvitaly-2026-09",
+      "record": "evidence/phase1/selected/work/idb_copy6_restore_hardware_attempt03/result.json",
+      "expected_values": {
+        "/data/all_pass": false,
+        "/data/erase_control_dispatched": true
+      },
+      "meaning": "The target compared exact, then the protected-view check stopped. A write was already dispatched.",
+      "do_not_infer": "Do not retry the write from the final false flag; inspect native execution and target/protected readback separately.",
+      "related_sources": []
+    },
+    {
+      "id": "userdata-prewrite-stop",
+      "case_id": "rf1-lordvitaly-2026-09",
+      "record": "evidence/phase2/primary/work/userdata_native_repair_attempt01/result.json",
+      "expected_values": {
+        "/all_pass": false,
+        "/write_attempted": false
+      },
+      "meaning": "This runner attempt stopped at a host-side assertion before the userdata repair was attempted.",
+      "do_not_infer": "Do not merge this attempt with the later write or infer userdata repair occurred.",
+      "related_sources": []
+    },
+    {
+      "id": "userdata-corrected-then-clean",
+      "case_id": "rf1-lordvitaly-2026-09",
+      "record": "evidence/phase2/primary/work/userdata_native_repair_attempt02/result.json",
+      "expected_values": {
+        "/all_pass": true,
+        "/write_attempted": true,
+        "/repair_exit": 1,
+        "/verify_exit": 0
+      },
+      "meaning": "The repair checker reported corrected errors (exit 1); the subsequent read-only verification reported clean (exit 0).",
+      "do_not_infer": "Do not classify the correcting exit as a failed repair or generalize this outcome to mounted filesystems.",
+      "related_sources": []
+    },
+    {
+      "id": "diagnostic-boot-stage-final",
+      "case_id": "rf1-lordvitaly-2026-09",
+      "record": "evidence/phase2/primary/work/boot_final_verified/result.json",
+      "expected_values": {
+        "/all_pass": true,
+        "/ordinary_boot_after_final_fix_tested": false,
+        "/live_android_log_obtained": false
+      },
+      "meaning": "Stage-local final verifies the diagnostic boot image through both FTL views. It predates later Linux work and stock-boot return.",
+      "do_not_infer": "Do not treat the filename final or exact readback as final functional validation.",
+      "related_sources": []
+    },
+    {
+      "id": "cache-ready-is-historical",
+      "case_id": "rf1-lordvitaly-2026-09",
+      "record": "evidence/phase2/primary/work/cache_last_writer/manifest.json",
+      "expected_values": {
+        "/hardware_ready": true,
+        "/device_access": false
+      },
+      "meaning": "Readiness described the old case-specific build and inputs, prepared without device access in this manifest.",
+      "do_not_infer": "Do not treat this as current authorization, a portable binary or proof of physical NAND behavior.",
+      "related_sources": []
+    },
+    {
+      "id": "cache-reconstructed-free-space",
+      "case_id": "rf1-lordvitaly-2026-09",
+      "record": "evidence/phase2/primary/work/cache_last_attempt/live_verify_result.json",
+      "expected_values": {
+        "/all_pass": true,
+        "/hardware_access": false,
+        "/first_6MiB_exact": true
+      },
+      "meaning": "Offline reconstruction used three actual block readbacks and clean-image free space. Only allocated filesystem ranges have that readback coverage.",
+      "do_not_infer": "Do not infer the complete cache partition was reread from NAND or overwritten.",
+      "related_sources": []
+    },
+    {
+      "id": "stock-readback-before-cold-test",
+      "case_id": "rf1-lordvitaly-2026-09",
+      "record": "evidence/phase2/usb_stock_final_evidence.json",
+      "expected_values": {
+        "/final_verification/all_pass": true,
+        "/final_verification/power_cycle_verification_pending_at_time_of_readback": true,
+        "/current_status/cold_boot_and_adapter_after_stock_return_pending": false
+      },
+      "meaning": "The first pending flag records the earlier binary-readback time. current_status incorporates the later separate operator cold-start confirmation.",
+      "do_not_infer": "Do not erase the timing distinction, treat these flags as contradictory, or invent a new binary read after that power cycle.",
+      "related_sources": []
+    },
+    {
+      "id": "functional-stock-confirmation",
+      "case_id": "rf1-lordvitaly-2026-09",
+      "record": "evidence/phase2/functional_cold_boot_confirmation.json",
+      "expected_values": {
+        "/stock_boot_confirmed_by_functional_test": true,
+        "/new_binary_nand_readback_after_that_power_cycle": false,
+        "/fresh_save_import_measured_after_final_power_cycle": false
+      },
+      "meaning": "Stock-boot cold startup and game operation were operator-reported functional observations. Save import was observed in the preceding temporary-host test.",
+      "do_not_infer": "Do not promote a functional observation to fresh binary NAND verification or a fresh save-import test.",
+      "related_sources": []
+    },
+    {
+      "id": "summary-spans-stages",
+      "case_id": "rf1-lordvitaly-2026-09",
+      "record": "REPAIR_SUMMARY.json",
+      "expected_values": {
+        "/final_validation/6": "save import",
+        "/validation_limits/save_import": "observed in earlier temporary-host test"
+      },
+      "meaning": "The validation list consolidates observations across the original repair. validation_limits supplies their timing; it is not a list of tests all repeated after final stock return.",
+      "do_not_infer": "Do not attach all listed observations to the last power cycle.",
+      "related_sources": []
+    }
+  ]
+}

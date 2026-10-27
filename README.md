@@ -59,6 +59,11 @@ These contributions made the investigation possible. See [Sources and credits](d
 
 ## Find the right starting point
 
+For readers and agents: [case catalog](docs/CASE_CATALOG.md)
+([JSON](CASES.json)), [source families and lookup](docs/SOURCE_INDEX.md), and
+[ambiguous evidence fields](docs/EVIDENCE_FIELD_GUIDE.md). These navigation aids
+supplement the unchanged historical sources and records.
+
 | Your goal | Read first |
 |---|---|
 | Understand a white screen, splash hang or failed power hold | [Decision tree](docs/DECISION_TREE.md), then [safety and scope](docs/SAFETY_AND_SCOPE.md) |

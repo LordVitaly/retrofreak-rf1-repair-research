@@ -5,6 +5,7 @@
 .github/workflows/validate.yml
 .gitignore
 AGENTS.md
+CASES.json
 CITATION.cff
 CONTRIBUTING.md
 LICENSE.md
@@ -21,8 +22,11 @@ SECURITY.md
 STATUS.md
 docs/ADDRESS_SPACES.md
 docs/BOARD_PHOTOS.md
+docs/CASE_CATALOG.md
 docs/COMMUNITY_RECOVERY_CASE_01.md
 docs/DECISION_TREE.md
+docs/EVIDENCE_FIELDS.json
+docs/EVIDENCE_FIELD_GUIDE.md
 docs/EVIDENCE_MAP.md
 docs/FIRMWARE_REFERENCE.md
 docs/HISTORICAL_REPORT_INDEX.md
@@ -34,6 +38,7 @@ docs/REFERENCE_HASHES.md
 docs/REPRODUCIBILITY.md
 docs/SAFETY_AND_SCOPE.md
 docs/SOURCES_AND_CREDITS.md
+docs/SOURCE_INDEX.md
 docs/SUCCESSFUL_RECOVERY_PATH.md
 docs/TECHNICAL_REPORT.md
 docs/TOOLING.md
@@ -134,6 +139,7 @@ evidence/phase2/primary/work/zero_capacity_replay_v3.json
 evidence/phase2/usb_stock_final_evidence.json
 provenance/BUILD_INFO.md
 provenance/INPUTS.json
+provenance/NAVIGATION_REVISION_2026-10-27.md
 provenance/PUBLICATION_UPDATE_2026-09-13.md
 provenance/RELEASE_AUDIT.md
 provenance/RESTORED_EVIDENCE.json
@@ -143,7 +149,9 @@ references/RECOVERY_SD_READONLY_REPORT.md
 references/SOURCES.json
 scripts/check_repository.py
 scripts/download_cygwin_packages.py
+scripts/navigation_support.py
 scripts/photo_support.py
+scripts/query_research.py
 scripts/refresh_metadata.py
 scripts/repo_support.py
 scripts/verify_manifest.py
@@ -153,6 +161,7 @@ tests/test_package_downloads.py
 tests/test_photo_metadata.py
 tests/test_publication_boundaries.py
 tests/test_repository_integrity.py
+tests/test_research_navigation.py
 tests/test_rf1_boot_digest.py
 third_party/DEPENDENCIES.md
 third_party/README.md
@@ -172,6 +181,7 @@ third_party/phase2/notices/google-usb-driver/amd64-NOTICE.txt
 third_party/phase2/notices/google-usb-driver/i386-NOTICE.txt
 toolkit/INDEX.json
 toolkit/README.md
+toolkit/SOURCE_FAMILIES.json
 toolkit/offline/README.md
 toolkit/offline/rf1_boot_digest.py
 toolkit/phase1_20260903/work/analyze_native_chunk0.py.txt

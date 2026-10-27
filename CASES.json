@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "path_base": "repository_root",
+  "scope": "Recorded cases and access conditions, not automatic repair authorization or a diagnosis for an unmeasured unit.",
+  "routing": [
+    {
+      "recovery_access": "working",
+      "case_ids": [
+        "rf1-yamanotsume-2026-10"
+      ],
+      "read_next": [
+        "docs/COMMUNITY_RECOVERY_CASE_01.md",
+        "docs/DECISION_TREE.md"
+      ],
+      "caveat": "A splash hang plus working recovery is an access-condition match, not proof of identical damage or compatible firmware."
+    },
+    {
+      "recovery_access": "unavailable",
+      "case_ids": [
+        "rf1-lordvitaly-2026-09"
+      ],
+      "read_next": [
+        "docs/SAFETY_AND_SCOPE.md",
+        "docs/SUCCESSFUL_RECOVERY_PATH.md"
+      ],
+      "caveat": "Do not infer the original NAND damage or reuse physical addresses from recovery unavailability alone."
+    },
+    {
+      "recovery_access": "unknown",
+      "case_ids": [],
+      "read_next": [
+        "docs/DECISION_TREE.md",
+        "docs/SAFETY_AND_SCOPE.md"
+      ],
+      "caveat": "Collect the access condition and symptoms first; do not silently choose a case."
+    }
+  ],
+  "cases": [
+    {
+      "id": "rf1-lordvitaly-2026-09",
+      "owner": {
+        "github": "LordVitaly",
+        "url": "https://github.com/LordVitaly"
+      },
+      "platform": "Early RF-1 / RK3066 / Micron 4-GiB NAND",
+      "symptoms": [
+        "white screen",
+        "unreliable power hold",
+        "recovery no longer reached"
+      ],
+      "recovery_access": "unavailable",
+      "recovery_history": "SD recovery was reached earlier; factory reset did not fix the unit. It was no longer reached during the successful deeper repair.",
+      "method": "Case-specific MaskROM, IDB/FlashInfo/BBT diagnosis, diagnostic boot, cache/system/userdata repairs and stock-boot return.",
+      "prerequisites": [
+        "Measured MaskROM access",
+        "Verified private acquisitions and fresh mappings before device-specific writes",
+        "Matching official firmware and reviewed per-stage guards"
+      ],
+      "status": "functional_recovery_documented",
+      "summary_path": "REPAIR_SUMMARY.json",
+      "related_docs": [
+        "docs/SUCCESSFUL_RECOVERY_PATH.md",
+        "docs/TECHNICAL_REPORT.md",
+        "STATUS.md"
+      ],
+      "related_evidence": [
+        "evidence/phase2/usb_stock_final_evidence.json",
+        "evidence/phase2/functional_cold_boot_confirmation.json"
+      ],
+      "outcome": "Cold normal startup, adapter/controller and GBC game confirmed by operator; binary stock-boot readback preceded final power removal.",
+      "not_established": [
+        "Every NAND cell healthy",
+        "Cause/time of every corruption event",
+        "Portable physical block map",
+        "Complete public rollback backup"
+      ]
+    },
+    {
+      "id": "rf1-yamanotsume-2026-10",
+      "owner": {
+        "github": "Yamanotsume",
+        "github_url": "https://github.com/Yamanotsume",
+        "reddit": "yamanotsume",
+        "reddit_url": "https://www.reddit.com/user/yamanotsume/"
+      },
+      "platform": "Second early RF-1, bought in 2016; hardware observations attributed to owner",
+      "symptoms": [
+        "Retro Freak splash hang",
+        "factory reset and cache wipe did not restore startup"
+      ],
+      "recovery_access": "working",
+      "method": "Extract matching official system 0.2.0 update to plain Rockchip rkimage; install through working SD Recovery System v1.1.",
+      "prerequisites": [
+        "Working Update rkimage from external storage menu",
+        "Matching firmware/hardware; extracted manifest reported SUPPORTED_PCBA=0x6,0x2",
+        "Preserve accessible data and review the firmware update write scope"
+      ],
+      "status": "owner_reported_success",
+      "reported_date": "2026-10-27",
+      "related_docs": [
+        "docs/COMMUNITY_RECOVERY_CASE_01.md",
+        "docs/RECOVERY_SD.md",
+        "docs/REFERENCE_HASHES.md"
+      ],
+      "related_evidence": [],
+      "external_sources": [
+        "https://github.com/LordVitaly/retrofreak-rf1-repair-research/issues/1#issuecomment-6445589262",
+        "https://www.reddit.com/r/retron5/comments/1w2g6rc/original_retro_freak_2016_stuck_on_logo_any_way/"
+      ],
+      "outcome": "Owner reports recovery update/verification completion and normal startup.",
+      "not_established": [
+        "Independent maintainer repetition",
+        "Full post-update NAND readback",
+        "Power-removal cold-persistence measurement",
+        "Cartridge/peripheral validation",
+        "Preservation of all userdata",
+        "Compatibility with all revisions"
+      ]
+    }
+  ]
+}

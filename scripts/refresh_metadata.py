@@ -6,24 +6,13 @@ import argparse
 from pathlib import Path
 
 from repo_support import SELF_MANIFESTS, publication_files, sha256, write_json
+from navigation_support import toolkit_entries
 
 
 def refresh(root: Path, date: str = '2026-09-12') -> int:
     root = root.resolve()
     files = publication_files(root)
-    toolkit = []
-    for p in files:
-        rel = p.relative_to(root).as_posix()
-        if not rel.startswith('toolkit/') or rel == 'toolkit/INDEX.json':
-            continue
-        if rel.startswith(('toolkit/phase1_', 'toolkit/phase2_')):
-            kind = 'inert_historical_source_snapshot'
-        elif p.suffix == '.py':
-            kind = 'executable_local_file_checker'
-        else:
-            kind = 'documentation'
-        toolkit.append({'path': rel, 'kind': kind})
-    write_json(root / 'toolkit/INDEX.json', toolkit)
+    write_json(root / 'toolkit/INDEX.json', toolkit_entries(root, files))
 
     evidence = []
     for p in files:

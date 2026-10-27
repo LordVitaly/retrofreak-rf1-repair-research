@@ -24,6 +24,12 @@ a malware scan of external installers, or hardware validation of archived writer
 
 ## After intentional edits
 
+Navigation checks additionally verify [case routing](CASE_CATALOG.md), complete
+[source-family membership](SOURCE_INDEX.md), the enriched toolkit index, local
+catalog references and exact JSON Pointer/value pins in the
+[field annotations](EVIDENCE_FIELD_GUIDE.md). These checks never import or run
+archival sources. New navigation tests use local synthetic fixtures.
+
 Review the diff first, especially changes to evidence and source snapshots. Then:
 
 ```sh

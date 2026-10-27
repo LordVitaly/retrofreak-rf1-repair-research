@@ -2,6 +2,9 @@
 
 | Document | Purpose |
 |---|---|
+| [Case catalog](CASE_CATALOG.md) | Choose a reading route by symptoms and measured recovery availability; includes both reported cases. |
+| [Source index](SOURCE_INDEX.md) | Find historical sources by purpose, family, original role and evidence context. |
+| [Evidence field guide](EVIDENCE_FIELD_GUIDE.md) | Interpret ambiguous flags using additive, value-pinned annotations. |
 | [Community case #1](COMMUNITY_RECOVERY_CASE_01.md) | Second RF-1: owner-reported plain-rkimage update through working SD recovery, with source links and limits. |
 | [Successful recovery path](SUCCESSFUL_RECOVERY_PATH.md) | Original unit with recovery unavailable: the deeper repair leading to functional recovery; not portable flash instructions. |
 | [Technical report](TECHNICAL_REPORT.md) | Diagnosis, formats, code paths, repairs and evidence limits. |

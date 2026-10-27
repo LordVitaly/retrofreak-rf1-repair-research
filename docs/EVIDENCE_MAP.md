@@ -1,5 +1,9 @@
 # Evidence map and claim boundaries
 
+For exact meanings of stage-local JSON flags, see the additive
+[field guide](EVIDENCE_FIELD_GUIDE.md) and [annotation catalog](EVIDENCE_FIELDS.json).
+The [case catalog](CASE_CATALOG.md) keeps the two repair reports separate.
+
 The final state is summarized in [STATUS](../STATUS.md). Intermediate records are
 historical observations; a PASS from one stage must not replace a later outcome.
 No private dump or vendor binary is included. Links below resolve to public,
