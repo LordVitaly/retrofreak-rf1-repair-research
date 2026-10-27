@@ -79,7 +79,11 @@ the history of our original unit. Each repair needs its own diagnosis and
 verification; the original unit's addresses and writers are not portable.
 
 ```mermaid
-flowchart LR
+flowchart TB
+    %% Invisible shared anchor aligns the two independent routes at the top.
+    ALIGN[" "]
+    style ALIGN fill:transparent,stroke:transparent,color:transparent
+
     subgraph RECOVERY["Working recovery: Yamanotsume's RF-1, issue #1"]
         direction TB
         R1["Recovery v1.1 reachable; logo hang; factory reset did not help"]
@@ -101,6 +105,9 @@ flowchart LR
         G --> H["Restore stock boot using freshly measured FTL owners"]
         H --> I["Operator confirms cold startup and a working GBC game"]
     end
+
+    ALIGN ~~~ R1
+    ALIGN ~~~ A
 ```
 
 | Finding | Why it mattered |
