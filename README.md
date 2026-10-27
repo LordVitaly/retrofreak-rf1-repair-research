@@ -92,7 +92,7 @@ flowchart TB
         R3 --> R4["Owner reports normal startup"]
     end
 
-    subgraph ORIGINAL["Recovery unavailable: our original RF-1"]
+    subgraph ORIGINAL["Recovery unavailable: LordVitaly's RF-1"]
         direction TB
         A["Recovery not reached; white screen and unreliable power hold"]
         A --> M["MaskROM access and reviewed backup / diagnosis"]
