@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "generated": "2026-09-13",
+  "generated": "2026-10-27",
   "language": "English",
   "excluded_self_manifests": [
     "MANIFEST.json",
@@ -79,8 +79,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 9239,
-      "sha256": "b83eed1c0a0896cecf5bf53eb20ecda9dee9f76cd71e912f48f1d207d00d9525"
+      "bytes": 12126,
+      "sha256": "d4c2ab928b51e0d0148a5399210f34e6fa638011ee988b12425a22ee15f7dc17"
     },
     {
       "path": "REPAIR_SUMMARY.json",
@@ -89,8 +89,8 @@
     },
     {
       "path": "REPO_FILE_INDEX.txt",
-      "bytes": 37460,
-      "sha256": "977d3e68a05eed043b42e6fcaafb1c7fa443b191ac3538d610ceb75a36559640"
+      "bytes": 37495,
+      "sha256": "3f6cfbf6df485d7016d2a5fd48c77f49ceeb2a72c22e5c2a079782787cac458b"
     },
     {
       "path": "SECURITY.md",
@@ -99,8 +99,8 @@
     },
     {
       "path": "STATUS.md",
-      "bytes": 1772,
-      "sha256": "15574549729c4be1da7e1166850f3853367f73e07ccfeb3413e0e5efbec00995"
+      "bytes": 2707,
+      "sha256": "5a4a626d0fe3f6e396d52fbfcded002d214101417265bb536561a29f791f9db0"
     },
     {
       "path": "docs/ADDRESS_SPACES.md",
@@ -113,14 +113,19 @@
       "sha256": "52f7a91d79263c4839df312c70cb9daaa312eecd6878f78b0da8d36d99e3e8bd"
     },
     {
+      "path": "docs/COMMUNITY_RECOVERY_CASE_01.md",
+      "bytes": 5331,
+      "sha256": "9b09ad67d07f292770bb51eea553d1b7ad1c63f6bd8e1b9e15636da90427657e"
+    },
+    {
       "path": "docs/DECISION_TREE.md",
-      "bytes": 3249,
-      "sha256": "fbded05a59956f824f5661710a9d57ceefab95f1da1fde2b7ac84f28f3538aa1"
+      "bytes": 4991,
+      "sha256": "91a794143398867779f9d718e10261c72d40a4c568a986431f6f0469239d9f6b"
     },
     {
       "path": "docs/EVIDENCE_MAP.md",
-      "bytes": 5358,
-      "sha256": "22d91b30b6bd6a46555fa774661fb708036807dd1a32bc77821277a3330cddd4"
+      "bytes": 5992,
+      "sha256": "46481b3c87562af0f8bc372380b11ad0360c1c46e7afc18cec655a4d0dfbe910"
     },
     {
       "path": "docs/FIRMWARE_REFERENCE.md",
@@ -144,18 +149,18 @@
     },
     {
       "path": "docs/README.md",
-      "bytes": 1756,
-      "sha256": "d218394ec5111290a02d1b34b5aa04bf05eeb6eebc616917c65e0cccc5c66722"
+      "bytes": 1967,
+      "sha256": "6d791e33a26d0eed18a2dd5a64c08693c66afb9bd307c8f7269d96e2d3da5fd1"
     },
     {
       "path": "docs/RECOVERY_SD.md",
-      "bytes": 2040,
-      "sha256": "62d0b34dc36a2386f74840d5b8563f3105cf20e6a068bf7426a3602f02fab4c7"
+      "bytes": 2879,
+      "sha256": "04d7206ca1cc809f57232d659c4daa8e3ec4d56dd03bee991842f9e7b2a282a2"
     },
     {
       "path": "docs/REFERENCE_HASHES.md",
-      "bytes": 819,
-      "sha256": "1c060ed9853193397f9018699699d9a985cfaaf9e688244a30aff4713a4f1edf"
+      "bytes": 1538,
+      "sha256": "aa1cfe8f9346b1d4a069a747c93032a57789922645460fa2ff0f005239f2bac8"
     },
     {
       "path": "docs/REPRODUCIBILITY.md",
@@ -169,13 +174,13 @@
     },
     {
       "path": "docs/SOURCES_AND_CREDITS.md",
-      "bytes": 4300,
-      "sha256": "31bc6d8cab7331f25e2c8aac4c73614d4e0cef0bfc8dcd80fde6e7f72690cefb"
+      "bytes": 5479,
+      "sha256": "20ec8376e64b64f318701ca72158e019b87d9746562e85d1725c751c4018353f"
     },
     {
       "path": "docs/SUCCESSFUL_RECOVERY_PATH.md",
-      "bytes": 6775,
-      "sha256": "971da7eb53b89b7d2f82159959f0dbb12243eb3655aeeccb1bbbe9e4656f0991"
+      "bytes": 7259,
+      "sha256": "bcbc27709072c6e25bd3deb4ba51c80769301f5bb040a650600dc5e2c8d1f3d1"
     },
     {
       "path": "docs/TECHNICAL_REPORT.md",

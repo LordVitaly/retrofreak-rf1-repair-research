@@ -2,6 +2,22 @@
 
 The recovery did not begin from a blank slate. Several earlier public discoveries were essential.
 
+## Community follow-up: a second working RF-1
+
+Thank you to **[Yamanotsume on GitHub](https://github.com/Yamanotsume) /
+[u/yamanotsume on Reddit](https://www.reddit.com/user/yamanotsume/)** for reporting
+a successful recovery on 2026-10-27 and documenting the update sequence, image
+hashes and hardware observations in [issue #1](https://github.com/LordVitaly/retrofreak-rf1-repair-research/issues/1).
+Their [full repair report](https://github.com/LordVitaly/retrofreak-rf1-repair-research/issues/1#issuecomment-6445589262)
+is the primary source for our [community case summary](COMMUNITY_RECOVERY_CASE_01.md).
+The result also appears in the [original Reddit thread](https://www.reddit.com/r/retron5/comments/1w2g6rc/original_retro_freak_2016_stuck_on_logo_any_way/)
+([linked comment](https://www.reddit.com/r/retron5/comments/1w2g6rc/comment/19rqjk118t3kz/)).
+
+The successful method used GoobyCorp's RetroFreak Toolkit to extract the official
+update's plain Rockchip image, then a working SD recovery menu to install it.
+This follow-up is a separate owner-reported case with working recovery; the
+original deeper repair was necessary when recovery was no longer being reached.
+
 ## Critical starting points
 
 ### Ken — Sui Lab

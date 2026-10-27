@@ -11,3 +11,17 @@ These hashes identify files used during the investigation. The corresponding ven
 | RetroN5 full-reset recovery IMG | 199,229,440 | `951d8777eaed7eca15de2cc65c3ebd488e4f977b17c698ae9906c36b1761f042` |
 
 Official `system.img` MD5: `04130d8d95d155dc377569b06e750b4b`.
+
+## Community-reported extracted update (2026-10-27)
+
+In [issue #1's repair report](https://github.com/LordVitaly/retrofreak-rf1-repair-research/issues/1#issuecomment-6445589262),
+Yamanotsume supplied the following identity for the plain Rockchip image used
+through working recovery. The maintainers have not independently reacquired or
+hashed this file; it is separate from the encrypted outer IMG above.
+
+| Artifact | Size | SHA-256 |
+|---|---:|---|
+| Extracted `update-RetroFreak-0.2.0-v2.img` (owner-reported) | 173,428,496 | `8be4cfc8cd92f03cefae48dee8b2e42ea1f44b7bd0988e1d1b5741dad28ead9a` |
+
+See [community case #1](COMMUNITY_RECOVERY_CASE_01.md) for prerequisites, the
+reported sequence and validation limits.

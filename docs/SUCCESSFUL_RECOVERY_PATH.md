@@ -2,6 +2,13 @@
 
 This document separates the sequence that ultimately contributed to a working RF-1 from dead ends, temporary hypotheses and experiments that were useful only for diagnosis.
 
+**Access condition in this case:** recovery was no longer being reached during
+the successful repair. The white screen and unreliable power hold required the
+deeper investigation below. A separate [second RF-1 case](COMMUNITY_RECOVERY_CASE_01.md)
+reports a simpler official-update route **with working SD recovery**. Review that
+case when recovery is available; it does not replace this history or establish
+that the same low-level repairs are needed on every unit without recovery.
+
 ## Preconditions
 
 This is a retrospective sequence for one unit, **not authorization to repeat a

@@ -2,7 +2,27 @@
 
 This is not a blind recipe. Use the least invasive layer that can still answer the current question.
 
+## First distinguish recovery availability
+
+```mermaid
+flowchart TD
+    A[RF-1 does not start normally] --> B{"Working SD recovery reachable?"}
+    B -->|Yes| C[Review section D and community case 1]
+    C --> D[Matching plain rkimage update: owner-reported success]
+    B -->|No| E[Capture boot / power evidence: sections B, C and E]
+    E --> F[Original case: MaskROM, boot-chain / FTL and filesystem diagnosis]
+```
+
+The [second-unit recovery update](COMMUNITY_RECOVERY_CASE_01.md) depends on a
+working recovery menu. Recovery was no longer being reached in the original
+successful repair, which required the [deeper case-specific path](SUCCESSFUL_RECOVERY_PATH.md).
+An unavailable recovery menu does not by itself establish the same NAND damage
+or justify replaying the historical writers.
+
 ## A. Unit reaches the Retro Freak splash or menu
+
+If normal startup hangs at the splash but SD recovery works, review section D
+and the second-unit report before considering a diagnostic boot or low-level work.
 
 1. Obtain logs before modifying NAND.
 2. If possible, enable/obtain ADB without replacing more of the boot chain than necessary.
@@ -35,9 +55,25 @@ On the reference unit, early geometry/FlashInfo/BBT state caused the power-hold 
 
 ## D. Recovery SD works
 
-Where appropriate, consider the community recovery method before low-level NAND work. Merely entering its menu is different from executing `Wipe data/factory reset`. The latter may erase internal saves/settings; do not treat it as a harmless diagnostic. If an authorized reset fixes the unit, stop there.
+Merely entering recovery is different from executing `Wipe data/factory reset`.
+The latter may erase internal saves/settings; do not treat it as a harmless
+diagnostic. If an authorized reset fixes the unit, stop there.
 
-If the recovery image is known-good but a marker in `/data/bootscript.sh` is never executed, further edits to the same script are unlikely to bypass an earlier BOOTSD-selection failure.
+If factory reset did not fix a splash hang, [Yamanotsume's second RF-1 report](COMMUNITY_RECOVERY_CASE_01.md)
+documents a successful **Update rkimage from external storage** using the plain
+Rockchip image extracted from the matching official system 0.2.0 update. The
+encrypted outer Retro Freak update is not the image used by this recovery option
+in the report. Review the case's prerequisites, image identities and write scope
+before any update; recovery reported updating boot, system, backup, recovery and
+bootloader. This is one owner's successful result, not a universal repair.
+
+**If recovery cannot be reached, this menu-based method is unavailable.** Continue
+with evidence-led diagnosis under B, C and E as applicable, and consult the
+original successful path for its measured findings rather than portable commands.
+
+If the recovery image is known-good but a marker in `/data/bootscript.sh` never
+persists, further edits to the same script are unlikely to bypass an earlier
+BOOTSD-selection failure. The marker alone does not establish the cause.
 
 ## E. Normal boot is unavailable, but MaskROM works
 

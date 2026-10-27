@@ -25,6 +25,12 @@ redacted records, not to the original private workspace.
 | Stock boot and host return | [Final-stage record](../evidence/phase2/usb_stock_final_evidence.json) | Native/both-mode readback before the last power removal. |
 | Final cold start and game | [Functional confirmation](../evidence/phase2/functional_cold_boot_confirmation.json) | Reported functional outcome, not new binary readback; save import observed at the earlier host test. |
 
+## External community report (2026-10-27)
+
+| Finding | Source | Limit |
+|---|---|---|
+| Second RF-1 starts normally after a plain-rkimage update through working SD recovery | [Yamanotsume's issue #1 report](https://github.com/LordVitaly/retrofreak-rf1-repair-research/issues/1#issuecomment-6445589262), summarized in [community case #1](COMMUNITY_RECOVERY_CASE_01.md) | Owner-reported recovery messages, hashes and normal startup. Not independently repeated by the maintainers; no full post-update NAND readback or power-removal cold-persistence test established. Recovery availability differs from the original successful repair. |
+
 ## Corrected interpretations
 
 - Runtime mapping divergence was directly measured for boot. It must not be used

@@ -2,7 +2,8 @@
 
 | Document | Purpose |
 |---|---|
-| [Successful recovery path](SUCCESSFUL_RECOVERY_PATH.md) | The sequence leading to functional recovery; not portable flash instructions. |
+| [Community case #1](COMMUNITY_RECOVERY_CASE_01.md) | Second RF-1: owner-reported plain-rkimage update through working SD recovery, with source links and limits. |
+| [Successful recovery path](SUCCESSFUL_RECOVERY_PATH.md) | Original unit with recovery unavailable: the deeper repair leading to functional recovery; not portable flash instructions. |
 | [Technical report](TECHNICAL_REPORT.md) | Diagnosis, formats, code paths, repairs and evidence limits. |
 | [Board photographs](BOARD_PHOTOS.md) | Owner-supplied board details, marked service button and connector orientation. |
 | [Evidence map](EVIDENCE_MAP.md) | Direct links from important findings to included records. |

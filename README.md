@@ -18,6 +18,35 @@ validation limits](STATUS.md) for exactly what was measured and when.
 
 [Start diagnosing](docs/DECISION_TREE.md) · [Read the recovery story](docs/SUCCESSFUL_RECOVERY_PATH.md) · [Browse the evidence](docs/EVIDENCE_MAP.md) · [Download the latest release](https://github.com/LordVitaly/retrofreak-rf1-repair-research/releases/latest)
 
+## Community success: a second RF-1 recovered (2026-10-27)
+
+Thank you to **[Yamanotsume on GitHub](https://github.com/Yamanotsume) /
+[u/yamanotsume on Reddit](https://www.reddit.com/user/yamanotsume/)** for reporting
+a successful repair of another early RF-1 and documenting the method, image
+hashes and observations in [issue #1](https://github.com/LordVitaly/retrofreak-rf1-repair-research/issues/1).
+Their console had been stuck on the Retro Freak logo since 2016; they report
+that it now boots normally.
+
+**This method requires working recovery.** On their unit, Recovery System v1.1
+was reachable from microSD, but factory reset had not fixed the splash hang. They
+extracted the plain Rockchip image from the official system 0.2.0 update using
+[GoobyCorp's RetroFreak Toolkit](https://github.com/GoobyCorp/RetroFreak_Toolkit),
+placed it on the RetroN 5 recovery SD as `update.img`, and used **Update rkimage
+from external storage**. The encrypted outer update is not the plain rkimage
+used in this report.
+
+**In our original case, recovery was no longer being reached.** The successful
+repair therefore required the deeper MaskROM, boot-chain, NAND/FTL and filesystem
+diagnosis documented in the [original recovery path](docs/SUCCESSFUL_RECOVERY_PATH.md).
+Those measurements and physical addresses remain specific to that unit.
+
+See the [community case and prerequisites](docs/COMMUNITY_RECOVERY_CASE_01.md),
+the author's [full technical report](https://github.com/LordVitaly/retrofreak-rf1-repair-research/issues/1#issuecomment-6445589262),
+and the [original Reddit thread](https://www.reddit.com/r/retron5/comments/1w2g6rc/original_retro_freak_2016_stuck_on_logo_any_way/)
+([linked comment](https://www.reddit.com/r/retron5/comments/1w2g6rc/comment/19rqjk118t3kz/)).
+This is an owner-reported result from a second unit; the maintainers have not
+independently repeated that repair.
+
 ## Acknowledgements: where this repair began
 
 Earlier community research gave this repair its essential starting points:
@@ -33,7 +62,8 @@ These contributions made the investigation possible. See [Sources and credits](d
 | Your goal | Read first |
 |---|---|
 | Understand a white screen, splash hang or failed power hold | [Decision tree](docs/DECISION_TREE.md), then [safety and scope](docs/SAFETY_AND_SCOPE.md) |
-| Follow the repair from failure to a playable game | [Successful recovery path](docs/SUCCESSFUL_RECOVERY_PATH.md) |
+| Stuck on the logo with working recovery | [Second RF-1: recovery update case](docs/COMMUNITY_RECOVERY_CASE_01.md) and [issue #1](https://github.com/LordVitaly/retrofreak-rf1-repair-research/issues/1) |
+| Recovery is unavailable; follow the original repair to a playable game | [Successful recovery path](docs/SUCCESSFUL_RECOVERY_PATH.md) |
 | Study NAND, FTL, BBT and the vendor boot digest | [Technical report](docs/TECHNICAL_REPORT.md) and [address spaces](docs/ADDRESS_SPACES.md) |
 | Check the evidence behind a claim | [Evidence map](docs/EVIDENCE_MAP.md) and [project status](STATUS.md) |
 | Reuse the research code | [Tooling guide](docs/TOOLING.md), [tool index](toolkit/INDEX.json), [license scope](LICENSE_STATUS.md) |
@@ -41,21 +71,36 @@ These contributions made the investigation possible. See [Sources and credits](d
 | Locate the hidden service button or inspect this board | [Board photographs and MaskROM button](docs/BOARD_PHOTOS.md) |
 | Identify the firmware used in this case | [Firmware reference](docs/FIRMWARE_REFERENCE.md) and [reference hashes](docs/REFERENCE_HASHES.md) |
 
-## The recovery, at a glance
+## Recovery paths, at a glance
 
-The sequence below is the history of this one unit, not a mandatory sequence for
-another console. Each step had its own diagnosis and verification.
+The two parallel routes have different entry conditions. The working-recovery
+route summarizes the second owner's report; the recovery-unavailable route is
+the history of our original unit. Each repair needs its own diagnosis and
+verification; the original unit's addresses and writers are not portable.
 
 ```mermaid
-flowchart TD
-    A[White screen and unreliable power hold] --> B[Restore valid IDB / FlashInfo / BBT path]
-    B --> C[Diagnostic boot, correct vendor boot ID, and cache repair]
-    C --> D[Root ADB exposes the Linux-visible system]
-    D --> E[Repair four system ranges: 8 MiB total]
-    E --> F[Repair unmounted userdata with stock e2fsck]
-    F --> G[Validate adapter in temporary USB host mode]
-    G --> H[Restore stock boot using freshly measured FTL owners]
-    H --> I[Operator confirms cold startup and a working GBC game]
+flowchart LR
+    subgraph RECOVERY["Working recovery: Yamanotsume's RF-1, issue #1"]
+        direction TB
+        R1["Recovery v1.1 reachable; logo hang; factory reset did not help"]
+        R1 --> R2["Extract matching official update to a plain Rockchip image"]
+        R2 --> R3["Recovery SD: update.img and Update rkimage"]
+        R3 --> R4["Owner reports normal startup"]
+    end
+
+    subgraph ORIGINAL["Recovery unavailable: our original RF-1"]
+        direction TB
+        A["Recovery not reached; white screen and unreliable power hold"]
+        A --> M["MaskROM access and reviewed backup / diagnosis"]
+        M --> B["Restore valid IDB / FlashInfo / BBT path"]
+        B --> C["Diagnostic boot, correct vendor boot ID, and cache repair"]
+        C --> D["Root ADB exposes the Linux-visible system"]
+        D --> E["Repair four system ranges: 8 MiB total"]
+        E --> F["Repair unmounted userdata with stock e2fsck"]
+        F --> G["Validate adapter in temporary USB host mode"]
+        G --> H["Restore stock boot using freshly measured FTL owners"]
+        H --> I["Operator confirms cold startup and a working GBC game"]
+    end
 ```
 
 | Finding | Why it mattered |

@@ -30,6 +30,20 @@ An earlier BOOTSD-selection or SD-device-availability failure remained a plausib
 
 ## Practical recommendation
 
+### Second RF-1: update through working recovery
+
+On 2026-10-27, [Yamanotsume](https://github.com/Yamanotsume) reported normal
+startup after using Recovery System v1.1's **Update rkimage from external
+storage** with the plain Rockchip image extracted from the official system 0.2.0
+update. Factory reset had not fixed their splash hang. See the
+[case summary and prerequisites](COMMUNITY_RECOVERY_CASE_01.md) and the
+[original issue report](https://github.com/LordVitaly/retrofreak-rf1-repair-research/issues/1#issuecomment-6445589262).
+
+This requires working recovery. In the original repair, recovery was no longer
+being reached, so that menu could not provide the repair route; see the
+[original successful path](SUCCESSFUL_RECOVERY_PATH.md). The second owner's
+update result does not explain the original unit's later BOOTSD failure.
+
 Consider the documented recovery access path before low-level repair when its
 limitations are acceptable. The unsuccessful marker tests do not prove a dead
 microSD slot; they show that the marker was not reached or persisted in those

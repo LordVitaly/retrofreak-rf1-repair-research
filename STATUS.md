@@ -14,7 +14,21 @@
 See the [evidence map](docs/EVIDENCE_MAP.md) and
 [final-stage record](evidence/phase2/usb_stock_final_evidence.json).
 
-## Not established
+## Community follow-up (2026-10-27)
+
+[Yamanotsume](https://github.com/Yamanotsume) reports normal startup on a second
+early RF-1 after a plain-rkimage update through working SD recovery; the unit had
+been stuck on the splash screen since 2016. Thank you for documenting the steps
+and hashes in [issue #1](https://github.com/LordVitaly/retrofreak-rf1-repair-research/issues/1#issuecomment-6445589262).
+See the [case summary](docs/COMMUNITY_RECOVERY_CASE_01.md) for the method and limits.
+
+This is an external owner report, not a second maintainer-tested instance of the
+original low-level repair. The original unit's recovery was no longer being
+reached; it required the deeper boot-chain/NAND/FTL and filesystem work documented
+here. The second report does not add new cold-persistence, binary readback or
+peripheral measurements to the original evidence table.
+
+## Not established for the original unit
 
 - Physical health or endurance of every NAND cell.
 - Recovery of every previous userdata/lost+found object.
@@ -25,4 +39,5 @@ See the [evidence map](docs/EVIDENCE_MAP.md) and
   readahead restart noted in an earlier working-state capture.
 
 The repaired unit's maps and addresses are historical measurements, not a layout
-for another console. This is a single documented repair, not a universal flasher.
+for another console. The original measured repair and the separate community
+recovery report do not constitute a universal flasher.
